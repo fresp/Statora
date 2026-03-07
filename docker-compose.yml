@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: statuspage-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - statuspage
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: statuspage-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGO_URI: mongodb://root:strongpassword@host.docker.internal:27017/admin?authSource=admin
+      MONGO_DB_NAME: statusplatform
+      REDIS_ADDR: redis:6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - statuspage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: statuspage-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MONGO_URI: mongodb://root:strongpassword@host.docker.internal:27017/admin?authSource=admin
+      REDIS_ADDR: redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - statuspage
+    cap_add:
+      - NET_RAW
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: statuspage-web
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - statuspage
+
+volumes:
+  redis_data:
+
+networks:
+  statuspage:
+    driver: bridge
