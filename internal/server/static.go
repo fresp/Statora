@@ -1,48 +1,61 @@
-// Package server provides static file serving.
 package server
 
 import (
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"status-platform/internal/embed" // Import our embeddings
+	"status-platform/internal/embed"
 )
 
-// StaticFileServer serves static files from embedded FS
 func StaticFileServer() gin.HandlerFunc {
-	fSys, err := fs.Sub(embed.Assets, "web/dist")
-	if err != nil {
-		log.Printf("[STATIC] Error creating sub filesystem: %v", err)
-		return func(c *gin.Context) {
-			c.String(http.StatusNotFound, "Embedded files not available")
-		}
-	}
 
-	fileServer := http.FileServer(http.FS(fSys))
+	fSys, err := fs.Sub(embed.Assets, "dist")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return func(c *gin.Context) {
 
-		path := c.Request.URL.Path
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
 
-		// HANDLE ROOT DIRECTLY
-		if path == "/" {
-			c.FileFromFS("index.html", http.FS(fSys))
-			c.Abort()
+		if path == "" {
+			path = "index.html"
+		}
+
+		log.Println("STATIC PATH:", path)
+
+		file, err := fSys.Open(path)
+		if err == nil {
+			defer file.Close()
+
+			stat, _ := file.Stat()
+
+			http.ServeContent(
+				c.Writer,
+				c.Request,
+				path,
+				stat.ModTime(),
+				file.(io.ReadSeeker),
+			)
 			return
 		}
 
-		// CHECK FILE EXISTENCE
-		_, err := fSys.Open(path[1:])
-		if err != nil {
-			// SPA fallback
-			c.FileFromFS("index.html", http.FS(fSys))
-			c.Abort()
-			return
-		}
+		// SPA fallback
+		index, _ := fSys.Open("index.html")
+		defer index.Close()
 
-		fileServer.ServeHTTP(c.Writer, c.Request)
-		c.Abort()
+		stat, _ := index.Stat()
+
+		http.ServeContent(
+			c.Writer,
+			c.Request,
+			"index.html",
+			stat.ModTime(),
+			index.(io.ReadSeeker),
+		)
 	}
 }

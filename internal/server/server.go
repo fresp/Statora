@@ -39,7 +39,11 @@ func RunServer() error {
 	go hub.Run()
 
 	// Setup API routes with Gin
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+
+	r.RedirectTrailingSlash = false
+	r.RedirectFixedPath = false
 
 	// Register API routes
 	RegisterAPIRoutes(r, hub, cfg)
@@ -60,10 +64,6 @@ func RunServer() error {
 
 
 	// Serve React root
-	r.GET("/", StaticFileServer())
-
-
-	// Register static file serving (embedded React frontend) on all routes that don't match API
 	r.NoRoute(StaticFileServer())
 
 	// Setup shutdown signal handler - this will call cancel() when SIGTERM/SIGINT is received
