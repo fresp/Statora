@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"status-platform/internal/database"
+	"github.com/fresp/StatusForge/internal/database"
 )
 
 type HealthResponse struct {

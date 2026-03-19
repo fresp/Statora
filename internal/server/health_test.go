@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"status-platform/configs"
-	"status-platform/internal/database"
+	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/database"
 )
 
 // TestHealthCheckHandler tests the health check endpoint functionality

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"status-platform/configs"
+	"github.com/fresp/StatusForge/configs"
 )
 
 // TestWorkerModeToggle tests that the ENABLE_WORKER flag works correctly

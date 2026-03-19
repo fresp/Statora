@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	authservice "status-platform/internal/services/auth"
+	authservice "github.com/fresp/StatusForge/internal/services/auth"
 )
 
 type stubLoginService struct {

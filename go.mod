@@ -1,4 +1,4 @@
-module status-platform
+module github.com/fresp/StatusForge
 
 go 1.26.0
 

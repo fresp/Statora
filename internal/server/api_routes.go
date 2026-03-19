@@ -13,11 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
-	"status-platform/configs"
-	"status-platform/internal/database"
-	"status-platform/internal/handlers"
-	"status-platform/internal/middleware"
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/database"
+	"github.com/fresp/StatusForge/internal/handlers"
+	"github.com/fresp/StatusForge/internal/middleware"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 // RegisterAPIRoutes registers all API routes on the given Gin engine

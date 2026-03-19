@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 type stubAdminRepo struct {

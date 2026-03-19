@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 func TestMapAdminToMemberDefaults(t *testing.T) {

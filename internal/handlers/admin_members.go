@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 var allowedAdminRoles = map[string]struct{}{

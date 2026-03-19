@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
-	"status-platform/configs"
-	"status-platform/internal/database"
-	"status-platform/internal/handlers"
+	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/database"
+	"github.com/fresp/StatusForge/internal/handlers"
 )
 
 // RunServer starts the unified server with API, Worker, and Web functionality

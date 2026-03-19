@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"status-platform/configs"
-	"status-platform/internal/handlers"
-	"status-platform/internal/middleware"
+	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/handlers"
+	"github.com/fresp/StatusForge/internal/middleware"
 )
 
 func TestAdminOnlyRoutesForbidOperatorRole(t *testing.T) {

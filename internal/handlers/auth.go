@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	authservice "status-platform/internal/services/auth"
+	authservice "github.com/fresp/StatusForge/internal/services/auth"
 )
 
 type loginService interface {

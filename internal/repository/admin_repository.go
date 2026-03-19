@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 type AdminRepository interface {

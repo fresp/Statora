@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"status-platform/internal/server"
+	"github.com/fresp/StatusForge/internal/server"
 )
 
 func main() {

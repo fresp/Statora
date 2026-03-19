@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"status-platform/internal/models"
+	"github.com/fresp/StatusForge/internal/models"
 )
 
 func main() {

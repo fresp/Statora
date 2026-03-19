@@ -10,8 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"status-platform/internal/models"
-	"status-platform/internal/utils"
+	"github.com/fresp/StatusForge/internal/models"
+	"github.com/fresp/StatusForge/internal/utils"
 )
 
 func GetMonitors(db *mongo.Database) gin.HandlerFunc {

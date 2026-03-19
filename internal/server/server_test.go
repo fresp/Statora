@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"status-platform/configs"
-	"status-platform/internal/database"
-	"status-platform/internal/handlers"
+	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/database"
+	"github.com/fresp/StatusForge/internal/handlers"
 )
 
 // MockDB is a mock implementation of the database functionality for testing
