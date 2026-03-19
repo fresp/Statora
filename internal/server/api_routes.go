@@ -89,6 +89,7 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 
 	adminOnly.GET("/admins", handlers.GetAdmins(database.GetDB()))
 	adminOnly.PATCH("/admins/:id", handlers.PatchAdmin(database.GetDB()))
+	adminOnly.DELETE("/admins/:id", handlers.DeleteAdmin(database.GetDB()))
 	adminOnly.POST("/admins/invitations", handlers.CreateAdminInvitation(database.GetDB()))
 	adminOnly.GET("/admins/invitations", handlers.GetAdminInvitations(database.GetDB()))
 	adminOnly.POST("/admins/invitations/:id/refresh", handlers.RefreshAdminInvitation(database.GetDB()))

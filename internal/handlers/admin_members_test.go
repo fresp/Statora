@@ -144,3 +144,33 @@ func TestGetAdminInvitationsMapsInvitationModel(t *testing.T) {
 	assert.Equal(t, inv.CreatedAt, resp.CreatedAt)
 	assert.False(t, resp.IsExpired)
 }
+
+func TestDeleteAdminRejectsInvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.DELETE("/api/admins/:id", DeleteAdmin(nil))
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/admins/not-an-object-id", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDeleteAdminRejectsSelfDelete(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("adminId", "507f1f77bcf86cd799439011")
+		c.Next()
+	})
+	r.DELETE("/api/admins/:id", DeleteAdmin(nil))
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/admins/507f1f77bcf86cd799439011", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}

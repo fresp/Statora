@@ -101,6 +101,7 @@ export default function StatusPage() {
                         <span>Status: {INCIDENT_STATUS_LABELS[incident.status]}</span>
                         <span>Impact: {INCIDENT_IMPACT_LABELS[incident.impact]}</span>
                         <span>Since: {formatDate(incident.createdAt)}</span>
+                        {incident.creatorUsername && <span>Created by: {incident.creatorUsername}</span>}
                       </div>
                     </div>
                     <button
@@ -136,6 +137,7 @@ export default function StatusPage() {
                 <div className="flex gap-4 mt-2 text-xs text-blue-600">
                   <span>Status: {m.status.replace('_', ' ')}</span>
                   <span>{formatDate(m.startTime)} → {formatDate(m.endTime)}</span>
+                  {m.creatorUsername && <span>Created by: {m.creatorUsername}</span>}
                 </div>
               </div>
             </div>
@@ -232,6 +234,7 @@ export default function StatusPage() {
                     </div>
                     <div className="flex gap-4 mt-3 text-xs text-gray-400">
                       <span>Created: {formatDate(incident.createdAt)}</span>
+                      {incident.creatorUsername && <span>Created by: {incident.creatorUsername}</span>}
                       {incident.resolvedAt && <span>Resolved: {formatDate(incident.resolvedAt)}</span>}
                     </div>
                     {isExpanded && <IncidentTimeline updates={incident.updates || []} />}

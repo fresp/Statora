@@ -67,6 +67,7 @@ export default function AdminMembers() {
   } = useApi<AdminInvitation[] | InvitationsResponse>('/admins/invitations')
   const { data: meData } = useApi<MeResponse>('/auth/me')
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string>('')
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -108,6 +109,22 @@ export default function AdminMembers() {
       setActionError(err.response?.data?.error || 'Failed to update member. Please try again.')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  async function deleteMember(member: AdminMember) {
+    const confirmed = window.confirm(`Remove member ${member.username} (${member.email})? This action cannot be undone.`)
+    if (!confirmed) return
+
+    setDeletingId(member.id)
+    setActionError('')
+    try {
+      await api.delete(`/admins/${member.id}`)
+      await refetch()
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to delete member. Please try again.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -284,10 +301,12 @@ export default function AdminMembers() {
             <tbody className="divide-y divide-gray-50">
               {members.map((member) => {
                 const isSaving = savingId === member.id
+                const isDeleting = deletingId === member.id
                 const isAdmin = member.role === 'admin'
                 const isCurrentUser = currentAdminId === member.id
-                const canEditRole = !isAdmin && !isSaving
-                const canToggleStatus = !isAdmin && !isCurrentUser && member.status !== 'invited' && !isSaving
+                const canEditRole = !isAdmin && !isSaving && !isDeleting
+                const canToggleStatus = !isAdmin && !isCurrentUser && member.status !== 'invited' && !isSaving && !isDeleting
+                const canDelete = !isCurrentUser && !isSaving && !isDeleting
                 const nextStatus: AdminStatus = member.status === 'disabled' ? 'active' : 'disabled'
 
                 return (
@@ -324,19 +343,30 @@ export default function AdminMembers() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => {
-                          void updateMember(member.id, { status: nextStatus })
-                        }}
-                        disabled={!canToggleStatus}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {member.status === 'invited'
-                          ? 'Pending Invite'
-                          : member.status === 'disabled'
-                            ? 'Enable'
-                            : 'Disable'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            void updateMember(member.id, { status: nextStatus })
+                          }}
+                          disabled={!canToggleStatus}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {member.status === 'invited'
+                            ? 'Pending Invite'
+                            : member.status === 'disabled'
+                              ? 'Enable'
+                              : 'Disable'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            void deleteMember(member)
+                          }}
+                          disabled={!canDelete}
+                          className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isDeleting ? 'Removing...' : 'Remove'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )

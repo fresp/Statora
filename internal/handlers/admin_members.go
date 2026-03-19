@@ -163,6 +163,55 @@ func PatchAdmin(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
+func DeleteAdmin(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		rawAdminID, exists := c.Get("adminId")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authenticated admin context"})
+			return
+		}
+
+		currentAdminIDHex, ok := rawAdminID.(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin context"})
+			return
+		}
+
+		currentAdminID, err := primitive.ObjectIDFromHex(currentAdminIDHex)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin id"})
+			return
+		}
+
+		if currentAdminID == id {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "cannot delete your own account"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		result, err := db.Collection("admins").DeleteOne(ctx, bson.M{"_id": id})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if result.DeletedCount == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "admin not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}
+}
+
 func CreateAdminInvitation(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {

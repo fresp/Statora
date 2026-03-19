@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fresp/StatusForge/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/fresp/StatusForge/internal/models"
 )
 
 func GetMaintenance(db *mongo.Database) gin.HandlerFunc {
@@ -63,6 +63,27 @@ func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
+		rawAdminID, exists := c.Get("adminId")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authenticated admin context"})
+			return
+		}
+
+		adminIDHex, ok := rawAdminID.(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin context"})
+			return
+		}
+
+		adminID, err := primitive.ObjectIDFromHex(adminIDHex)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin id"})
+			return
+		}
+
+		creatorUsername, _ := c.Get("username")
+		creatorName, _ := creatorUsername.(string)
+
 		var compIDs []primitive.ObjectID
 		for _, s := range req.Components {
 			oid, err := primitive.ObjectIDFromHex(s)
@@ -80,13 +101,15 @@ func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		m := models.Maintenance{
-			ID:          primitive.NewObjectID(),
-			Title:       req.Title,
-			Description: req.Description,
-			Components:  compIDs,
-			StartTime:   startTime,
-			EndTime:     endTime,
-			Status:      status,
+			ID:              primitive.NewObjectID(),
+			Title:           req.Title,
+			Description:     req.Description,
+			CreatorID:       &adminID,
+			CreatorUsername: creatorName,
+			Components:      compIDs,
+			StartTime:       startTime,
+			EndTime:         endTime,
+			Status:          status,
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -109,11 +132,11 @@ func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Title       string                    `json:"title"`
-			Description string                    `json:"description"`
-			Status      models.MaintenanceStatus  `json:"status"`
-			StartTime   string                    `json:"startTime"`
-			EndTime     string                    `json:"endTime"`
+			Title       string                   `json:"title"`
+			Description string                   `json:"description"`
+			Status      models.MaintenanceStatus `json:"status"`
+			StartTime   string                   `json:"startTime"`
+			EndTime     string                   `json:"endTime"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -8,7 +8,7 @@ import (
 
 type IncidentWithUpdates struct {
 	Incident
-	Updates  []IncidentUpdate `json:"updates"`
+	Updates []IncidentUpdate `json:"updates"`
 }
 
 type IncidentStatus string
@@ -35,6 +35,8 @@ type Incident struct {
 	Description        string               `bson:"description" json:"description"`
 	Status             IncidentStatus       `bson:"status" json:"status"`
 	Impact             IncidentImpact       `bson:"impact" json:"impact"`
+	CreatorID          *primitive.ObjectID  `bson:"creatorId,omitempty" json:"creatorId,omitempty"`
+	CreatorUsername    string               `bson:"creatorUsername,omitempty" json:"creatorUsername,omitempty"`
 	AffectedComponents []primitive.ObjectID `bson:"affectedComponents" json:"affectedComponents"`
 	CreatedAt          time.Time            `bson:"createdAt" json:"createdAt"`
 	UpdatedAt          time.Time            `bson:"updatedAt" json:"updatedAt"`

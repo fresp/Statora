@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fresp/StatusForge/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/fresp/StatusForge/internal/models"
 )
 
 func GetIncidents(db *mongo.Database) gin.HandlerFunc {
@@ -48,11 +48,11 @@ func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			Title              string                   `json:"title" binding:"required"`
-			Description        string                   `json:"description"`
-			Status             models.IncidentStatus    `json:"status"`
-			Impact             models.IncidentImpact    `json:"impact"`
-			AffectedComponents []string                 `json:"affectedComponents"`
+			Title              string                `json:"title" binding:"required"`
+			Description        string                `json:"description"`
+			Status             models.IncidentStatus `json:"status"`
+			Impact             models.IncidentImpact `json:"impact"`
+			AffectedComponents []string              `json:"affectedComponents"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -65,6 +65,27 @@ func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		if req.Impact == "" {
 			req.Impact = models.ImpactMinor
 		}
+
+		rawAdminID, exists := c.Get("adminId")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing authenticated admin context"})
+			return
+		}
+
+		adminIDHex, ok := rawAdminID.(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin context"})
+			return
+		}
+
+		adminID, err := primitive.ObjectIDFromHex(adminIDHex)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authenticated admin id"})
+			return
+		}
+
+		creatorUsername, _ := c.Get("username")
+		creatorName, _ := creatorUsername.(string)
 
 		var compIDs []primitive.ObjectID
 		for _, s := range req.AffectedComponents {
@@ -83,6 +104,8 @@ func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			Description:        req.Description,
 			Status:             req.Status,
 			Impact:             req.Impact,
+			CreatorID:          &adminID,
+			CreatorUsername:    creatorName,
 			AffectedComponents: compIDs,
 			CreatedAt:          time.Now(),
 			UpdatedAt:          time.Now(),
@@ -110,11 +133,11 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Title              string                   `json:"title"`
-			Description        string                   `json:"description"`
-			Status             models.IncidentStatus    `json:"status"`
-			Impact             models.IncidentImpact    `json:"impact"`
-			AffectedComponents []string                 `json:"affectedComponents"`
+			Title              string                `json:"title"`
+			Description        string                `json:"description"`
+			Status             models.IncidentStatus `json:"status"`
+			Impact             models.IncidentImpact `json:"impact"`
+			AffectedComponents []string              `json:"affectedComponents"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

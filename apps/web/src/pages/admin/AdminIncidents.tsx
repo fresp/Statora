@@ -103,6 +103,7 @@ function IncidentRow({ incident, components, onRefetch }: {
           </span>
         </td>
         <td className="px-6 py-4 text-sm text-gray-500">{formatDate(incident.createdAt)}</td>
+        <td className="px-6 py-4 text-sm text-gray-500">{incident.creatorUsername || '—'}</td>
         <td className="px-6 py-4">
           <div className="flex items-center justify-end gap-2">
             <button
@@ -119,7 +120,7 @@ function IncidentRow({ incident, components, onRefetch }: {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={5} className="px-6 pb-4 bg-gray-50">
+          <td colSpan={6} className="px-6 pb-4 bg-gray-50">
             <div className="pl-4 border-l-2 border-gray-200 space-y-2 mt-1">
               {(updates || []).length === 0 ? (
                 <p className="text-sm text-gray-400">No updates yet.</p>
@@ -259,6 +260,7 @@ export default function AdminIncidents() {
               <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-6 py-3 font-medium text-gray-600">Impact</th>
               <th className="text-left px-6 py-3 font-medium text-gray-600">Created</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600">Creator</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
@@ -268,7 +270,7 @@ export default function AdminIncidents() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-400">No incidents found.</td>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">No incidents found.</td>
               </tr>
             )}
           </tbody>

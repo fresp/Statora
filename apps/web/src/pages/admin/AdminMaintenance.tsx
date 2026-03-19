@@ -147,6 +147,7 @@ export default function AdminMaintenance() {
               <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-6 py-3 font-medium text-gray-600">Start</th>
               <th className="text-left px-6 py-3 font-medium text-gray-600">End</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600">Creator</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
@@ -161,6 +162,7 @@ export default function AdminMaintenance() {
                 </td>
                 <td className="px-6 py-4 text-gray-500">{formatDate(m.startTime)}</td>
                 <td className="px-6 py-4 text-gray-500">{formatDate(m.endTime)}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{m.creatorUsername || '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end">
                     <button onClick={() => openEdit(m)} className="text-gray-400 hover:text-blue-600 transition-colors">
@@ -172,7 +174,7 @@ export default function AdminMaintenance() {
             ))}
             {(maintenance || []).length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-400">No maintenance windows scheduled.</td>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">No maintenance windows scheduled.</td>
               </tr>
             )}
           </tbody>

@@ -47,6 +47,8 @@ export interface Incident {
   description: string
   status: IncidentStatus
   impact: IncidentImpact
+  creatorId?: string
+  creatorUsername?: string
   affectedComponents: string[]
   createdAt: string
   updatedAt: string
@@ -66,6 +68,8 @@ export interface Maintenance {
   id: string
   title: string
   description: string
+  creatorId?: string
+  creatorUsername?: string
   components: string[]
   startTime: string
   endTime: string
