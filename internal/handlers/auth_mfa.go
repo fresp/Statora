@@ -251,7 +251,12 @@ func getUserIDFromContext(c *gin.Context) (string, bool) {
 }
 
 func handleMFAHandlerError(c *gin.Context, err error) {
-	if errors.Is(err, authservice.ErrInvalidPassword) || errors.Is(err, authservice.ErrInvalidMFACode) {
+	if errors.Is(err, authservice.ErrInvalidMFACode) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if errors.Is(err, authservice.ErrInvalidPassword) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}

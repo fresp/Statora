@@ -17,6 +17,36 @@ import (
 	authservice "github.com/fresp/StatusForge/internal/services/auth"
 )
 
+func TestHandleMFAHandlerErrorReturnsBadRequestForInvalidMFACode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	handleMFAHandlerError(c, authservice.ErrInvalidMFACode)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, authservice.ErrInvalidMFACode.Error(), response["error"])
+}
+
+func TestHandleMFAHandlerErrorReturnsUnauthorizedForInvalidPassword(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	handleMFAHandlerError(c, authservice.ErrInvalidPassword)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, authservice.ErrInvalidPassword.Error(), response["error"])
+}
+
 type stubMFAHandlerService struct {
 	startEnrollmentResult *authservice.StartEnrollmentResult
 	verifyResult          *authservice.VerifyChallengeResult
@@ -160,6 +190,30 @@ func TestMFAVerifyUsesChallengeForEnabledMFA(t *testing.T) {
 	assert.Equal(t, user.ID.Hex(), svc.verifyChallengeReq.UserID)
 	assert.Equal(t, "123456", svc.verifyChallengeReq.Code)
 	assert.Empty(t, svc.verifyEnrollmentReq.UserID)
+}
+
+func TestMFAVerifyReturnsBadRequestForInvalidMFACode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	user := &models.User{ID: primitive.NewObjectID(), Username: "alice", Email: "alice@example.com", Role: "admin", MFAEnabled: true}
+	svc := &stubMFAHandlerService{err: authservice.ErrInvalidMFACode}
+
+	router := gin.New()
+	router.POST("/api/auth/mfa/verify", func(c *gin.Context) {
+		c.Set("userId", user.ID.Hex())
+		mfaVerifyWithService(svc, &stubMFAHandlerUserRepo{user: user})(c)
+	})
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/auth/mfa/verify", bytes.NewBuffer([]byte(`{"code":"000000"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, authservice.ErrInvalidMFACode.Error(), response["error"])
 }
 
 func TestMFARecoveryVerifyReturnsVerifiedToken(t *testing.T) {
