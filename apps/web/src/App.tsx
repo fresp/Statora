@@ -13,6 +13,7 @@ import AdminSubscribers from './pages/admin/AdminSubscribers'
 import AdminMembers from './pages/admin/AdminMembers'
 import AdminActivate from './pages/admin/AdminActivate'
 import AdminProfile from './pages/admin/AdminProfile'
+import AdminWebhookChannels from './pages/admin/AdminWebhookChannels'
 import { getStoredToken, getStoredProfile } from './lib/auth'
 import type { UserRole } from './types'
 
@@ -118,6 +119,14 @@ export default function App() {
           element={
             <RoleRoute allowed={['admin']}>
               <AdminSubscribers />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="webhook-channels"
+          element={
+            <RoleRoute allowed={['admin']}>
+              <AdminWebhookChannels />
             </RoleRoute>
           }
         />

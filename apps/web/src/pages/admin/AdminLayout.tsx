@@ -12,6 +12,7 @@ import {
   LogOut,
   ExternalLink,
   User,
+  Webhook,
 } from 'lucide-react'
 import type { UserRole } from '../../types'
 
@@ -38,12 +39,14 @@ const navItems = [
   { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench, end: false },
   { to: '/admin/monitors', label: 'Monitors', icon: Activity, end: false },
   { to: '/admin/subscribers', label: 'Subscribers', icon: Users, end: false },
+  { to: '/admin/webhook-channels', label: 'Webhook Channels', icon: Webhook, end: false },
   { to: '/admin/users', label: 'Users', icon: Shield, end: false },
   { to: '/admin/profile', label: 'My Profile', icon: User, end: true },
 ]
 
 const OPERATOR_ALLOWED = new Set(['/admin/incidents', '/admin/maintenance'])
 const ALWAYS_ALLOWED = new Set(['/admin/profile'])
+const ADMIN_ONLY = new Set(['/admin/webhook-channels'])
 
 export default function AdminLayout() {
   const navigate = useNavigate()
