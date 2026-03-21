@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Key, RefreshCw, AlertCircle, CheckCircle, Loader2, User, Lock } from 'lucide-react'
+import { Shield, Key, RefreshCw, AlertCircle, CheckCircle, Loader2, User } from 'lucide-react'
 import api from '../../lib/api'
 import { setAuthSession, updateStoredProfile } from '../../lib/auth'
 import type { AuthMeResponse, MfaSetupResponse, MfaVerifyResponse, MfaVerifyRequest, ProfileUpdateRequest } from '../../types'
+import QrCodeDisplay from '../../components/qr-code-display'
 
 interface FormState {
   username: string
@@ -411,6 +412,20 @@ export default function AdminProfile() {
                 </div>
               </div>
             </div>
+
+            {mfaSetup.otpauthUrl && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scan QR Code
+                </label>
+                <div className="border border-gray-200 rounded-lg p-4 bg-white inline-block">
+                  <QrCodeDisplay text={mfaSetup.otpauthUrl} size={200} />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  If scanning is unavailable, use the manual secret below.
+                </p>
+              </div>
+            )}
 
             {/* Secret display */}
             <div>
