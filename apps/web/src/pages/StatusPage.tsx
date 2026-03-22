@@ -6,6 +6,29 @@ import type { StatusSummary, ComponentWithSubs, Incident, Maintenance, StatusPag
 import { STATUS_COLORS, STATUS_LABELS, STATUS_TEXT_COLORS, getOverallStatusLabel, formatDate, formatDateShort, INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS } from '../lib/utils'
 import { IncidentTimeline } from '../components/IncidentTimeline'
 
+type ThemePalette = StatusPageSettings['theme']['light']
+
+const THEME_PRESETS: Record<string, { light: ThemePalette; dark: ThemePalette }> = {
+  default: {
+    light: { primaryColor: '#16a34a', backgroundColor: '#f9fafb', textColor: '#111827', accentColor: '#0ea5e9' },
+    dark: { primaryColor: '#22c55e', backgroundColor: '#0b1220', textColor: '#e5e7eb', accentColor: '#38bdf8' },
+  },
+  ocean: {
+    light: { primaryColor: '#0ea5e9', backgroundColor: '#f0f9ff', textColor: '#0f172a', accentColor: '#14b8a6' },
+    dark: { primaryColor: '#38bdf8', backgroundColor: '#082f49', textColor: '#e0f2fe', accentColor: '#2dd4bf' },
+  },
+  graphite: {
+    light: { primaryColor: '#334155', backgroundColor: '#f8fafc', textColor: '#0f172a', accentColor: '#6366f1' },
+    dark: { primaryColor: '#64748b', backgroundColor: '#020617', textColor: '#e2e8f0', accentColor: '#818cf8' },
+  },
+}
+
+const FONT_SIZE_MAP: Record<StatusPageSettings['theme']['typography']['fontScale'], string> = {
+  sm: '0.925rem',
+  md: '1rem',
+  lg: '1.075rem',
+}
+
 const DEFAULT_SETTINGS: StatusPageSettings = {
   head: {
     title: 'Status Platform',
@@ -17,11 +40,28 @@ const DEFAULT_SETTINGS: StatusPageSettings = {
   branding: {
     siteName: 'System Status',
     logoUrl: '',
+    backgroundImageUrl: '',
+    heroImageUrl: '',
   },
   theme: {
-    primaryColor: '#16a34a',
-    backgroundColor: '#f9fafb',
-    textColor: '#111827',
+    preset: 'default',
+    mode: 'system',
+    light: {
+      primaryColor: '#16a34a',
+      backgroundColor: '#f9fafb',
+      textColor: '#111827',
+      accentColor: '#0ea5e9',
+    },
+    dark: {
+      primaryColor: '#22c55e',
+      backgroundColor: '#0b1220',
+      textColor: '#e5e7eb',
+      accentColor: '#38bdf8',
+    },
+    typography: {
+      fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontScale: 'md',
+    },
   },
   layout: {
     variant: 'classic',
@@ -40,33 +80,62 @@ function normalizeSettings(settings?: StatusPageSettings | null): StatusPageSett
     return DEFAULT_SETTINGS
   }
 
+  const presetKey = settings.theme?.preset && THEME_PRESETS[settings.theme.preset] ? settings.theme.preset : 'default'
+  const preset = THEME_PRESETS[presetKey]
+  const mode = settings.theme?.mode === 'light' || settings.theme?.mode === 'dark' || settings.theme?.mode === 'system'
+    ? settings.theme.mode
+    : DEFAULT_SETTINGS.theme.mode
+  const fontScale = settings.theme?.typography?.fontScale === 'sm' || settings.theme?.typography?.fontScale === 'md' || settings.theme?.typography?.fontScale === 'lg'
+    ? settings.theme.typography.fontScale
+    : DEFAULT_SETTINGS.theme.typography.fontScale
+  const layoutVariant = settings.layout?.variant === 'classic' || settings.layout?.variant === 'compact' || settings.layout?.variant === 'minimal' || settings.layout?.variant === 'cards'
+    ? settings.layout.variant
+    : 'classic'
+
   return {
     head: {
-      title: settings.head?.title || DEFAULT_SETTINGS.head.title,
-      description: settings.head?.description || DEFAULT_SETTINGS.head.description,
-      keywords: settings.head?.keywords || DEFAULT_SETTINGS.head.keywords,
-      faviconUrl: settings.head?.faviconUrl || DEFAULT_SETTINGS.head.faviconUrl,
+      title: settings.head?.title ?? DEFAULT_SETTINGS.head.title,
+      description: settings.head?.description ?? DEFAULT_SETTINGS.head.description,
+      keywords: settings.head?.keywords ?? DEFAULT_SETTINGS.head.keywords,
+      faviconUrl: settings.head?.faviconUrl ?? DEFAULT_SETTINGS.head.faviconUrl,
       metaTags: settings.head?.metaTags || {},
     },
     branding: {
-      siteName: settings.branding?.siteName || DEFAULT_SETTINGS.branding.siteName,
-      logoUrl: settings.branding?.logoUrl || '',
+      siteName: settings.branding?.siteName ?? DEFAULT_SETTINGS.branding.siteName,
+      logoUrl: settings.branding?.logoUrl ?? '',
+      backgroundImageUrl: settings.branding?.backgroundImageUrl ?? '',
+      heroImageUrl: settings.branding?.heroImageUrl ?? '',
     },
     theme: {
-      primaryColor: settings.theme?.primaryColor || DEFAULT_SETTINGS.theme.primaryColor,
-      backgroundColor: settings.theme?.backgroundColor || DEFAULT_SETTINGS.theme.backgroundColor,
-      textColor: settings.theme?.textColor || DEFAULT_SETTINGS.theme.textColor,
+      preset: presetKey,
+      mode,
+      light: {
+        primaryColor: settings.theme?.light?.primaryColor || preset.light.primaryColor,
+        backgroundColor: settings.theme?.light?.backgroundColor || preset.light.backgroundColor,
+        textColor: settings.theme?.light?.textColor || preset.light.textColor,
+        accentColor: settings.theme?.light?.accentColor || preset.light.accentColor,
+      },
+      dark: {
+        primaryColor: settings.theme?.dark?.primaryColor || preset.dark.primaryColor,
+        backgroundColor: settings.theme?.dark?.backgroundColor || preset.dark.backgroundColor,
+        textColor: settings.theme?.dark?.textColor || preset.dark.textColor,
+        accentColor: settings.theme?.dark?.accentColor || preset.dark.accentColor,
+      },
+      typography: {
+        fontFamily: settings.theme?.typography?.fontFamily ?? DEFAULT_SETTINGS.theme.typography.fontFamily,
+        fontScale,
+      },
     },
     layout: {
-      variant: settings.layout?.variant === 'compact' ? 'compact' : 'classic',
+      variant: layoutVariant,
     },
     footer: {
-      text: settings.footer?.text || '',
+      text: settings.footer?.text ?? '',
       showPoweredBy: settings.footer?.showPoweredBy ?? true,
     },
-    customCss: settings.customCss || '',
-    updatedAt: settings.updatedAt || '',
-    createdAt: settings.createdAt || '',
+    customCss: settings.customCss ?? '',
+    updatedAt: settings.updatedAt ?? '',
+    createdAt: settings.createdAt ?? '',
   }
 }
 
@@ -190,6 +259,12 @@ export default function StatusPage() {
   const resolvedIncidents = incidentData?.resolved || []
   const upcomingMaintenance = maintenanceData?.filter(m => m.status !== 'completed') || []
   const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
 
   const headerBg: Record<string, string> = {
     operational: 'bg-green-600',
@@ -208,18 +283,76 @@ export default function StatusPage() {
     upsertCustomCss(settings.customCss)
   }, [settings])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return
+    }
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const listener = (event: MediaQueryListEvent) => {
+      setSystemPrefersDark(event.matches)
+    }
+
+    media.addEventListener('change', listener)
+    return () => media.removeEventListener('change', listener)
+  }, [])
+
+  const effectiveMode = settings.theme.mode === 'system'
+    ? (systemPrefersDark ? 'dark' : 'light')
+    : settings.theme.mode
+  const activePalette = effectiveMode === 'dark' ? settings.theme.dark : settings.theme.light
+
   const pageStyle: React.CSSProperties = {
-    backgroundColor: settings.theme.backgroundColor,
-    color: settings.theme.textColor,
+    backgroundColor: activePalette.backgroundColor,
+    color: activePalette.textColor,
+    fontFamily: settings.theme.typography.fontFamily,
+    fontSize: FONT_SIZE_MAP[settings.theme.typography.fontScale],
+    backgroundImage: settings.branding.backgroundImageUrl
+      ? `linear-gradient(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.16)), url(${settings.branding.backgroundImageUrl})`
+      : undefined,
+    backgroundSize: settings.branding.backgroundImageUrl ? 'cover' : undefined,
+    backgroundAttachment: settings.branding.backgroundImageUrl ? 'fixed' : undefined,
+    backgroundPosition: settings.branding.backgroundImageUrl ? 'center' : undefined,
   }
 
   const headerStyle: React.CSSProperties = {
-    backgroundColor: settings.theme.primaryColor,
+    boxShadow: `inset 0 -3px 0 ${activePalette.accentColor}`,
   }
 
   const contentClassName = settings.layout.variant === 'compact'
     ? 'max-w-3xl mx-auto px-4 py-6 space-y-6'
-    : 'max-w-4xl mx-auto px-4 py-8 space-y-8'
+    : settings.layout.variant === 'minimal'
+      ? 'max-w-3xl mx-auto px-3 py-5 space-y-5'
+      : settings.layout.variant === 'cards'
+        ? 'max-w-5xl mx-auto px-4 py-8 space-y-8'
+        : 'max-w-4xl mx-auto px-4 py-8 space-y-8'
+
+  const cardSurfaceStyle: React.CSSProperties = {
+    backgroundColor: effectiveMode === 'dark' ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.95)',
+    color: activePalette.textColor,
+    borderColor: activePalette.accentColor,
+  }
+
+  const sectionTitleStyle: React.CSSProperties = {
+    color: activePalette.textColor,
+  }
+
+  const mutedTextColor = effectiveMode === 'dark' ? 'rgba(229, 231, 235, 0.78)' : 'rgba(55, 65, 81, 0.85)'
+  const subtleTextColor = effectiveMode === 'dark' ? 'rgba(229, 231, 235, 0.62)' : 'rgba(107, 114, 128, 0.95)'
+  const incidentSurfaceStyle: React.CSSProperties = {
+    backgroundColor: effectiveMode === 'dark' ? 'rgba(127, 29, 29, 0.26)' : 'rgba(254, 242, 242, 0.96)',
+    borderColor: effectiveMode === 'dark' ? '#f87171' : '#fecaca',
+    color: activePalette.textColor,
+  }
+  const maintenanceSurfaceStyle: React.CSSProperties = {
+    backgroundColor: effectiveMode === 'dark' ? 'rgba(30, 58, 138, 0.24)' : 'rgba(239, 246, 255, 0.97)',
+    borderColor: effectiveMode === 'dark' ? '#60a5fa' : '#bfdbfe',
+    color: activePalette.textColor,
+  }
+  const uptimeSurfaceStyle: React.CSSProperties = {
+    backgroundColor: effectiveMode === 'dark' ? 'rgba(15, 23, 42, 0.55)' : 'rgba(249, 250, 251, 0.96)',
+    borderColor: activePalette.accentColor,
+  }
 
   return (
     <div className="min-h-screen" style={pageStyle}>
@@ -239,6 +372,13 @@ export default function StatusPage() {
             )}
             <h1 className="text-3xl font-bold">{settings.branding.siteName}</h1>
           </div>
+          {settings.branding.heroImageUrl && (
+            <img
+              src={settings.branding.heroImageUrl}
+              alt="Status page hero"
+              className="w-full max-h-48 object-cover rounded-xl border border-white/30 mb-4"
+            />
+          )}
           <div className="flex items-center gap-3 text-xl">
             <StatusIcon status={overallStatus} />
             <span>{getOverallStatusLabel(overallStatus as any)}</span>
@@ -255,15 +395,15 @@ export default function StatusPage() {
         {activeIncidents.map(incident => {
           const isExpanded = expandedIncidents.has(incident.id)
           return (
-            <div key={incident.id} className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div key={incident.id} className="border rounded-lg p-4" style={incidentSurfaceStyle}>
               <div className="flex items-start gap-3">
                 <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold text-red-900">{incident.title}</h3>
-                      <p className="text-red-700 text-sm mt-1">{incident.description}</p>
-                      <div className="flex gap-4 mt-2 text-xs text-red-600">
+                      <h3 className="font-semibold">{incident.title}</h3>
+                      <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{incident.description}</p>
+                      <div className="flex gap-4 mt-2 text-xs" style={{ color: subtleTextColor }}>
                         <span>Status: {INCIDENT_STATUS_LABELS[incident.status]}</span>
                         <span>Impact: {INCIDENT_IMPACT_LABELS[incident.impact]}</span>
                         <span>Since: {formatDate(incident.createdAt)}</span>
@@ -294,13 +434,13 @@ export default function StatusPage() {
 
         {/* Upcoming Maintenance */}
         {upcomingMaintenance.map(m => (
-          <div key={m.id} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div key={m.id} className="border rounded-lg p-4" style={maintenanceSurfaceStyle}>
             <div className="flex items-start gap-3">
               <Wrench className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-blue-900">{m.title}</h3>
-                <p className="text-blue-700 text-sm mt-1">{m.description}</p>
-                <div className="flex gap-4 mt-2 text-xs text-blue-600">
+                <h3 className="font-semibold">{m.title}</h3>
+                <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{m.description}</p>
+                <div className="flex gap-4 mt-2 text-xs" style={{ color: subtleTextColor }}>
                   <span>Status: {m.status.replace('_', ' ')}</span>
                   <span>{formatDate(m.startTime)} → {formatDate(m.endTime)}</span>
                   {m.creatorUsername && <span>Created by: {m.creatorUsername}</span>}
@@ -312,11 +452,15 @@ export default function StatusPage() {
 
         {/* Components */}
         {(components || []).map(comp => (
-          <div key={comp.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div
+            key={comp.id}
+            className={`${settings.layout.variant === 'cards' ? 'rounded-2xl shadow-lg' : 'rounded-xl shadow-sm'} border overflow-hidden`}
+            style={cardSurfaceStyle}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100" style={{ borderColor: activePalette.accentColor }}>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">{comp.name}</h2>
-                {comp.description && <p className="text-sm text-gray-500 mt-0.5">{comp.description}</p>}
+                <h2 className="text-lg font-semibold" style={sectionTitleStyle}>{comp.name}</h2>
+                {comp.description && <p className="text-sm mt-0.5" style={{ color: subtleTextColor }}>{comp.description}</p>}
               </div>
               <div className="flex items-center gap-2">
                 <StatusIcon status={comp.status} />
@@ -331,7 +475,7 @@ export default function StatusPage() {
               <div className="divide-y divide-gray-50">
                 {comp.subComponents.map(sub => (
                   <div key={sub.id} className="flex items-center justify-between px-6 py-3">
-                    <span className="text-sm text-gray-700 pl-4">{sub.name}</span>
+                    <span className="text-sm pl-4" style={{ color: mutedTextColor }}>{sub.name}</span>
                     <div className="flex items-center gap-2">
                       <StatusIcon status={sub.status} />
                       <span className={`text-xs font-medium ${STATUS_TEXT_COLORS[sub.status]}`}>
@@ -345,10 +489,10 @@ export default function StatusPage() {
 
             {/* 90-day uptime */}
             {comp.uptimeHistory && comp.uptimeHistory.length > 0 && (
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+              <div className="px-6 py-4 border-t" style={uptimeSurfaceStyle}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-500">90-day uptime</span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs" style={{ color: subtleTextColor }}>90-day uptime</span>
+                  <span className="text-xs" style={{ color: subtleTextColor }}>
                     {comp.uptimeHistory.length > 0
                       ? `${(comp.uptimeHistory.reduce((s, b) => s + b.uptimePercent, 0) / comp.uptimeHistory.length).toFixed(2)}% avg`
                       : ''}
@@ -356,8 +500,8 @@ export default function StatusPage() {
                 </div>
                 <UptimeBar bars={comp.uptimeHistory} />
                 <div className="flex justify-between mt-1">
-                  <span className="text-xs text-gray-400">{formatDateShort(comp.uptimeHistory[0]?.date)}</span>
-                  <span className="text-xs text-gray-400">Today</span>
+                  <span className="text-xs" style={{ color: subtleTextColor }}>{formatDateShort(comp.uptimeHistory[0]?.date)}</span>
+                  <span className="text-xs" style={{ color: subtleTextColor }}>Today</span>
                 </div>
               </div>
             )}
@@ -367,16 +511,16 @@ export default function StatusPage() {
         {/* Incident History */}
         {resolvedIncidents.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Incident History</h2>
+            <h2 className="text-xl font-semibold mb-4" style={sectionTitleStyle}>Incident History</h2>
             <div className="space-y-4">
               {resolvedIncidents.map(incident => {
                 const isExpanded = expandedIncidents.has(incident.id)
                 return (
-                  <div key={incident.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                  <div key={incident.id} className="rounded-xl border p-5" style={cardSurfaceStyle}>
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="font-medium text-gray-900">{incident.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{incident.description}</p>
+                        <h3 className="font-medium" style={sectionTitleStyle}>{incident.title}</h3>
+                        <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{incident.description}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
@@ -398,7 +542,7 @@ export default function StatusPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="flex gap-4 mt-3 text-xs text-gray-400">
+                    <div className="flex gap-4 mt-3 text-xs" style={{ color: subtleTextColor }}>
                       <span>Created: {formatDate(incident.createdAt)}</span>
                       {incident.creatorUsername && <span>Created by: {incident.creatorUsername}</span>}
                       {incident.resolvedAt && <span>Resolved: {formatDate(incident.resolvedAt)}</span>}
@@ -412,12 +556,12 @@ export default function StatusPage() {
         )}
 
         {/* Footer */}
-        <div className="text-center py-8 border-t border-gray-200">
+        <div className="text-center py-8 border-t" style={{ borderColor: activePalette.accentColor }}>
           {settings.footer.text && (
-            <p className="text-sm text-gray-500 mb-1">{settings.footer.text}</p>
+            <p className="text-sm mb-1" style={{ color: mutedTextColor }}>{settings.footer.text}</p>
           )}
           {settings.footer.showPoweredBy && (
-            <p className="text-sm text-gray-400">Powered by Status Platform</p>
+            <p className="text-sm" style={{ color: subtleTextColor }}>Powered by <a href='https://github.com/fresp/StatusForge'>StatusForge</a></p>
           )}
         </div>
       </div>

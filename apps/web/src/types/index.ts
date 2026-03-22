@@ -223,14 +223,31 @@ export interface StatusPageSettings {
   branding: {
     siteName: string
     logoUrl: string
+    backgroundImageUrl: string
+    heroImageUrl: string
   }
   theme: {
-    primaryColor: string
-    backgroundColor: string
-    textColor: string
+    preset: string
+    mode: 'light' | 'dark' | 'system'
+    light: {
+      primaryColor: string
+      backgroundColor: string
+      textColor: string
+      accentColor: string
+    }
+    dark: {
+      primaryColor: string
+      backgroundColor: string
+      textColor: string
+      accentColor: string
+    }
+    typography: {
+      fontFamily: string
+      fontScale: 'sm' | 'md' | 'lg'
+    }
   }
   layout: {
-    variant: 'classic' | 'compact'
+    variant: 'classic' | 'compact' | 'minimal' | 'cards'
   }
   footer: {
     text: string
@@ -252,14 +269,31 @@ export interface StatusPageSettingsPatchRequest {
   branding?: {
     siteName?: string
     logoUrl?: string
+    backgroundImageUrl?: string
+    heroImageUrl?: string
   }
   theme?: {
-    primaryColor?: string
-    backgroundColor?: string
-    textColor?: string
+    preset?: string
+    mode?: 'light' | 'dark' | 'system'
+    light?: {
+      primaryColor?: string
+      backgroundColor?: string
+      textColor?: string
+      accentColor?: string
+    }
+    dark?: {
+      primaryColor?: string
+      backgroundColor?: string
+      textColor?: string
+      accentColor?: string
+    }
+    typography?: {
+      fontFamily?: string
+      fontScale?: 'sm' | 'md' | 'lg'
+    }
   }
   layout?: {
-    variant?: 'classic' | 'compact'
+    variant?: 'classic' | 'compact' | 'minimal' | 'cards'
   }
   footer?: {
     text?: string

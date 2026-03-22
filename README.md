@@ -8,7 +8,7 @@ StatusForge is a production-ready, self-hosted status page and monitoring platfo
 - **Advanced Certificate & Domain Expiry Monitoring**: Track SSL certificate expiry and domain expiration windows with configurable alert thresholds.
 - **Incident & Maintenance Management**: Efficiently create, update, and resolve incidents and schedule maintenance events.
 - **Admin Console UX**: Navigate the admin area more efficiently with grouped, collapsible sidebar sections and clearer visual hierarchy.
-- **Customizable Public Status Page**: Brand your status page to match your company's identity with flexible theming and content options.
+- **Customizable Public Status Page**: Brand your status page with theme presets, light/dark/system modes, typography controls, background and hero images, layout variants, custom metadata, and custom CSS.
 - **Role-Based Access Control (RBAC)**: Secure admin workflows with distinct `admin` and `operator` roles.
 - **Multi-Factor Authentication (MFA)**: Enhance security for administrative access.
 - **Subscriber Management**: Allow users to subscribe to updates for incidents and maintenance.
@@ -142,6 +142,21 @@ To build the frontend and backend for production:
 The provided `Dockerfile` creates a minimal Alpine-based image embedding the built frontend assets into the Go binary. The `docker-compose.yml` orchestrates the `server`, `mongo`, and `redis` services.
 
 For detailed Docker operations, refer to the `Makefile` for convenient commands like `make up`, `make up-build`, `make down`, `make down-v`, `make logs`, `make logs-server`, `make ps`, and `make shell-server`.
+
+## 🎨 Status Page Branding & Theme Controls
+
+Administrators can customize the public status page from the admin settings screen without rebuilding the application.
+
+- **Branding assets**: Site name, logo URL, background image URL, and hero image URL.
+- **Theme presets**: Built-in `default`, `ocean`, and `graphite` presets.
+- **Color modes**: `light`, `dark`, or `system` mode selection.
+- **Palette editing**: Separate light and dark palettes for primary, background, text, and accent colors.
+- **Typography**: Configurable font family and font scale (`sm`, `md`, `lg`).
+- **Layout variants**: `classic`, `compact`, `minimal`, and `cards` layouts for the public page.
+- **Preview tooling**: The admin console includes a live preview before saving changes.
+- **Validation**: Backend validation enforces `http(s)` URLs for branding assets and `#RRGGBB` hex colors for theme values.
+
+These settings are served through the status page settings API and pushed to connected clients through the existing realtime update flow.
 
 ## 🤝 Contributing
 
