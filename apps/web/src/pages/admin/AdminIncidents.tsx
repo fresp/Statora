@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { Plus, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import api from '../../lib/api'
 import type { Incident, IncidentUpdate, Component, IncidentStatus, IncidentImpact } from '../../types'
 import { INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS, formatDate } from '../../lib/utils'
+import Modal from '../../components/Modal'
 
 const STATUSES: IncidentStatus[] = ['investigating', 'identified', 'monitoring', 'resolved']
 const IMPACTS: IncidentImpact[] = ['none', 'minor', 'major', 'critical']
@@ -22,20 +23,6 @@ const DEFAULT_FORM: IncidentForm = {
   status: 'investigating',
   impact: 'minor',
   affectedComponents: [],
-}
-
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  )
 }
 
 function IncidentRow({ incident, components, onRefetch }: {
@@ -139,7 +126,7 @@ function IncidentRow({ incident, components, onRefetch }: {
       )}
 
       {showUpdateModal && (
-        <Modal title="Add Incident Update" onClose={() => setShowUpdateModal(false)}>
+        <Modal title="Add Incident Update" onClose={() => setShowUpdateModal(false)} size="lg">
           <form onSubmit={submitUpdate} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -278,7 +265,7 @@ export default function AdminIncidents() {
       </div>
 
       {showModal && (
-        <Modal title="Create Incident" onClose={() => setShowModal(false)}>
+        <Modal title="Create Incident" onClose={() => setShowModal(false)} size="lg">
           {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <form onSubmit={handleSave} className="space-y-4">
             <div>

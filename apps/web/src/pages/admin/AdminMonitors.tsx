@@ -3,6 +3,7 @@ import { Plus, Trash2, X, Activity, Edit2, CheckCircle2, XCircle, AlertCircle } 
 import { useApi } from '../../hooks/useApi'
 import api from '../../lib/api'
 import type { Monitor, Component, SubComponent, MonitorType } from '../../types'
+import Modal from '../../components/Modal'
 
 const MONITOR_TYPES: MonitorType[] = ['http', 'tcp', 'dns', 'ping', 'ssl']
 
@@ -35,20 +36,6 @@ const DEFAULT_FORM: FormState = {
   subComponentId: '',
 }
 
-
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-6">{children}</div>
-      </div>
-    </div>
-  )
-}
 
 const TYPE_PLACEHOLDERS: Record<MonitorType, string> = {
   http: 'https://example.com/health',
@@ -289,9 +276,25 @@ export default function AdminMonitors() {
       </div>
 
       {showModal && (
-        <Modal title={editingId ? "Edit Monitor" : "New Monitor"} onClose={closeModal}>
+        <Modal
+          title={editingId ? 'Edit Monitor' : 'New Monitor'}
+          onClose={closeModal}
+          footer={(
+            <div className="flex gap-3">
+              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="button" onClick={handleTest} disabled={testing || !form.target} className="flex-1 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 rounded-lg py-2 text-sm font-medium">
+                {testing ? 'Testing...' : 'Test Target'}
+              </button>
+              <button type="submit" form="monitor-form" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
+                {saving ? 'Saving...' : (editingId ? 'Update Monitor' : 'Create Monitor')}
+              </button>
+            </div>
+          )}
+        >
           {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-          <form onSubmit={handleSave} className="space-y-4">
+          <form id="monitor-form" onSubmit={handleSave} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
@@ -480,17 +483,6 @@ export default function AdminMonitors() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
-                Cancel
-              </button>
-              <button type="button" onClick={handleTest} disabled={testing || !form.target} className="flex-1 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 rounded-lg py-2 text-sm font-medium">
-                {testing ? 'Testing...' : 'Test Target'}
-              </button>
-              <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
-                {saving ? 'Saving...' : (editingId ? 'Update Monitor' : 'Create Monitor')}
-              </button>
             </div>
             {testResult && (
               <div className={`px-3 py-2 rounded-lg text-sm flex items-center justify-between ${testResult.status === 'up' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
