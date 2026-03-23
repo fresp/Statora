@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAuthSession, requiresMfa } from './auth'
+import type { SetupSaveRequest, SetupStatusResponse } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -44,3 +45,18 @@ api.interceptors.response.use(
 )
 
 export default api
+
+export async function getSetupStatus(): Promise<SetupStatusResponse> {
+  const res = await api.get<SetupStatusResponse>('/setup/status')
+  return res.data
+}
+
+export async function validateMongoSetup(mongoUri: string, mongoDbName: string): Promise<{ valid: boolean }> {
+  const res = await api.post<{ valid: boolean }>('/setup/validate/mongo', { mongoUri, mongoDbName })
+  return res.data
+}
+
+export async function saveSetupConfig(payload: SetupSaveRequest): Promise<SetupStatusResponse> {
+  const res = await api.post<SetupStatusResponse>('/setup/save', payload)
+  return res.data
+}

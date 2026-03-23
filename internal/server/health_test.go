@@ -48,8 +48,11 @@ func TestHealthCheckHandler(t *testing.T) {
 	// Perform the request
 	router.ServeHTTP(w, req)
 
-	// Test status code
-	assert.Equal(t, http.StatusOK, w.Code, "Health endpoint should return 200 when databases are present")
+	if mongoConnected && redisConnected {
+		assert.Equal(t, http.StatusOK, w.Code, "Health endpoint should return 200 when databases are present")
+	} else {
+		assert.Equal(t, http.StatusServiceUnavailable, w.Code, "Health endpoint should return 503 when dependencies are unavailable")
+	}
 
 	// Parse the response
 	var response map[string]interface{}

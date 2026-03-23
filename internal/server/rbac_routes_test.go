@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/database"
 	"github.com/fresp/StatusForge/internal/handlers"
 	"github.com/fresp/StatusForge/internal/middleware"
 )
@@ -22,7 +23,7 @@ func TestAdminOnlyRoutesForbidOperatorRole(t *testing.T) {
 	hub := handlers.NewHub()
 
 	cfg := &configs.Config{JWTSecret: "test-rbac-secret"}
-	RegisterAPIRoutes(router, hub, cfg)
+	RegisterAPIRoutes(router, hub, cfg, nil)
 
 	token, err := middleware.GenerateTokenWithClaims(middleware.TokenClaimsInput{
 		UserID:      "operator-id",
@@ -84,7 +85,7 @@ func TestPartialTokenCanOnlyAccessMeAndMFAEndpoints(t *testing.T) {
 	hub := handlers.NewHub()
 
 	cfg := &configs.Config{JWTSecret: "test-rbac-secret"}
-	RegisterAPIRoutes(router, hub, cfg)
+	RegisterAPIRoutes(router, hub, cfg, nil)
 
 	token, err := middleware.GenerateTokenWithClaims(middleware.TokenClaimsInput{
 		UserID:      "admin-id",
@@ -156,7 +157,11 @@ func TestVerifiedTokenCanAccessRoleProtectedRoutes(t *testing.T) {
 	hub := handlers.NewHub()
 
 	cfg := &configs.Config{JWTSecret: "test-rbac-secret"}
-	RegisterAPIRoutes(router, hub, cfg)
+	baseCfg := configs.Load()
+	if err := database.ConnectMongo(baseCfg.MongoURI, baseCfg.MongoDBName); err != nil {
+		t.Skip("Skipping verified token route test: MongoDB not available")
+	}
+	RegisterAPIRoutes(router, hub, cfg, database.GetDB())
 
 	verifiedAdminToken, err := middleware.GenerateTokenWithClaims(middleware.TokenClaimsInput{
 		UserID:      "admin-id",

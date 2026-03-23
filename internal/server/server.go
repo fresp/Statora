@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -20,10 +21,13 @@ func RunServer() error {
 
 	cfg := configs.Load()
 
-	// Connect to databases
-	if err := database.ConnectMongo(cfg.MongoURI, cfg.MongoDBName); err != nil {
-		log.Fatalf("[SERVER] MongoDB connection failed: %v", err)
+	if err := database.Initialize(cfg); err != nil {
+		log.Fatalf("[SERVER] Database initialization failed: %v", err)
 	}
+
+	setupPending := !cfg.SetupDone
+	runtimeMongoReady := cfg.DBEngine == "mongodb" && database.GetDB() != nil
+
 	if err := database.ConnectRedis(cfg.RedisAddr); err != nil {
 		log.Printf("[SERVER] Redis connection warning: %v", err)
 	}
@@ -45,26 +49,50 @@ func RunServer() error {
 	r.RedirectTrailingSlash = false
 	r.RedirectFixedPath = false
 
-	// Register API routes
-	RegisterAPIRoutes(r, hub, cfg)
+	RegisterSetupRoutes(r)
+
+	if runtimeMongoReady {
+		RegisterAPIRoutes(r, hub, cfg, db)
+	} else {
+		r.NoRoute(StaticFileServer())
+		r.Any("/api/*path", func(c *gin.Context) {
+			if setupPending {
+				c.JSON(503, gin.H{"error": "setup required", "setupDone": false})
+				return
+			}
+			c.JSON(503, gin.H{"error": "selected database runtime is not yet available"})
+		})
+	}
 
 	// Register health check endpoint
 	r.GET("/health", HealthCheckHandler())
 
 	// If Worker is enabled, start it
-	if cfg.EnableWorker {
+	if cfg.EnableWorker && runtimeMongoReady {
 		log.Println("[SERVER] Starting monitoring worker...")
 		go StartWorker(ctx, db, rdb)
+	} else if cfg.EnableWorker && !runtimeMongoReady {
+		if setupPending {
+			log.Println("[SERVER] Worker deferred: setup is not complete")
+		} else {
+			log.Println("[SERVER] Worker disabled: selected database runtime is not yet available")
+		}
 	} else {
 		log.Println("[SERVER] Worker disabled via ENABLE_WORKER=false")
 	}
 
-	// Seed admin user
-	SeedAdmin(db, cfg)
+	if runtimeMongoReady {
+		SeedAdmin(db, cfg)
+	}
 
-
-	// Serve React root
-	r.NoRoute(StaticFileServer())
+	if !runtimeMongoReady {
+		if db != nil {
+			log.Printf("[SERVER] Ignoring unexpected DB state while setup mode is active")
+		}
+	} else {
+		// Serve React root
+		r.NoRoute(StaticFileServer())
+	}
 
 	// Setup shutdown signal handler - this will call cancel() when SIGTERM/SIGINT is received
 	SetupShutdownSignalHandler(cancel)
@@ -78,7 +106,7 @@ func RunServer() error {
 	<-ctx.Done()
 
 	// Gracefully stop worker if it was started
-	if cfg.EnableWorker {
+	if cfg.EnableWorker && runtimeMongoReady {
 		log.Println("[SERVER] Stopping worker...")
 		if err := StopWorker(); err != nil {
 			log.Printf("[SERVER] Error stopping worker: %v", err)
@@ -88,5 +116,8 @@ func RunServer() error {
 	}
 
 	log.Println("[SERVER] Server shutdown complete")
+	if errors.Is(ctx.Err(), context.Canceled) {
+		return nil
+	}
 	return nil
 }

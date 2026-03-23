@@ -14,14 +14,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/fresp/StatusForge/configs"
-	"github.com/fresp/StatusForge/internal/database"
 	"github.com/fresp/StatusForge/internal/handlers"
 	"github.com/fresp/StatusForge/internal/middleware"
 	"github.com/fresp/StatusForge/internal/models"
 )
 
 // RegisterAPIRoutes registers all API routes on the given Gin engine
-func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
+func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config, db *mongo.Database) {
 	// Apply CORS middleware
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
@@ -35,26 +34,26 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	api := r.Group("/api")
 	r.GET("/ws", handlers.ServeWs(hub))
 
-	api.GET("/status/summary", handlers.GetStatusSummary(database.GetDB()))
-	api.GET("/status/components", handlers.GetStatusComponents(database.GetDB()))
-	api.GET("/status/incidents", handlers.GetStatusIncidents(database.GetDB()))
-	api.GET("/status/settings", handlers.GetPublicStatusPageSettings(database.GetDB()))
-	api.POST("/subscribe", handlers.Subscribe(database.GetDB()))
+	api.GET("/status/summary", handlers.GetStatusSummary(db))
+	api.GET("/status/components", handlers.GetStatusComponents(db))
+	api.GET("/status/incidents", handlers.GetStatusIncidents(db))
+	api.GET("/status/settings", handlers.GetPublicStatusPageSettings(db))
+	api.POST("/subscribe", handlers.Subscribe(db))
 
-	api.POST("/auth/login", handlers.Login(database.GetDB(), cfg.JWTSecret))
-	api.POST("/users/invitations/activate", handlers.ActivateUserInvitation(database.GetDB()))
+	api.POST("/auth/login", handlers.Login(db, cfg.JWTSecret))
+	api.POST("/users/invitations/activate", handlers.ActivateUserInvitation(db))
 
 	auth := api.Group("")
 	auth.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
 	partialAuth := auth.Group("")
 
-	partialAuth.GET("/auth/me", handlers.GetMe(database.GetDB()))
-	partialAuth.PATCH("/auth/me", handlers.ProfileUpdate(database.GetDB(), cfg))
-	partialAuth.POST("/auth/mfa/setup", handlers.MFASetup(database.GetDB(), cfg))
-	partialAuth.POST("/auth/mfa/verify", handlers.MFAVerify(database.GetDB(), cfg))
-	partialAuth.POST("/auth/mfa/recovery/verify", handlers.MFARecoveryVerify(database.GetDB(), cfg))
-	partialAuth.POST("/auth/mfa/disable", handlers.MFADisable(database.GetDB(), cfg))
+	partialAuth.GET("/auth/me", handlers.GetMe(db))
+	partialAuth.PATCH("/auth/me", handlers.ProfileUpdate(db, cfg))
+	partialAuth.POST("/auth/mfa/setup", handlers.MFASetup(db, cfg))
+	partialAuth.POST("/auth/mfa/verify", handlers.MFAVerify(db, cfg))
+	partialAuth.POST("/auth/mfa/recovery/verify", handlers.MFARecoveryVerify(db, cfg))
+	partialAuth.POST("/auth/mfa/disable", handlers.MFADisable(db, cfg))
 
 	verifiedAuth := auth.Group("")
 	verifiedAuth.Use(middleware.RequireMFAVerified())
@@ -65,52 +64,52 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	incidentAndMaintenance := verifiedAuth.Group("")
 	incidentAndMaintenance.Use(middleware.RequireRoles("admin", "operator"))
 
-	incidentAndMaintenance.GET("/incidents", handlers.GetIncidents(database.GetDB()))
-	incidentAndMaintenance.POST("/incidents", handlers.CreateIncident(database.GetDB(), hub))
-	incidentAndMaintenance.PATCH("/incidents/:id", handlers.UpdateIncident(database.GetDB(), hub))
-	incidentAndMaintenance.POST("/incidents/:id/update", handlers.AddIncidentUpdate(database.GetDB(), hub))
-	incidentAndMaintenance.GET("/incidents/:id/updates", handlers.GetIncidentUpdates(database.GetDB()))
+	incidentAndMaintenance.GET("/incidents", handlers.GetIncidents(db))
+	incidentAndMaintenance.POST("/incidents", handlers.CreateIncident(db, hub))
+	incidentAndMaintenance.PATCH("/incidents/:id", handlers.UpdateIncident(db, hub))
+	incidentAndMaintenance.POST("/incidents/:id/update", handlers.AddIncidentUpdate(db, hub))
+	incidentAndMaintenance.GET("/incidents/:id/updates", handlers.GetIncidentUpdates(db))
 
-	incidentAndMaintenance.GET("/maintenance", handlers.GetMaintenance(database.GetDB()))
-	incidentAndMaintenance.POST("/maintenance", handlers.CreateMaintenance(database.GetDB()))
-	incidentAndMaintenance.PATCH("/maintenance/:id", handlers.UpdateMaintenance(database.GetDB()))
+	incidentAndMaintenance.GET("/maintenance", handlers.GetMaintenance(db))
+	incidentAndMaintenance.POST("/maintenance", handlers.CreateMaintenance(db))
+	incidentAndMaintenance.PATCH("/maintenance/:id", handlers.UpdateMaintenance(db))
 
-	incidentAndMaintenance.GET("/components", handlers.GetComponents(database.GetDB()))
-	incidentAndMaintenance.GET("/components/:id/subcomponents", handlers.GetSubComponents(database.GetDB()))
-	incidentAndMaintenance.GET("/subcomponents", handlers.GetSubComponents(database.GetDB()))
+	incidentAndMaintenance.GET("/components", handlers.GetComponents(db))
+	incidentAndMaintenance.GET("/components/:id/subcomponents", handlers.GetSubComponents(db))
+	incidentAndMaintenance.GET("/subcomponents", handlers.GetSubComponents(db))
 
-	adminOnly.POST("/components", handlers.CreateComponent(database.GetDB(), hub))
-	adminOnly.PATCH("/components/:id", handlers.UpdateComponent(database.GetDB(), hub))
-	adminOnly.DELETE("/components/:id", handlers.DeleteComponent(database.GetDB()))
+	adminOnly.POST("/components", handlers.CreateComponent(db, hub))
+	adminOnly.PATCH("/components/:id", handlers.UpdateComponent(db, hub))
+	adminOnly.DELETE("/components/:id", handlers.DeleteComponent(db))
 
-	adminOnly.POST("/subcomponents", handlers.CreateSubComponent(database.GetDB()))
-	adminOnly.PATCH("/subcomponents/:id", handlers.UpdateSubComponent(database.GetDB()))
+	adminOnly.POST("/subcomponents", handlers.CreateSubComponent(db))
+	adminOnly.PATCH("/subcomponents/:id", handlers.UpdateSubComponent(db))
 
-	adminOnly.GET("/monitors", handlers.GetMonitors(database.GetDB()))
-	adminOnly.POST("/monitors", handlers.CreateMonitor(database.GetDB()))
+	adminOnly.GET("/monitors", handlers.GetMonitors(db))
+	adminOnly.POST("/monitors", handlers.CreateMonitor(db))
 	adminOnly.POST("/monitors/test", handlers.TestMonitor())
-	adminOnly.PUT("/monitors/:id", handlers.UpdateMonitor(database.GetDB()))
-	adminOnly.DELETE("/monitors/:id", handlers.DeleteMonitor(database.GetDB()))
-	adminOnly.GET("/monitors/:id/logs", handlers.GetMonitorLogs(database.GetDB()))
-	adminOnly.GET("/monitors/:id/uptime", handlers.GetMonitorUptime(database.GetDB()))
-	adminOnly.GET("/monitors/:id/history", handlers.GetMonitorHistory(database.GetDB()))
-	adminOnly.GET("/monitors/outages", handlers.GetMonitorOutages(database.GetDB()))
+	adminOnly.PUT("/monitors/:id", handlers.UpdateMonitor(db))
+	adminOnly.DELETE("/monitors/:id", handlers.DeleteMonitor(db))
+	adminOnly.GET("/monitors/:id/logs", handlers.GetMonitorLogs(db))
+	adminOnly.GET("/monitors/:id/uptime", handlers.GetMonitorUptime(db))
+	adminOnly.GET("/monitors/:id/history", handlers.GetMonitorHistory(db))
+	adminOnly.GET("/monitors/outages", handlers.GetMonitorOutages(db))
 
-	adminOnly.GET("/subscribers", handlers.GetSubscribers(database.GetDB()))
-	adminOnly.DELETE("/subscribers/:id", handlers.DeleteSubscriber(database.GetDB()))
-	adminOnly.GET("/settings/status-page", handlers.GetAdminStatusPageSettings(database.GetDB()))
-	adminOnly.PATCH("/settings/status-page", handlers.UpdateStatusPageSettings(database.GetDB(), hub))
-	adminOnly.GET("/webhook-channels", handlers.GetWebhookChannels(database.GetDB()))
-	adminOnly.POST("/webhook-channels", handlers.CreateWebhookChannel(database.GetDB()))
-	adminOnly.DELETE("/webhook-channels/:id", handlers.DeleteWebhookChannel(database.GetDB()))
+	adminOnly.GET("/subscribers", handlers.GetSubscribers(db))
+	adminOnly.DELETE("/subscribers/:id", handlers.DeleteSubscriber(db))
+	adminOnly.GET("/settings/status-page", handlers.GetAdminStatusPageSettings(db))
+	adminOnly.PATCH("/settings/status-page", handlers.UpdateStatusPageSettings(db, hub))
+	adminOnly.GET("/webhook-channels", handlers.GetWebhookChannels(db))
+	adminOnly.POST("/webhook-channels", handlers.CreateWebhookChannel(db))
+	adminOnly.DELETE("/webhook-channels/:id", handlers.DeleteWebhookChannel(db))
 
-	adminOnly.GET("/users", handlers.GetUsers(database.GetDB()))
-	adminOnly.PATCH("/users/:id", handlers.PatchUser(database.GetDB()))
-	adminOnly.DELETE("/users/:id", handlers.DeleteUser(database.GetDB()))
-	adminOnly.POST("/users/invitations", handlers.CreateUserInvitation(database.GetDB()))
-	adminOnly.GET("/users/invitations", handlers.GetUserInvitations(database.GetDB()))
-	adminOnly.POST("/users/invitations/:id/refresh", handlers.RefreshUserInvitation(database.GetDB()))
-	adminOnly.DELETE("/users/invitations/:id", handlers.RevokeUserInvitation(database.GetDB()))
+	adminOnly.GET("/users", handlers.GetUsers(db))
+	adminOnly.PATCH("/users/:id", handlers.PatchUser(db))
+	adminOnly.DELETE("/users/:id", handlers.DeleteUser(db))
+	adminOnly.POST("/users/invitations", handlers.CreateUserInvitation(db))
+	adminOnly.GET("/users/invitations", handlers.GetUserInvitations(db))
+	adminOnly.POST("/users/invitations/:id/refresh", handlers.RefreshUserInvitation(db))
+	adminOnly.DELETE("/users/invitations/:id", handlers.RevokeUserInvitation(db))
 }
 
 func SeedAdmin(db *mongo.Database, cfg *configs.Config) {

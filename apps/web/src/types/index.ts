@@ -351,3 +351,26 @@ export interface WebhookChannel {
   enabled: boolean
   createdAt: string
 }
+
+export type DBEngine = 'mongodb' | 'sqlite'
+
+export interface SetupDBStatus {
+  engine: string
+  setupDone: boolean
+  mongoConnected: boolean
+  sqliteConnected: boolean
+  runtimeSupported: boolean
+}
+
+export interface SetupStatusResponse {
+  setupDone: boolean
+  engine: string
+  dbStatus: SetupDBStatus
+}
+
+export interface SetupSaveRequest {
+  engine: DBEngine
+  mongoUri?: string
+  mongoDbName?: string
+  sqlitePath?: string
+}

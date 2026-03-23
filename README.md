@@ -34,7 +34,7 @@ StatusForge is built with a modern, efficient, and scalable technology stack.
 
 - **Backend**: Go (GoLang 1.26+) with Gin HTTP web framework
 - **Frontend**: React 18 with Vite for a fast development experience and TypeScript for type safety
-- **Database**: MongoDB for flexible data storage
+- **Database**: MongoDB for full runtime support, with first-run database engine setup supporting MongoDB and SQLite configuration
 - **Caching & Pub/Sub**: Redis for high-performance caching and real-time updates
 - **Styling**: Tailwind CSS for utility-first styling
 
@@ -60,8 +60,10 @@ Ensure you have Docker and Docker Compose installed on your system.
     cp .env.example .env
     ```
     You can customize these variables in the `.env` file. Important variables include:
+    -   `DB_ENGINE`: Database engine selection (`mongodb` or `sqlite`).
     -   `MONGO_URI`: MongoDB connection string.
     -   `MONGO_DB_NAME`: Database name for MongoDB.
+    -   `SQLITE_PATH`: SQLite database file path when `DB_ENGINE=sqlite`.
     -   `REDIS_ADDR`: Redis connection address.
     -   `JWT_SECRET`: Secret key for JWT authentication ( **change this in production!** ).
     -   `MFA_SECRET_KEY`: Secret key for MFA ( **change this in production!** ).
@@ -83,6 +85,7 @@ Ensure you have Docker and Docker Compose installed on your system.
     Once the services are up, access StatusForge in your web browser:
     -   **Public Status Page**: `http://localhost:8080`
     -   **Admin Panel**: `http://localhost:8080/admin`
+    -   **Initial Database Setup**: `http://localhost:8080/admin/setup` (shown automatically until setup is completed)
     -   **Health Check**: `http://localhost:8080/health`
 
     The default admin credentials are `admin@statusplatform.com` with password `admin123`. **It is crucial to change these credentials immediately after the first login in a production environment.**
@@ -95,12 +98,14 @@ For developers who want to contribute or customize StatusForge, you can run the 
 
 -   Go 1.26+
 -   Node.js 20+
--   MongoDB instance (local or remote)
+-   MongoDB instance (local or remote) for full runtime support, or SQLite for local setup/configuration
 -   Redis instance (local or remote)
 
 ### Backend
 
 1.  **Configure Environment Variables**: Copy `.env.example` to `.env` as described in the Docker Quick Start.
+    - For MongoDB, set `DB_ENGINE=mongodb` plus `MONGO_URI` and `MONGO_DB_NAME`.
+    - For SQLite setup flow, set `DB_ENGINE=sqlite` and `SQLITE_PATH`, then complete the onboarding flow in the admin UI.
 2.  **Install Go dependencies**:
     ```bash
     go mod download
@@ -146,6 +151,19 @@ To build the frontend and backend for production:
 ### Docker Deployment
 
 The provided `Dockerfile` creates a minimal Alpine-based image embedding the built frontend assets into the Go binary. The `docker-compose.yml` orchestrates the `server`, `mongo`, and `redis` services.
+
+## 🗄️ Database Setup Flow
+
+StatusForge now includes a first-run database setup flow before the admin application is available.
+
+- On a fresh install, the app redirects to `/admin/setup` until database setup is completed.
+- The setup flow can validate MongoDB connectivity before persisting the selected engine.
+- SQLite can be configured as a local database target during setup.
+
+### Current limitation
+
+- MongoDB remains the only fully supported runtime backend for the complete monitoring and admin feature set.
+- SQLite setup and persistence are wired into the onboarding/configuration flow, but full SQLite runtime parity for business handlers and worker execution is not yet implemented.
 
 For detailed Docker operations, refer to the `Makefile` for convenient commands like `make up`, `make up-build`, `make down`, `make down-v`, `make logs`, `make logs-server`, `make ps`, and `make shell-server`.
 
