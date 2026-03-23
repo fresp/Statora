@@ -1,6 +1,10 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
+import { useApi } from '../../hooks/useApi'
+import type { StatusPageSettings } from '../../types'
+
+const DEFAULT_PAGE_TITLE = 'StatusForge'
 
 export default function AdminActivate() {
   const [searchParams] = useSearchParams()
@@ -12,6 +16,12 @@ export default function AdminActivate() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
+  const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
+
+  useEffect(() => {
+    document.title = `${pageTitle} - Admin Panel`
+  }, [pageTitle])
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

@@ -8,16 +8,18 @@ import api from '../../lib/api'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench } from 'lucide-react'
 
+const ADMIN_TITLE_SUFFIX = ' - Admin Panel'
+
 const DEFAULT_SETTINGS: StatusPageSettings = {
   head: {
-    title: 'Status Platform',
+    title: 'StatusForge',
     description: 'Live system status and incident updates.',
     keywords: 'status, uptime, incidents, maintenance',
     faviconUrl: '/vite.svg',
     metaTags: {},
   },
   branding: {
-    siteName: 'System Status',
+    siteName: 'StatusForge',
     logoUrl: '',
     backgroundImageUrl: '',
     heroImageUrl: '',
@@ -140,11 +142,15 @@ export default function AdminSettings() {
   }, [])
 
   useEffect(() => {
+    document.title = `${settings.head.title}${ADMIN_TITLE_SUFFIX}`
+  }, [settings.head.title])
+
+  useEffect(() => {
     if (themePresets.length === 0) {
       return
     }
 
-    loadThemePresetStylesheet(settings.theme.preset, themePresets).catch(() => {})
+    loadThemePresetStylesheet(settings.theme.preset, themePresets).catch(() => { })
   }, [settings.theme.preset, themePresets])
 
   async function handleSave(e: React.FormEvent) {
@@ -326,7 +332,7 @@ export default function AdminSettings() {
               >
                 <div className="flex items-center gap-2">
                   {settings.branding.logoUrl && <img src={settings.branding.logoUrl} alt="logo" className="w-6 h-6 rounded object-contain" />}
-                  <span className="font-semibold">{settings.branding.siteName || 'System Status'}</span>
+                  <span className="font-semibold">{settings.branding.siteName || 'StatusForge'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <CheckCircle className="w-4 h-4" />

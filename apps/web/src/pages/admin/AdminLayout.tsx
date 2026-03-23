@@ -19,6 +19,10 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import type { UserRole } from '../../types'
+import type { StatusPageSettings } from '../../types'
+import { useApi } from '../../hooks/useApi'
+
+const DEFAULT_PAGE_TITLE = 'StatusForge'
 
 interface StoredAdminProfile {
   role?: UserRole
@@ -129,34 +133,36 @@ export default function AdminLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const role = readStoredRole()
+  const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
+  const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
   const visibleNavSections: NavSection[] = role === 'operator'
     ? navSections
-        .map(section => {
-          const items: NavItem[] = []
+      .map(section => {
+        const items: NavItem[] = []
 
-          section.items.forEach(item => {
-            const visibleChildren = item.children?.filter(
-              child => OPERATOR_ALLOWED.has(child.to) || ALWAYS_ALLOWED.has(child.to),
-            )
-            const isItemAllowed = OPERATOR_ALLOWED.has(item.to) || ALWAYS_ALLOWED.has(item.to)
+        section.items.forEach(item => {
+          const visibleChildren = item.children?.filter(
+            child => OPERATOR_ALLOWED.has(child.to) || ALWAYS_ALLOWED.has(child.to),
+          )
+          const isItemAllowed = OPERATOR_ALLOWED.has(item.to) || ALWAYS_ALLOWED.has(item.to)
 
-            if (!isItemAllowed && (!visibleChildren || visibleChildren.length === 0)) {
-              return
-            }
-
-            const nextItem: NavItem = visibleChildren
-              ? { ...item, children: visibleChildren }
-              : { ...item }
-
-            items.push(nextItem)
-          })
-
-          return {
-            ...section,
-            items,
+          if (!isItemAllowed && (!visibleChildren || visibleChildren.length === 0)) {
+            return
           }
+
+          const nextItem: NavItem = visibleChildren
+            ? { ...item, children: visibleChildren }
+            : { ...item }
+
+          items.push(nextItem)
         })
-        .filter(section => section.items.length > 0)
+
+        return {
+          ...section,
+          items,
+        }
+      })
+      .filter(section => section.items.length > 0)
     : navSections
 
   function handleLogout() {
@@ -240,6 +246,10 @@ export default function AdminLayout() {
     })
   }, [location.pathname, visibleNavSections])
 
+  useEffect(() => {
+    document.title = `${pageTitle} - Admin Panel`
+  }, [pageTitle, location.pathname])
+
   function toggleSection(key: string) {
     setOpenSections(prev => ({
       ...prev,
@@ -256,7 +266,7 @@ export default function AdminLayout() {
         <div className="border-b border-gray-700">
           <div className="flex items-start justify-between gap-2 px-3 py-4 min-h-[76px]">
             <div className={`min-w-0 transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-              <h1 className="text-lg font-bold truncate">Status Platform</h1>
+              <h1 className="text-lg font-bold truncate">{pageTitle}</h1>
               <p className="text-xs text-gray-400 mt-0.5 truncate">User Console</p>
             </div>
             <button
@@ -300,10 +310,9 @@ export default function AdminLayout() {
                         end={end}
                         title={isSidebarCollapsed ? label : undefined}
                         className={({ isActive }) =>
-                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 pl-3 pr-3'} py-2.5 rounded-lg border-l-2 text-sm leading-5 font-medium transition-colors ${
-                            isActive
-                              ? 'bg-blue-600/95 text-white border-blue-300 shadow-sm'
-                              : 'text-gray-500 border-transparent hover:bg-gray-800/60 hover:text-gray-200'
+                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 pl-3 pr-3'} py-2.5 rounded-lg border-l-2 text-sm leading-5 font-medium transition-colors ${isActive
+                            ? 'bg-blue-600/95 text-white border-blue-300 shadow-sm'
+                            : 'text-gray-500 border-transparent hover:bg-gray-800/60 hover:text-gray-200'
                           }`
                         }
                       >
@@ -319,10 +328,9 @@ export default function AdminLayout() {
                               to={child.to}
                               end={child.end}
                               className={({ isActive }) =>
-                                `block px-3 py-2 rounded-md text-[13px] leading-5 font-medium transition-colors ${
-                                  isActive
-                                    ? 'bg-blue-600/90 text-white'
-                                    : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
+                                `block px-3 py-2 rounded-md text-[13px] leading-5 font-medium transition-colors ${isActive
+                                  ? 'bg-blue-600/90 text-white'
+                                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
                                 }`
                               }
                             >

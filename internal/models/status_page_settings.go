@@ -67,14 +67,14 @@ func DefaultStatusPageSettings() StatusPageSettings {
 	return StatusPageSettings{
 		Key: StatusPageSettingsKey,
 		Head: StatusPageHeadSettings{
-			Title:       "Status Platform",
+			Title:       "StatusForge",
 			Description: "Live system status and incident updates.",
 			Keywords:    "status, uptime, incidents, maintenance",
 			FaviconURL:  "/vite.svg",
 			MetaTags:    map[string]string{},
 		},
 		Branding: StatusPageBrandingSettings{
-			SiteName:           "System Status",
+			SiteName:           "StatusForge",
 			LogoURL:            "",
 			BackgroundImageURL: "",
 			HeroImageURL:       "",

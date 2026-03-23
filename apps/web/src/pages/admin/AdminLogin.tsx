@@ -1,11 +1,16 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { clearAuthSession, setAuthSession } from '../../lib/auth'
-import type { LoginResponse, MfaVerifyResponse, User } from '../../types'
+import { useApi } from '../../hooks/useApi'
+import type { LoginResponse, MfaVerifyResponse, StatusPageSettings, User } from '../../types'
+
+const DEFAULT_PAGE_TITLE = 'StatusForge'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
+  const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
+  const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -83,12 +88,16 @@ export default function AdminLogin() {
     clearAuthSession()
   }
 
+  useEffect(() => {
+    document.title = `${pageTitle} - Admin Panel`
+  }, [pageTitle])
+
   return (
     <>
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-md w-full max-w-sm p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">User Login</h1>
-          <p className="text-sm text-gray-500 mb-6">Status Platform</p>
+          <p className="text-sm text-gray-500 mb-6">{pageTitle}</p>
 
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">

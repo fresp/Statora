@@ -10,14 +10,14 @@ import { loadThemePresetStylesheet, getThemePresets, DEFAULT_THEME_PRESET } from
 
 const DEFAULT_SETTINGS: StatusPageSettings = {
   head: {
-    title: 'Status Platform',
+    title: 'StatusForge',
     description: 'Live system status and incident updates.',
     keywords: 'status, uptime, incidents, maintenance',
     faviconUrl: '/vite.svg',
     metaTags: {},
   },
   branding: {
-    siteName: 'System Status',
+    siteName: 'StatusForge',
     logoUrl: '',
     backgroundImageUrl: '',
     heroImageUrl: '',
@@ -233,7 +233,7 @@ export default function StatusPage() {
 
   useEffect(() => {
     const presets = getThemePresets().presets
-    loadThemePresetStylesheet(settings.theme.preset, presets).catch(() => {})
+    loadThemePresetStylesheet(settings.theme.preset, presets).catch(() => { })
   }, [settings.theme.preset])
 
   const headerStatusToken = getStatusToken(overallStatus)
@@ -531,20 +531,20 @@ export default function StatusPage() {
             </div>
 
             <div className="text-center mt-8">
-                <Link to="/history" className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
-                  style={{
-                    borderColor: 'var(--border)',
-                    color: 'var(--text)',
-                    backgroundColor: 'var(--surface)',
-                  }}
-                >
-                  View Full Incident History
-                </Link>
+              <Link to="/history" className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
+                style={{
+                  borderColor: 'var(--border)',
+                  color: 'var(--text)',
+                  backgroundColor: 'var(--surface)',
+                }}
+              >
+                View Full Incident History
+              </Link>
             </div>
           </div>
         )}
 
-         <div className="text-center py-8 border-t" style={{ borderColor: 'var(--border)' }}>
+        <div className="text-center py-8 border-t" style={{ borderColor: 'var(--border)' }}>
           {settings.footer.text && (
             <p className="text-sm mb-1" style={{ color: mutedTextColor }}>{settings.footer.text}</p>
           )}
