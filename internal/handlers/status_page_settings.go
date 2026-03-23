@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/fresp/StatusForge/internal/models"
@@ -39,6 +40,11 @@ func isValidURLOrEmpty(value string) bool {
 		return false
 	}
 	return parsed.Scheme == "http" || parsed.Scheme == "https"
+}
+
+func normalizeThemePreset(value string) string {
+	normalized := strings.TrimSpace(strings.ToLower(value))
+	return strings.TrimSuffix(normalized, ".css")
 }
 
 type statusPageSettingsPatchRequest struct {
@@ -206,11 +212,12 @@ func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 
 		if req.Theme != nil {
 			if req.Theme.Preset != nil {
-				if _, ok := validThemePresets[*req.Theme.Preset]; !ok {
+				normalizedPreset := normalizeThemePreset(*req.Theme.Preset)
+				if _, ok := validThemePresets[normalizedPreset]; !ok {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "theme.preset must be one of: default, ocean, graphite"})
 					return
 				}
-				set["theme.preset"] = *req.Theme.Preset
+				set["theme.preset"] = normalizedPreset
 			}
 			if req.Theme.Mode != nil {
 				if *req.Theme.Mode != "light" && *req.Theme.Mode != "dark" && *req.Theme.Mode != "system" {
