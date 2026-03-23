@@ -96,4 +96,6 @@ apps/web/node_modules/
 
 # Git worktrees
 .worktrees/
-/docs
+/docs/*
+!/docs/screenshots/
+!/docs/screenshots/*.png

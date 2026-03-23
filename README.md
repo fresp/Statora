@@ -18,9 +18,15 @@ StatusForge is a production-ready, self-hosted status page and monitoring platfo
 
 ## 🚀 Screenshots
 
-| Admin Dashboard | Public Status Page | Incident Management |
-|-----------------|--------------------|---------------------|
-| ![Admin Dashboard](docs/images/admin-dashboard.png) | ![Public Status Page](docs/images/public-statuspage.jpeg) | ![Incident Management](docs/images/admin-incident.png) |
+Run `npm run docs:screenshots --prefix apps/web` to regenerate these images after UI changes.
+
+| Admin Dashboard | Public Status Page | Incident History |
+|-----------------|--------------------|------------------|
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Public Status Page](docs/screenshots/status-page.png) | ![Incident History](docs/screenshots/incident-history.png) |
+
+| Monitoring Table | Theme Settings |
+|------------------|----------------|
+| ![Monitoring Table](docs/screenshots/monitoring-table.png) | ![Theme Settings](docs/screenshots/theme-settings.png) |
 
 ## 🛠️ Tech Stack
 
