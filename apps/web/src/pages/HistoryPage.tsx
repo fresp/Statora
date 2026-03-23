@@ -133,6 +133,11 @@ export default function HistoryPage() {
     : `${settingsData?.theme?.preset?.trim() || DEFAULT_THEME_PRESET}.css`
 
   React.useEffect(() => {
+    const pageTitle = settingsData?.head?.title?.trim() || 'Status Page'
+    document.title = `${pageTitle} - Incident History`
+  }, [settingsData?.head?.title])
+
+  React.useEffect(() => {
     const presets = getThemePresets().presets
     loadThemePresetStylesheet(themePreset, presets).catch(() => {})
   }, [themePreset])
