@@ -15,6 +15,7 @@ import AdminActivate from './pages/admin/AdminActivate'
 import AdminProfile from './pages/admin/AdminProfile'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminWebhookChannels from './pages/admin/AdminWebhookChannels'
+import HistoryPage from './pages/HistoryPage'
 import { getStoredToken, getStoredProfile } from './lib/auth'
 import type { UserRole } from './types'
 
@@ -74,6 +75,7 @@ export default function App() {
     <Routes>
       {/* Public status page */}
       <Route path="/" element={<StatusPage />} />
+      <Route path="/history" element={<HistoryPage />} />
 
       {/* Admin auth */}
       <Route path="/admin/login" element={<AdminLogin />} />

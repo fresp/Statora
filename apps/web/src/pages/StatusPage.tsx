@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench, ChevronDown, ChevronUp } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { StatusSummary, ComponentWithSubs, Incident, Maintenance, StatusPageSettings } from '../types'
-import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS } from '../lib/utils'
+import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS, groupIncidentsByRecentDays } from '../lib/utils'
 import { IncidentTimeline } from '../components/IncidentTimeline'
 import { loadThemePresetStylesheet, getThemePresets, DEFAULT_THEME_PRESET } from '../lib/themePresetLoader'
 
@@ -213,6 +214,14 @@ export default function StatusPage() {
   const upcomingMaintenance = maintenanceData?.filter(m => m.status !== 'completed') || []
   const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
 
+  const recentIncidents = [...activeIncidents, ...resolvedIncidents].filter((incident: Incident) => {
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setHours(0, 0, 0, 0)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+    return new Date(incident.createdAt) >= sevenDaysAgo
+  })
+  const recentIncidentGroups = groupIncidentsByRecentDays(recentIncidents, 7)
+
   useEffect(() => {
     document.title = settings.head.title
     upsertMetaTag('name="description"', settings.head.description)
@@ -284,6 +293,7 @@ export default function StatusPage() {
   const subComponentDividerStyle: React.CSSProperties = {
     borderColor: 'var(--subcomponent-divider)',
   }
+
 
   return (
     <div className="min-h-screen" style={pageStyle}>
@@ -441,55 +451,99 @@ export default function StatusPage() {
           </div>
         ))}
 
-        {/* Incident History */}
-        {resolvedIncidents.length > 0 && (
+        {/* Recent Incident History (last 7 days) */}
+        {recentIncidentGroups.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4" style={sectionTitleStyle}>Incident History</h2>
-            <div className="space-y-4">
-              {resolvedIncidents.map(incident => {
-                const isExpanded = expandedIncidents.has(incident.id)
+            <h2 className="text-xl font-semibold mb-4" style={sectionTitleStyle}>Recent Incident History</h2>
+            <div className="space-y-6">
+              {recentIncidentGroups.map((group) => {
+                const dayLabel = new Date(`${group.dateKey}T00:00:00`).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })
+
                 return (
-                  <div key={incident.id} className="rounded-xl border p-5" style={cardSurfaceStyle}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-medium" style={sectionTitleStyle}>{incident.title}</h3>
-                        <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{incident.description}</p>
+                  <div key={group.dateKey}>
+                    <h3 className="text-lg font-semibold mb-3" style={{ color: mutedTextColor }}>{dayLabel}</h3>
+                    {group.incidents.length === 0 ? (
+                      <div className="rounded-xl border p-5" style={cardSurfaceStyle}>
+                        <p className="text-sm" style={{ color: mutedTextColor }}>No incidents reported.</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--status-resolved-bg)', color: 'var(--status-resolved-text)' }}>
-                          Resolved
-                        </span>
-                        <button
-                          onClick={() => setExpandedIncidents(prev => {
-                            const next = new Set(prev)
-                            if (next.has(incident.id)) {
-                              next.delete(incident.id)
-                            } else {
-                              next.add(incident.id)
-                            }
-                            return next
-                          })}
-                          className="flex-shrink-0 transition-colors"
-                          style={{ color: 'var(--text-subtle)' }}
-                        >
-                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </button>
+                    ) : (
+                      <div className="space-y-4">
+                        {group.incidents.map((incident) => {
+                          const isExpanded = expandedIncidents.has(incident.id)
+                          const isResolved = incident.status === 'resolved'
+
+                          return (
+                            <div key={incident.id} className="rounded-xl border p-5" style={cardSurfaceStyle}>
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h3 className="font-medium" style={sectionTitleStyle}>{incident.title}</h3>
+                                  <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{incident.description}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className="text-xs px-2 py-1 rounded-full font-medium"
+                                    style={
+                                      isResolved
+                                        ? { backgroundColor: 'var(--status-resolved-bg)', color: 'var(--status-resolved-text)' }
+                                        : { backgroundColor: 'var(--status-active-bg)', color: 'var(--status-active-text)' }
+                                    }
+                                  >
+                                    {INCIDENT_STATUS_LABELS[incident.status]}
+                                  </span>
+                                  <button
+                                    onClick={() => setExpandedIncidents((prev) => {
+                                      const next = new Set(prev)
+                                      if (next.has(incident.id)) {
+                                        next.delete(incident.id)
+                                      } else {
+                                        next.add(incident.id)
+                                      }
+                                      return next
+                                    })}
+                                    className="flex-shrink-0 transition-colors"
+                                    style={{ color: 'var(--text-subtle)' }}
+                                  >
+                                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-4 mt-3 text-xs" style={{ color: subtleTextColor }}>
+                                <span>Impact: {INCIDENT_IMPACT_LABELS[incident.impact]}</span>
+                                <span>Created: {formatDate(incident.createdAt)}</span>
+                                {incident.creatorUsername && <span>Created by: {incident.creatorUsername}</span>}
+                                {incident.resolvedAt && <span>Resolved: {formatDate(incident.resolvedAt)}</span>}
+                              </div>
+
+                              {isExpanded && <IncidentTimeline updates={incident.updates || []} />}
+                            </div>
+                          )
+                        })}
                       </div>
-                    </div>
-                    <div className="flex gap-4 mt-3 text-xs" style={{ color: subtleTextColor }}>
-                      <span>Created: {formatDate(incident.createdAt)}</span>
-                      {incident.creatorUsername && <span>Created by: {incident.creatorUsername}</span>}
-                      {incident.resolvedAt && <span>Resolved: {formatDate(incident.resolvedAt)}</span>}
-                    </div>
-                    {isExpanded && <IncidentTimeline updates={incident.updates || []} />}
+                    )}
                   </div>
                 )
               })}
             </div>
+
+            <div className="text-center mt-8">
+                <Link to="/history" className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
+                  style={{
+                    borderColor: 'var(--border)',
+                    color: 'var(--text)',
+                    backgroundColor: 'var(--surface)',
+                  }}
+                >
+                  View Full Incident History
+                </Link>
+            </div>
           </div>
         )}
 
-        {/* Footer */}
          <div className="text-center py-8 border-t" style={{ borderColor: 'var(--border)' }}>
           {settings.footer.text && (
             <p className="text-sm mb-1" style={{ color: mutedTextColor }}>{settings.footer.text}</p>
