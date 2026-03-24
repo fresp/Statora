@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -150,6 +150,14 @@ function getStatusToken(status: string): string {
   }
 }
 
+function toCategoryPrefix(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 type ThemeVariableStyle = React.CSSProperties & Record<`--${string}`, string>
 
 function StatusIcon({ status }: { status: string }) {
@@ -184,6 +192,7 @@ function UptimeBar({ bars }: { bars: { date: string; uptimePercent: number; stat
 }
 
 export default function StatusPage() {
+  const navigate = useNavigate()
   const { data: summary, refetch: refetchSummary } = useApi<StatusSummary>('/status/summary')
   const { data: components, refetch: refetchComponents } = useApi<ComponentWithSubs[]>('/status/components')
   const { data: incidentData, refetch: refetchIncidents } = useApi<{ active: Incident[]; resolved: Incident[] }>('/status/incidents')
@@ -381,8 +390,17 @@ export default function StatusPage() {
         {(components || []).map(comp => (
           <div
             key={comp.id}
-            className="rounded-xl shadow-sm border overflow-hidden"
+            className="rounded-xl shadow-sm border overflow-hidden cursor-pointer transition-colors hover:bg-[var(--surface-uptime)]"
             style={cardSurfaceStyle}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/status/${toCategoryPrefix(comp.name)}`)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                navigate(`/status/${toCategoryPrefix(comp.name)}`)
+              }
+            }}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b" style={componentHeaderStyle}>
               <div>

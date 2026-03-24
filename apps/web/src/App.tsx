@@ -1,6 +1,7 @@
 import React from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import StatusPage from './pages/StatusPage'
+import StatusCategoryPage from './pages/StatusCategoryPage'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -75,6 +76,7 @@ export default function App() {
     <Routes>
       {/* Public status page */}
       <Route path="/" element={<StatusPage />} />
+      <Route path="/status/:categoryPrefix" element={<StatusCategoryPage />} />
       <Route path="/history" element={<HistoryPage />} />
 
       {/* Admin auth */}

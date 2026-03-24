@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAuthSession, requiresMfa } from './auth'
+import type { CategorySummary } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -44,3 +45,8 @@ api.interceptors.response.use(
 )
 
 export default api
+
+export async function fetchCategorySummary(categoryPrefix: string): Promise<CategorySummary> {
+  const { data } = await api.get<CategorySummary>(`/v1/status/category/${encodeURIComponent(categoryPrefix)}`)
+  return data
+}

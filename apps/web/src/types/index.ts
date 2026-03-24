@@ -41,6 +41,25 @@ export interface ComponentWithSubs extends Component {
   uptimeHistory: UptimeBar[]
 }
 
+export interface CategoryServiceStatus {
+  id: string
+  name: string
+  description: string
+  status: ComponentStatus
+  uptime90d: number
+  uptimeHistory: UptimeBar[]
+}
+
+export interface CategorySummary {
+  prefix: string
+  name: string
+  description: string
+  aggregateStatus: ComponentStatus
+  uptime90d: number
+  services: CategoryServiceStatus[]
+  incidents: Incident[]
+}
+
 export interface Incident {
   id: string
   title: string

@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/fresp/StatusForge/internal/models"
+	"github.com/fresp/StatusForge/internal/repository"
+	statusservice "github.com/fresp/StatusForge/internal/services/status"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -476,5 +478,31 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 			"active":   activeWithUpdates,
 			"resolved": resolvedWithUpdates,
 		})
+	}
+}
+
+func GetStatusCategory(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		prefix := c.Param("prefix")
+		if prefix == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "category prefix is required"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		service := statusservice.NewService(repository.NewMongoStatusRepository(db))
+		summary, err := service.BuildCategorySummary(ctx, prefix)
+		if err != nil {
+			if err == statusservice.ErrCategoryNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "category not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, summary)
 	}
 }
