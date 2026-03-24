@@ -263,6 +263,7 @@ export default function StatusPage() {
     backgroundColor: `var(${headerStatusToken})`,
     color: 'var(--on-primary)',
     boxShadow: 'inset 0 -3px 0 var(--color-accent)',
+    borderRadius: '0px 0px 8px 8px'
   }
 
   const contentClassName = 'max-w-4xl mx-auto px-4 py-8 space-y-8'
@@ -308,7 +309,7 @@ export default function StatusPage() {
     <div className="min-h-screen" style={pageStyle}>
       {/* Header */}
       <div
-        className="py-12 px-4"
+        className="max-w-4xl mx-auto px-4 py-8 space-y-8"
         style={headerStyle}
       >
         <div className="max-w-4xl mx-auto">
