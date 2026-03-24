@@ -16,7 +16,7 @@ export default function AdminActivate() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
+  const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
   const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
 
   useEffect(() => {
