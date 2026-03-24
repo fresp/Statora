@@ -159,7 +159,7 @@ function StatusIcon({ status }: { status: string }) {
     case 'operational': return <CheckCircle className={cls} style={{ color }} />
     case 'degraded_performance': return <AlertTriangle className={cls} style={{ color }} />
     case 'partial_outage': return <AlertCircle className={cls} style={{ color }} />
-    case 'major_outage': return <XCircle className={cls} style={{ color }} />
+    case 'major_outage': return <XCircle className={cls} />
     case 'maintenance': return <Wrench className={cls} style={{ color }} />
     default: return <CheckCircle className={cls} style={{ color: 'var(--status-operational)' }} />
   }
@@ -335,10 +335,6 @@ export default function StatusPage() {
 
         {activeIncidents.length > 0 && (
           <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <XCircle className="w-5 h-5" style={{ color: 'var(--status-major)' }} />
-              <h2 className="text-xl font-semibold" style={sectionTitleStyle}>Active Incidents</h2>
-            </div>
 
             <div className="space-y-4">
               {groupIncidentsByStatus(activeIncidents).map((group) => (
