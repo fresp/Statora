@@ -46,24 +46,15 @@ const TYPE_PLACEHOLDERS: Record<MonitorType, string> = {
 }
 
 export default function AdminMonitors() {
-  const { data: monitors, refetch } = useApi<Monitor[]>('/monitors')
-  const { data: components } = useApi<Component[]>('/components')
-  const { data: subcomponents = [] } = useApi<SubComponent[]>('/subcomponents')
+  const { data: monitors, total: totalMonitors, loading: monitorsLoading, error: monitorsError, refetch } = useApi<Monitor[]>('/monitors')
+  const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components')
+  const { data: subcomponents, total: totalSubcomponents, loading: subcomponentsLoading, error: subcomponentsError } = useApi<SubComponent[]>('/subcomponents')
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{
-    status: string
-    responseTime: number
-    sslWarning?: boolean
-    sslDaysRemaining?: number
-    sslTriggeredThreshold?: number
-    domainWarning?: boolean
-    domainDaysRemaining?: number
-    domainTriggeredThreshold?: number
-  } | null>(null)
+  const [testResult, setTestResult] = useState<{ status: string; responseTime: number; sslWarning?: boolean; sslDaysRemaining?: number; sslTriggeredThreshold?: number; domainWarning?: boolean; domainDaysRemaining?: number; domainTriggeredThreshold?: number; } | null>(null)
   const [error, setError] = useState('')
 
   const supportsDomainExpiry = form.type === 'http' || form.type === 'ssl'
@@ -73,7 +64,7 @@ export default function AdminMonitors() {
   
   function openCreate() {
     setEditingId(null)
-    setForm({ ...DEFAULT_FORM, componentId: components?.[0]?.id || '', subComponentId: '' })
+    setForm({ ...DEFAULT_FORM, componentId: (components || [])[0]?.id || '', subComponentId: '' })
     setError('')
     setTestResult(null)
     setShowModal(true)
@@ -200,7 +191,7 @@ export default function AdminMonitors() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Monitors</h1>
-          <p className="text-sm text-gray-500 mt-1">{monitors?.length ?? 0} active monitors</p>
+          <p className="text-sm text-gray-500 mt-1">{totalMonitors ?? 0} active monitors</p>
         </div>
         <button
           onClick={openCreate}

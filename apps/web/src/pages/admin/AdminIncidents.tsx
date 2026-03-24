@@ -165,7 +165,7 @@ function IncidentRow({ incident, components, onRefetch }: {
 }
 
 export default function AdminIncidents() {
-  const { data: incidents, refetch } = useApi<Incident[]>('/incidents')
+  const { data: incidents, total: totalIncidents, refetch } = useApi<Incident[]>('/incidents')
   const { data: components } = useApi<Component[]>('/components')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<IncidentForm>(DEFAULT_FORM)
@@ -214,7 +214,7 @@ export default function AdminIncidents() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Incidents</h1>
-          <p className="text-sm text-gray-500 mt-1">{incidents?.length ?? 0} total</p>
+          <p className="text-sm text-gray-500 mt-1">{totalIncidents} total</p>
         </div>
         <button
           onClick={openCreate}

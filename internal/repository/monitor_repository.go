@@ -15,7 +15,7 @@ import (
 type MonitorRepository interface {
 	Insert(ctx context.Context, monitor models.Monitor) error
 	Update(ctx context.Context, id primitive.ObjectID, monitor models.Monitor) (bool, error)
-	List(ctx context.Context) ([]models.Monitor, error)
+	List(ctx context.Context, page, limit int) ([]models.Monitor, int64, error)
 }
 
 type MongoMonitorRepository struct {
@@ -55,20 +55,32 @@ func (r *MongoMonitorRepository) Update(ctx context.Context, id primitive.Object
 	return res.MatchedCount > 0, nil
 }
 
-func (r *MongoMonitorRepository) List(ctx context.Context) ([]models.Monitor, error) {
-	cursor, err := r.collection.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+func (r *MongoMonitorRepository) List(ctx context.Context, page, limit int) ([]models.Monitor, int64, error) {
+	filter := bson.M{}
+	total, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	skip := int64((page - 1) * limit)
+	findOptions := options.Find().
+		SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+		SetSkip(skip).
+		SetLimit(int64(limit))
+
+	cursor, err := r.collection.Find(ctx, filter, findOptions)
+	if err != nil {
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
 	var monitors []models.Monitor
 	if err := cursor.All(ctx, &monitors); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if monitors == nil {
 		monitors = []models.Monitor{}
 	}
 
-	return monitors, nil
+	return monitors, total, nil
 }

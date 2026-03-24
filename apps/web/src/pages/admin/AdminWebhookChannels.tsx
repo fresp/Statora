@@ -6,7 +6,7 @@ import type { WebhookChannel } from '../../types'
 import { formatDate } from '../../lib/utils'
 
 export default function AdminWebhookChannels() {
-  const { data: channels, refetch } = useApi<WebhookChannel[]>('/webhook-channels')
+  const { data: channels, total: totalChannels, refetch } = useApi<WebhookChannel[]>('/webhook-channels')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -51,7 +51,7 @@ export default function AdminWebhookChannels() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Webhook Channels</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {enabled.length} active · {disabled.length} inactive
+            {totalChannels} total · {enabled.length} active · {disabled.length} inactive
           </p>
         </div>
       </div>

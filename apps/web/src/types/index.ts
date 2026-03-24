@@ -1,3 +1,10 @@
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  total_pages: number;
+}
+
 // API types for the status platform
 
 export type ComponentStatus =

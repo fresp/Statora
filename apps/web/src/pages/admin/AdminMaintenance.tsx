@@ -44,7 +44,7 @@ function toDatetimeLocal(iso: string) {
 }
 
 export default function AdminMaintenance() {
-  const { data: maintenance, refetch } = useApi<Maintenance[]>('/maintenance')
+  const { data: maintenance, total: totalMaintenance, refetch } = useApi<Maintenance[]>('/maintenance')
   const { data: components } = useApi<Component[]>('/components')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Maintenance | null>(null)
@@ -116,7 +116,7 @@ export default function AdminMaintenance() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Maintenance</h1>
-          <p className="text-sm text-gray-500 mt-1">{maintenance?.length ?? 0} total</p>
+          <p className="text-sm text-gray-500 mt-1">{totalMaintenance} total</p>
         </div>
         <button
           onClick={openCreate}

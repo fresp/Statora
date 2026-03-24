@@ -15,11 +15,26 @@ import (
 
 func GetMaintenance(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("maintenance").Find(ctx, bson.M{},
-			options.Find().SetSort(bson.D{{Key: "startTime", Value: -1}}))
+		coll := db.Collection("maintenance")
+		total64, err := coll.CountDocuments(ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		skip := int64((page - 1) * limit)
+
+		cursor, err := coll.Find(ctx, bson.M{},
+			options.Find().SetSort(bson.D{{Key: "startTime", Value: -1}}).SetSkip(skip).SetLimit(int64(limit)))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -34,21 +49,38 @@ func GetMaintenance(db *mongo.Database) gin.HandlerFunc {
 		if items == nil {
 			items = []models.Maintenance{}
 		}
-		c.JSON(http.StatusOK, items)
+		writePaginatedResponse(c, items, int(total64), page, limit)
 	}
 }
 
 func GetPublicMaintenance(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("maintenance").Find(
+		filter := bson.M{
+			"status": bson.M{"$ne": "completed"},
+		}
+
+		coll := db.Collection("maintenance")
+		total64, err := coll.CountDocuments(ctx, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		skip := int64((page - 1) * limit)
+
+		cursor, err := coll.Find(
 			ctx,
-			bson.M{
-				"status": bson.M{"$ne": "completed"},
-			},
-			options.Find().SetSort(bson.D{{Key: "startTime", Value: -1}}),
+			filter,
+			options.Find().SetSort(bson.D{{Key: "startTime", Value: -1}}).SetSkip(skip).SetLimit(int64(limit)),
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -64,7 +96,7 @@ func GetPublicMaintenance(db *mongo.Database) gin.HandlerFunc {
 		if items == nil {
 			items = []models.Maintenance{}
 		}
-		c.JSON(http.StatusOK, items)
+		writePaginatedResponse(c, items, int(total64), page, limit)
 	}
 }
 

@@ -17,7 +17,7 @@ interface FormState {
 const DEFAULT_FORM: FormState = { name: '', description: '', status: 'operational' }
 
 export default function AdminComponents() {
-  const { data: components, refetch } = useApi<Component[]>('/components')
+  const { data: components, total: totalComponents, refetch } = useApi<Component[]>('/components')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Component | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -77,7 +77,7 @@ export default function AdminComponents() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Components</h1>
-          <p className="text-sm text-gray-500 mt-1">{components?.length ?? 0} total</p>
+          <p className="text-sm text-gray-500 mt-1">{totalComponents} total</p>
         </div>
         <button
           onClick={openCreate}

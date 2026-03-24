@@ -42,8 +42,8 @@ func NewService(repo repository.MonitorRepository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) List(ctx context.Context) ([]models.Monitor, error) {
-	return s.repo.List(ctx)
+func (s *Service) List(ctx context.Context, page, limit int) ([]models.Monitor, int64, error) {
+	return s.repo.List(ctx, page, limit)
 }
 
 func (s *Service) Create(ctx context.Context, input MonitorUpsertInput) (models.Monitor, error) {

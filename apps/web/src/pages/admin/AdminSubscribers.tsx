@@ -6,7 +6,7 @@ import type { Subscriber } from '../../types'
 import { formatDate } from '../../lib/utils'
 
 export default function AdminSubscribers() {
-  const { data: subscribers, refetch } = useApi<Subscriber[]>('/subscribers')
+  const { data: subscribers, total: totalSubscribers, refetch } = useApi<Subscriber[]>('/subscribers')
   const [deleting, setDeleting] = useState<string | null>(null)
 
   async function handleDelete(s: Subscriber) {
@@ -31,7 +31,7 @@ export default function AdminSubscribers() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscribers</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {verified.length} verified · {unverified.length} pending
+            {totalSubscribers} total · {verified.length} verified · {unverified.length} pending
           </p>
         </div>
       </div>

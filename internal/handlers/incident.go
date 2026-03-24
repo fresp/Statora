@@ -15,6 +15,12 @@ import (
 
 func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -42,8 +48,18 @@ func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 			filter["createdAt"] = createdAtFilter
 		}
 
+		total, err := db.Collection("incidents").CountDocuments(ctx, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		skip := int64((page - 1) * limit)
 		cursor, err := db.Collection("incidents").Find(ctx, filter,
-			options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+			options.Find().
+				SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+				SetSkip(skip).
+				SetLimit(int64(limit)))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -58,7 +74,7 @@ func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 		if incidents == nil {
 			incidents = []models.Incident{}
 		}
-		c.JSON(http.StatusOK, incidents)
+		writePaginatedResponse(c, incidents, int(total), page, limit)
 	}
 }
 

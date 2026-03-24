@@ -16,11 +16,26 @@ import (
 // GetWebhookChannels retrieves all webhook channels from the database.
 func GetWebhookChannels(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("webhook_channels").Find(ctx, bson.M{},
-			options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+		coll := db.Collection("webhook_channels")
+		total64, err := coll.CountDocuments(ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		skip := int64((page - 1) * limit)
+
+		cursor, err := coll.Find(ctx, bson.M{},
+			options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip(skip).SetLimit(int64(limit)))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -37,7 +52,7 @@ func GetWebhookChannels(db *mongo.Database) gin.HandlerFunc {
 			channels = []models.WebhookChannel{}
 		}
 
-		c.JSON(http.StatusOK, channels)
+		writePaginatedResponse(c, channels, int(total64), page, limit)
 	}
 }
 

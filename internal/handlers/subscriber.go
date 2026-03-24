@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fresp/StatusForge/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/fresp/StatusForge/internal/models"
 )
 
 func Subscribe(db *mongo.Database) gin.HandlerFunc {
@@ -51,11 +51,26 @@ func Subscribe(db *mongo.Database) gin.HandlerFunc {
 
 func GetSubscribers(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("subscribers").Find(ctx, bson.M{},
-			options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+		coll := db.Collection("subscribers")
+		total64, err := coll.CountDocuments(ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		skip := int64((page - 1) * limit)
+
+		cursor, err := coll.Find(ctx, bson.M{},
+			options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetSkip(skip).SetLimit(int64(limit)))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -70,7 +85,7 @@ func GetSubscribers(db *mongo.Database) gin.HandlerFunc {
 		if subs == nil {
 			subs = []models.Subscriber{}
 		}
-		c.JSON(http.StatusOK, subs)
+		writePaginatedResponse(c, subs, int(total64), page, limit)
 	}
 }
 

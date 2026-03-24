@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api'
 import { fetchCategorySummary } from '../lib/api'
-import type { CategorySummary } from '../types'
+import type { CategorySummary, PaginatedResponse } from '../types'
+
+function isPaginatedEnvelope<T>(value: unknown): value is PaginatedResponse<T> {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Partial<PaginatedResponse<T>>
+  return Array.isArray(candidate.items) && typeof candidate.total === 'number'
+}
 
 export function useApi<T>(url: string, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -12,8 +24,19 @@ export function useApi<T>(url: string, deps: unknown[] = []) {
     try {
       setLoading(true)
       setError(null)
-      const res = await api.get<T>(url)
-      setData(res.data)
+      const res = await api.get<PaginatedResponse<unknown> | T>(url)
+
+      if (isPaginatedEnvelope(res.data)) {
+        setData(res.data.items as T)
+        setTotal(res.data.total)
+        setPage(res.data.page || 1)
+        setTotalPages(res.data.total_pages || 1)
+      } else {
+        setData(res.data)
+        setTotal(Array.isArray(res.data) ? res.data.length : 0)
+        setPage(1)
+        setTotalPages(1)
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Request failed'
       setError(msg)
@@ -25,9 +48,9 @@ export function useApi<T>(url: string, deps: unknown[] = []) {
   useEffect(() => {
     fetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
+  }, [url, ...deps])
 
-  return { data, loading, error, refetch: fetch }
+  return { data, total, page, totalPages, loading, error, refetch: fetch }
 }
 
 export function useCategorySummary(categoryPrefix: string | undefined) {

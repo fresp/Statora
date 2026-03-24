@@ -35,10 +35,10 @@ function StatCard({
 }
 
 export default function AdminDashboard() {
-  const { data: components } = useApi<Component[]>('/components')
-  const { data: incidents } = useApi<Incident[]>('/incidents')
-  const { data: monitors } = useApi<Monitor[]>('/monitors')
-  const { data: subscribers } = useApi<Subscriber[]>('/subscribers')
+  const { data: components, total: totalComponents } = useApi<Component[]>('/components')
+  const { data: incidents, total: totalIncidents } = useApi<Incident[]>('/incidents')
+  const { data: monitors, total: totalMonitors } = useApi<Monitor[]>('/monitors')
+  const { data: subscribers, total: totalSubscribers } = useApi<Subscriber[]>('/subscribers')
   const { data: maintenance } = useApi<Maintenance[]>('/maintenance')
 
   const activeIncidents = incidents?.filter(i => i.status !== 'resolved') || []
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <StatCard
           title="Components"
-          value={components?.length ?? '—'}
+          value={totalComponents}
           icon={Layers}
           color="bg-blue-500"
           to="/admin/components"
@@ -71,14 +71,14 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Monitors"
-          value={monitors?.length ?? '—'}
+          value={totalMonitors}
           icon={Activity}
           color="bg-purple-500"
           to="/admin/monitors"
         />
         <StatCard
           title="Subscribers"
-          value={subscribers?.length ?? '—'}
+          value={totalSubscribers}
           icon={Users}
           color="bg-indigo-500"
           to="/admin/subscribers"
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
         />
         <StatCard
           title="Total Incidents"
-          value={incidents?.length ?? '—'}
+          value={totalIncidents}
           icon={TrendingUp}
           color="bg-gray-500"
           to="/admin/incidents"

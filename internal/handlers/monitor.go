@@ -18,17 +18,27 @@ import (
 
 func GetMonitors(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		service := monitorservice.NewService(repository.NewMongoMonitorRepository(db))
-		monitors, err := service.List(ctx)
+		monitors, total, err := service.List(ctx, page, limit)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, monitors)
+		if monitors == nil {
+			monitors = []models.Monitor{}
+		}
+
+		writePaginatedResponse(c, monitors, int(total), page, limit)
 	}
 }
 

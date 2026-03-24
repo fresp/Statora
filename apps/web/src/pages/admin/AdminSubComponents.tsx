@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Plus, Pencil } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import api from '../../lib/api'
@@ -18,59 +18,19 @@ interface FormState {
 const DEFAULT_FORM: FormState = { componentId: '', name: '', description: '', status: 'operational' }
 
 export default function AdminSubComponents() {
-  // Fetch components but not subcomponents initially
-  const { data: components, refetch: refetchComponents } = useApi<Component[]>('/components')
-  const [subComponents, setSubComponents] = useState<SubComponent[] | undefined>()
-  const [loadingAll, setLoadingAll] = useState(false)
+  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components')
+  const { data: subComponents, total: totalSubComponents, refetch: refetchSubComponents } = useApi<SubComponent[]>('/subcomponents')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<SubComponent | null>(null)
-  
-
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  
-  // Fetch all subcomponents by fetching each component's subcomponents
-  const fetchAllSubcomponents = async () => {
-    if (!components || components.length === 0) {
-      setSubComponents([])
-      return
-    }
-    
-    setLoadingAll(true)
-    try {
-      // Fetch subcomponents for each component
-      const allSubComponents = await Promise.all(
-        components.map(async (component) => {
-          const response = await api.get<SubComponent[]>(`/components/${component.id}/subcomponents`)
-          return response.data;
-        })
-      )
-      
-      // Flatten and set the combined results
-      const flattened = allSubComponents.flat()
-      setSubComponents(flattened) 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch subcomponents')
-      setSubComponents(undefined)
-    } finally {
-      setLoadingAll(false)
-    }
-  }
-  
+
   // Refetch both components and subcomponents
   const refetch = async () => {
-    await refetchComponents()
-    fetchAllSubcomponents() // Fetch subcomponents after components update
+    await Promise.all([refetchComponents(), refetchSubComponents()])
   }
-  // Fetch all subcomponents when components are loaded
-  useEffect(() => {
-    if (components) {
-      fetchAllSubcomponents();
-    }
-  }, [components]);
-  
 
   function openCreate() {
     setEditing(null)
@@ -119,7 +79,7 @@ export default function AdminSubComponents() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sub-Components</h1>
-          <p className="text-sm text-gray-500 mt-1">{subComponents?.length ?? 0} total</p>
+          <p className="text-sm text-gray-500 mt-1">{totalSubComponents} total · {totalComponents} components</p>
         </div>
         <button
           onClick={openCreate}
@@ -166,12 +126,7 @@ export default function AdminSubComponents() {
                 </td>
               </tr>
             ))}
-            {loadingAll && (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">Loading subcomponents...</td>
-              </tr>
-            )}
-            {!loadingAll && subComponents !== undefined && (subComponents || []).length === 0 && (
+            {(subComponents || []).length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-gray-400">No sub-components yet.</td>
               </tr>
