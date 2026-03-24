@@ -1,308 +1,180 @@
-# StatusForge
+# StatusForge: Self-Hosted Status Page & Monitoring Platform
 
-StatusForge is a self-hosted status page and monitoring platform with a Go/Gin backend, a React/Vite frontend, MongoDB persistence, Redis-backed realtime support, and a built-in monitoring worker.
+StatusForge is a production-ready, self-hosted status page and monitoring platform, inspired by leading services like Atlassian Statuspage, Better Stack, and UptimeRobot. It provides a robust solution for businesses to maintain transparency and communicate service health to their users effectively.
 
-It is designed to run as a single unified server binary that serves both the API and the embedded web app.
+## ✨ Key Features
 
-## Features
+- **Real-time Monitoring**: Track the uptime and performance of your services with instant updates.
+- **Advanced Certificate & Domain Expiry Monitoring**: Track SSL certificate expiry and domain expiration windows with configurable alert thresholds.
+- **Incident & Maintenance Management**: Efficiently create, update, and resolve incidents and schedule maintenance events.
+- **Admin Console UX**: Navigate the admin area more efficiently with grouped, collapsible sidebar sections and clearer visual hierarchy.
+- **Customizable Public Status Page**: Brand your status page with theme presets, light/dark/system modes, typography controls, background and hero images, layout variants, custom metadata, and custom CSS.
+- **Role-Based Access Control (RBAC)**: Secure admin workflows with distinct `admin` and `operator` roles.
+- **Multi-Factor Authentication (MFA)**: Enhance security for administrative access.
+- **Subscriber Management**: Allow users to subscribe to updates for incidents and maintenance.
+- **Webhook Integrations**: Configure webhooks for automated notifications on service status changes.
+- **Flexible HTTPS Checks**: For HTTPS-based HTTP monitors, optionally ignore TLS certificate errors during availability checks when certificate expiry monitoring is not enabled.
+- **Self-Hosted**: Full control over your data and infrastructure.
 
-- Public status page with realtime updates over WebSocket
-- Category-level status detail pages at `/status/:categoryPrefix`
-- Component and subcomponent status tracking
-- Incident and maintenance management
-- HTTP, TCP, DNS, ping, and SSL monitoring
-- SSL certificate and domain expiry warning support
-- Admin console with RBAC and MFA-aware authentication flow
-- Subscriber and webhook channel management
-- Themeable public status page with branding and layout controls
-- Unified Docker deployment for API, worker, and frontend assets
+## 🚀 Screenshots
 
-## Architecture
+Run `npm run docs:screenshots --prefix apps/web` to regenerate these images after UI changes.
 
-### Backend
+| Admin Dashboard | Public Status Page | Incident History |
+|-----------------|--------------------|------------------|
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Public Status Page](docs/screenshots/status-page.png) | ![Incident History](docs/screenshots/incident-history.png) |
 
-- **Language/runtime:** Go 1.26
-- **HTTP framework:** Gin
-- **Entrypoint:** `cmd/server/main.go`
-- **Server bootstrap:** `internal/server/server.go`
-- **Route registration:** `internal/server/api_routes.go`
-- **Mongo connection:** `internal/database/mongo.go`
-- **Redis connection:** `internal/database/redis.go`
-- **Embedded frontend assets:** `internal/embed/embed.go`
+| Monitoring Table | Theme Settings |
+|------------------|----------------|
+| ![Monitoring Table](docs/screenshots/monitoring-table.png) | ![Theme Settings](docs/screenshots/theme-settings.png) |
 
-The backend starts from `server.RunServer()`, loads `.env`, connects to MongoDB and Redis, creates the Gin engine, registers API routes, starts the monitoring worker when enabled, seeds the initial admin user, and serves the embedded frontend for non-API routes.
+## 🛠️ Tech Stack
 
-### Frontend
+StatusForge is built with a modern, efficient, and scalable technology stack.
 
-- **Framework:** React 18
-- **Build tool:** Vite 5
-- **Language:** TypeScript
-- **Router:** `react-router-dom`
-- **HTTP client:** Axios
-- **Icons/UI utilities:** `lucide-react`
-- **Frontend root:** `apps/web/src/App.tsx`
+- **Backend**: Go (GoLang 1.26+) with Gin HTTP web framework
+- **Frontend**: React 18 with Vite for a fast development experience and TypeScript for type safety
+- **Database**: MongoDB for flexible data storage
+- **Caching & Pub/Sub**: Redis for high-performance caching and real-time updates
+- **Styling**: Tailwind CSS for utility-first styling
 
-The frontend is built into static assets and copied into `internal/embed/dist` during Docker builds so the Go server can serve the UI directly.
+## ⚡ Quick Start with Docker Compose
 
-### Data stores
-
-- **MongoDB:** primary application database
-- **Redis:** connectivity check plus realtime/pub-sub support used by the unified server and worker paths
-
-## Repository Layout
-
-```text
-.
-├── cmd/server/                  # Go application entrypoint
-├── configs/                     # Environment-driven config loading
-├── internal/
-│   ├── database/                # MongoDB and Redis connection helpers
-│   ├── embed/                   # Embedded frontend assets
-│   ├── handlers/                # HTTP handlers and websocket hub
-│   ├── middleware/              # Auth, MFA, and role enforcement
-│   ├── models/                  # Mongo-backed domain models
-│   ├── repository/              # Data access layer
-│   ├── server/                  # Unified server + worker bootstrap
-│   ├── services/                # Business logic services
-│   └── utils/                   # Monitor protocol utilities
-├── apps/web/                    # React/Vite frontend
-├── Dockerfile                   # Multi-stage unified image build
-├── docker-compose.yml           # Local stack: app + Mongo + Redis
-├── Makefile                     # Docker compose convenience commands
-└── .env.example                 # Local configuration template
-```
-
-## Public Routes
-
-Registered from `internal/server/api_routes.go`:
-
-- `GET /health`
-- `GET /ws`
-- `GET /api/status/summary`
-- `GET /api/status/components`
-- `GET /api/status/incidents`
-- `GET /api/status/category/:prefix`
-- `GET /api/v1/status/category/:prefix`
-- `GET /api/status/settings`
-- `POST /api/subscribe`
-
-The public web UI includes:
-
-- `/` — main status page
-- `/status/:categoryPrefix` — category detail page
-- `/history` — incident history page
-
-## Admin API Surface
-
-The admin API is protected in layers:
-
-1. JWT authentication via `AuthMiddleware`
-2. MFA verification via `RequireMFAVerified`
-3. Role checks via `RequireRoles`
-
-Major admin route groups include:
-
-- Auth/profile/MFA endpoints
-- Incidents and incident updates
-- Maintenance windows
-- Components and subcomponents
-- Monitors, logs, uptime, history, and outage data
-- Subscribers
-- Status page settings
-- Webhook channels
-- Users and user invitations
-
-## Monitoring Worker
-
-The unified server can start an internal monitoring worker from `internal/server/worker.go` when `ENABLE_WORKER=true`.
-
-The worker:
-
-- polls monitor definitions from MongoDB
-- executes monitor checks on a ticker
-- stores monitor logs
-- updates component/subcomponent status
-- updates daily uptime records
-- detects outages
-- applies SSL/domain warning degradation logic
-- updates maintenance status
-
-Supported monitor types visible in the worker path include:
-
-- HTTP
-- TCP
-- DNS
-- Ping
-- SSL
-
-## Environment Variables
-
-From `configs/config.go` and `.env.example`:
-
-| Variable | Required | Default | Purpose |
-|---|---|---:|---|
-| `MONGO_URI` | Yes | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGO_DB_NAME` | Yes | `statusplatform` | Mongo database name |
-| `REDIS_ADDR` | Yes | `localhost:6379` | Redis address |
-| `JWT_SECRET` | Yes | fallback present, override in real deployments | JWT signing secret |
-| `MFA_SECRET_KEY` | Yes | empty | MFA-related secret material |
-| `PORT` | No | `8080` | HTTP server port |
-| `ADMIN_EMAIL` | Bootstrap only | `admin@statusplatform.com` | Seeded admin email |
-| `ADMIN_USERNAME` | Bootstrap only | `admin` | Seeded admin username |
-| `ADMIN_PASSWORD` | Bootstrap only | `admin123` | Seeded admin password |
-| `ENABLE_WORKER` | No | `true` | Enables the internal monitoring worker |
-
-## Local Development
+The fastest way to get StatusForge up and running locally is using Docker Compose.
 
 ### Prerequisites
 
-- Go 1.26+
-- Node.js 20+
-- MongoDB
-- Redis
+Ensure you have Docker and Docker Compose installed on your system.
 
-### 1. Configure environment
+### Steps
 
-```bash
-cp .env.example .env
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/fresp/StatusForge.git
+    cd StatusForge
+    ```
 
-Adjust values for your local MongoDB and Redis instances as needed.
+2.  **Configure Environment Variables:**
+    Copy the example environment file:
+    ```bash
+    cp .env.example .env
+    ```
+    You can customize these variables in the `.env` file. Important variables include:
+    -   `MONGO_URI`: MongoDB connection string.
+    -   `MONGO_DB_NAME`: Database name for MongoDB.
+    -   `REDIS_ADDR`: Redis connection address.
+    -   `JWT_SECRET`: Secret key for JWT authentication ( **change this in production!** ).
+    -   `MFA_SECRET_KEY`: Secret key for MFA ( **change this in production!** ).
+    -   `PORT`: The port StatusForge will run on (default: `8080`).
+    -   `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`: Credentials for the initial admin user (used for bootstrap only).
+    -   `ENABLE_WORKER`: Enables the background worker that executes monitor checks and writes monitor status updates.
 
-### 2. Run the backend
+3.  **Start the Services:**
+    Build and start all services using Docker Compose:
+    ```bash
+    docker compose up --build
+    ```
+    Alternatively, if you have `make` installed:
+    ```bash
+    make up-build
+    ```
 
-```bash
-go mod download
-go run cmd/server/main.go
-```
+4.  **Access StatusForge:**
+    Once the services are up, access StatusForge in your web browser:
+    -   **Public Status Page**: `http://localhost:8080`
+    -   **Admin Panel**: `http://localhost:8080/admin`
+    -   **Health Check**: `http://localhost:8080/health`
 
-This starts the unified server on `http://localhost:8080` by default.
+    The default admin credentials are `admin@statusplatform.com` with password `admin123`. **It is crucial to change these credentials immediately after the first login in a production environment.**
 
-### 3. Run the frontend in Vite dev mode
+## ⚙️ Local Development
 
-In another terminal:
+For developers who want to contribute or customize StatusForge, you can run the backend and frontend separately.
 
-```bash
-cd apps/web
-npm install
-npm run dev
-```
+### Prerequisites
 
-The Vite dev server runs on `http://localhost:3000` and proxies:
-
-- `/api` → `http://localhost:8080`
-- `/ws` → `ws://localhost:8080`
-
-## Docker Compose Quick Start
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-Or with `make`:
-
-```bash
-make up-build
-```
-
-Services defined in `docker-compose.yml`:
-
-- `server` — unified StatusForge app on port `8080`
-- `mongo` — MongoDB 7 on port `27017`
-- `redis` — Redis 7 on port `6379`
-
-The compose stack also grants `NET_RAW` to the server container for ICMP ping monitor support.
-
-## Build
-
-### Frontend
-
-```bash
-cd apps/web
-npm run build
-```
+-   Go 1.26+
+-   Node.js 20+
+-   MongoDB instance (local or remote)
+-   Redis instance (local or remote)
 
 ### Backend
 
-```bash
-go build -o server cmd/server/main.go
-```
+1.  **Configure Environment Variables**: Copy `.env.example` to `.env` as described in the Docker Quick Start.
+2.  **Install Go dependencies**:
+    ```bash
+    go mod download
+    ```
+3.  **Run the Go server**:
+    ```bash
+    go run cmd/server/main.go
+    ```
 
-### Docker image
+### Frontend
 
-The root `Dockerfile` uses a multi-stage build:
+1.  **Navigate to the frontend directory**:
+    ```bash
+    cd apps/web
+    ```
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+3.  **Start the Vite development server**:
+    ```bash
+    npm run dev
+    ```
+    The Vite development server will provide live reloading for frontend changes.
 
-1. build the React frontend with Node 20
-2. build the Go backend with Go 1.26
-3. copy frontend assets into `internal/embed/dist`
-4. produce a final minimal Alpine image running `/app/server`
+## 📦 Build & Deployment
 
-## Make Targets
+### Building for Production
 
-Common targets from `Makefile`:
+To build the frontend and backend for production:
 
-- `make up`
-- `make up-build`
-- `make down`
-- `make down-v`
-- `make restart`
-- `make logs`
-- `make logs-server`
-- `make logs-mongo`
-- `make logs-redis`
-- `make ps`
-- `make shell-server`
-- `make shell-mongo`
-- `make shell-redis`
+1.  **Frontend Build**:
+    ```bash
+    cd apps/web
+    npm run build
+    ```
+2.  **Backend Build**:
+    ```bash
+    go build -o server cmd/server/main.go
+    ```
+    The `Dockerfile` handles this multi-stage build process automatically for Docker deployments.
 
-## Notable Recent Status Feature Additions
+### Docker Deployment
 
-Current changes in this branch add category-level public status support:
+The provided `Dockerfile` creates a minimal Alpine-based image embedding the built frontend assets into the Go binary. The `docker-compose.yml` orchestrates the `server`, `mongo`, and `redis` services.
 
-- backend category detail endpoint via `GetStatusCategory`
-- repository/service layering for category summary generation
-- frontend route for `/status/:categoryPrefix`
-- clickable category cards from the main status page
+For detailed Docker operations, refer to the `Makefile` for convenient commands like `make up`, `make up-build`, `make down`, `make down-v`, `make logs`, `make logs-server`, `make ps`, and `make shell-server`.
 
-This functionality is implemented across:
+## 🎨 Status Page Branding & Theme Controls
 
-- `internal/repository/status_repository.go`
-- `internal/services/status/service.go`
-- `internal/handlers/status.go`
-- `internal/server/api_routes.go`
-- `apps/web/src/pages/StatusCategoryPage.tsx`
-- `apps/web/src/lib/api.ts`
-- `apps/web/src/hooks/useApi.ts`
-- `apps/web/src/types/index.ts`
-- `apps/web/src/pages/StatusPage.tsx`
-- `apps/web/src/App.tsx`
+Administrators can customize the public status page from the admin settings screen without rebuilding the application.
 
-## Screenshots
+- **Branding assets**: Site name, logo URL, background image URL, and hero image URL.
+- **Theme presets**: Built-in `default`, `ocean`, and `graphite` presets.
+- **Color modes**: `light`, `dark`, or `system` mode selection.
+- **Palette editing**: Separate light and dark palettes for primary, background, text, and accent colors.
+- **Typography**: Configurable font family and font scale (`sm`, `md`, `lg`).
+- **Layout variants**: `classic`, `compact`, `minimal`, and `cards` layouts for the public page.
+- **Incident history UX**: The public status page surfaces a rolling 7-day incident snapshot by default, and `/history` exposes the archive through quarter navigation with month-grouped incident lists and empty-month states.
+- **Preview tooling**: The admin console includes a live preview before saving changes.
+- **Validation**: Backend validation enforces `http(s)` URLs for branding assets and `#RRGGBB` hex colors for theme values.
 
-Run the screenshot generator after UI updates:
+These settings are served through the status page settings API and pushed to connected clients through the existing realtime update flow.
 
-```bash
-npm run docs:screenshots --prefix apps/web
-```
+## 🤝 Contributing
 
-Available screenshots are stored in `docs/screenshots/`.
+We welcome contributions to StatusForge! Whether it's bug reports, feature requests, documentation improvements, or code contributions, your help is valuable.
 
-## Testing and Verification
+-   Fork the repository.
+-   Create a new branch for your feature or bug fix.
+-   Submit a pull request with a clear description of your changes.
 
-Useful commands for local verification:
+Please ensure your code adheres to existing style guides and passes all tests.
 
-```bash
-go test ./...
-cd apps/web && npm run build
-```
+## 📄 License
 
-## Security Notes
-
-- Change bootstrap admin credentials before real deployment.
-- Replace default JWT and MFA secrets in any non-local environment.
-- Review CORS settings in `internal/server/api_routes.go` before internet-facing deployment.
-
-## License
-
-This repository is licensed under the MIT License. See `LICENSE`.
+StatusForge is open-source software licensed under the [MIT License](LICENSE).
