@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { Incident, IncidentUpdate, Component, IncidentStatus, IncidentImpact } from '../../types'
 import { INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS, formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const STATUSES: IncidentStatus[] = ['investigating', 'identified', 'monitoring', 'resolved']
 const IMPACTS: IncidentImpact[] = ['none', 'minor', 'major', 'critical']
@@ -165,8 +167,9 @@ function IncidentRow({ incident, components, onRefetch }: {
 }
 
 export default function AdminIncidents() {
-  const { data: incidents, total: totalIncidents, refetch } = useApi<Incident[]>('/incidents')
-  const { data: components } = useApi<Component[]>('/components')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: incidents, total: totalIncidents, totalPages, loading, refetch } = useApi<Incident[]>('/incidents', [], apiParams)
+  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<IncidentForm>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
@@ -262,6 +265,16 @@ export default function AdminIncidents() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalIncidents}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {showModal && (

@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { Component, ComponentStatus } from '../../types'
 import { STATUS_LABELS, STATUS_COLORS } from '../../lib/utils'
 import Modal from '../../components/Modal'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const STATUSES: ComponentStatus[] = ['operational', 'degraded_performance', 'partial_outage', 'major_outage', 'maintenance']
 
@@ -17,7 +19,8 @@ interface FormState {
 const DEFAULT_FORM: FormState = { name: '', description: '', status: 'operational' }
 
 export default function AdminComponents() {
-  const { data: components, total: totalComponents, refetch } = useApi<Component[]>('/components')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: components, total: totalComponents, totalPages, loading, refetch } = useApi<Component[]>('/components', [], apiParams)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Component | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -127,6 +130,16 @@ export default function AdminComponents() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalComponents}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {showModal && (

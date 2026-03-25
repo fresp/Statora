@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import { Trash2, Mail } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { Subscriber } from '../../types'
 import { formatDate } from '../../lib/utils'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 export default function AdminSubscribers() {
-  const { data: subscribers, total: totalSubscribers, refetch } = useApi<Subscriber[]>('/subscribers')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: subscribers, total: totalSubscribers, totalPages, loading, refetch } = useApi<Subscriber[]>('/subscribers', [], apiParams)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   async function handleDelete(s: Subscriber) {
@@ -87,6 +90,16 @@ export default function AdminSubscribers() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalSubscribers}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
     </div>
   )

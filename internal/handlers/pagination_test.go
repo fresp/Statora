@@ -75,3 +75,27 @@ func TestWritePaginatedResponse(t *testing.T) {
 	assert.True(t, ok)
 	assert.Len(t, items, 2)
 }
+
+func TestClampPageToTotalPagesKeepsPageWhenInRange(t *testing.T) {
+	clamped := clampPageToTotalPages(2, 10, 35)
+
+	assert.Equal(t, 2, clamped)
+}
+
+func TestClampPageToTotalPagesClampsToLastPageWhenOutOfRange(t *testing.T) {
+	clamped := clampPageToTotalPages(9, 10, 35)
+
+	assert.Equal(t, 4, clamped)
+}
+
+func TestClampPageToTotalPagesKeepsRequestedPageWhenTotalIsEmpty(t *testing.T) {
+	clamped := clampPageToTotalPages(3, 10, 0)
+
+	assert.Equal(t, 3, clamped)
+}
+
+func TestClampPageToTotalPagesNormalizesPageBelowOne(t *testing.T) {
+	clamped := clampPageToTotalPages(0, 10, 35)
+
+	assert.Equal(t, 1, clamped)
+}

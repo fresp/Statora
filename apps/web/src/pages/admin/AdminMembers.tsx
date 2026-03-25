@@ -2,7 +2,9 @@ import React, { useMemo, useState } from 'react'
 import { Shield, RefreshCw, Plus, X } from 'lucide-react'
 import api from '../../lib/api'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import type { UserInvitation, UserMember, UserRole, UserStatus } from '../../types'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const ROLE_OPTIONS: UserRole[] = ['admin', 'operator']
 const INVITE_ROLE_OPTIONS: Extract<UserRole, 'admin' | 'operator'>[] = ['admin', 'operator']
@@ -58,13 +60,28 @@ function readStoredAdminProfile(): StoredAdminProfile | null {
 }
 
 export default function AdminMembers() {
-  const { data, loading, error, refetch } = useApi<UserMember[] | MembersResponse>('/users')
+  const membersPagination = useAdminPagination({ pageParam: 'usersPage', limitParam: 'usersLimit' })
+  const invitationsPagination = useAdminPagination({
+    pageParam: 'invitesPage',
+    limitParam: 'invitesLimit',
+  })
+
+  const {
+    data,
+    total: membersTotal,
+    totalPages: membersTotalPages,
+    loading,
+    error,
+    refetch,
+  } = useApi<UserMember[] | MembersResponse>('/users', [], membersPagination.apiParams)
   const {
     data: invitationsData,
+    total: invitationsTotal,
+    totalPages: invitationsTotalPages,
     loading: invitationsLoading,
     error: invitationsError,
     refetch: refetchInvitations,
-  } = useApi<UserInvitation[] | InvitationsResponse>('/users/invitations')
+  } = useApi<UserInvitation[] | InvitationsResponse>('/users/invitations', [], invitationsPagination.apiParams)
   const { data: meData } = useApi<MeResponse>('/auth/me')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -371,6 +388,16 @@ export default function AdminMembers() {
               })}
             </tbody>
           </table>
+
+          <AdminPaginationControls
+            page={membersPagination.page}
+            totalPages={membersTotalPages}
+            total={membersTotal}
+            limit={membersPagination.limit}
+            loading={loading}
+            onPageChange={membersPagination.setPage}
+            onLimitChange={membersPagination.setLimit}
+          />
         </div>
       )}
 
@@ -452,6 +479,16 @@ export default function AdminMembers() {
                 })}
               </tbody>
             </table>
+
+            <AdminPaginationControls
+              page={invitationsPagination.page}
+              totalPages={invitationsTotalPages}
+              total={invitationsTotal}
+              limit={invitationsPagination.limit}
+              loading={invitationsLoading}
+              onPageChange={invitationsPagination.setPage}
+              onLimitChange={invitationsPagination.setLimit}
+            />
           </div>
         )}
       </div>

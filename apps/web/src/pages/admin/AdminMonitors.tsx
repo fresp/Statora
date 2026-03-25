@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
 import { Plus, Trash2, X, Activity, Edit2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { Monitor, Component, SubComponent, MonitorType } from '../../types'
 import Modal from '../../components/Modal'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const MONITOR_TYPES: MonitorType[] = ['http', 'tcp', 'dns', 'ping', 'ssl']
 
@@ -46,9 +48,10 @@ const TYPE_PLACEHOLDERS: Record<MonitorType, string> = {
 }
 
 export default function AdminMonitors() {
-  const { data: monitors, total: totalMonitors, loading: monitorsLoading, error: monitorsError, refetch } = useApi<Monitor[]>('/monitors')
-  const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components')
-  const { data: subcomponents, total: totalSubcomponents, loading: subcomponentsLoading, error: subcomponentsError } = useApi<SubComponent[]>('/subcomponents')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: monitors, total: totalMonitors, page: currentPage, totalPages, loading: monitorsLoading, error: monitorsError, refetch } = useApi<Monitor[]>('/monitors', [], apiParams)
+  const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: subcomponents, total: totalSubcomponents, loading: subcomponentsLoading, error: subcomponentsError } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 500 })
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -264,6 +267,16 @@ export default function AdminMonitors() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={currentPage || page}
+          totalPages={totalPages}
+          total={totalMonitors}
+          limit={limit}
+          loading={monitorsLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {showModal && (

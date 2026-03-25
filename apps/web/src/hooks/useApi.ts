@@ -3,6 +3,10 @@ import api from '../lib/api'
 import { fetchCategorySummary } from '../lib/api'
 import type { CategorySummary, PaginatedResponse } from '../types'
 
+type QueryParamValue = string | number | boolean | null | undefined
+
+type QueryParams = Record<string, QueryParamValue>
+
 function isPaginatedEnvelope<T>(value: unknown): value is PaginatedResponse<T> {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -12,7 +16,7 @@ function isPaginatedEnvelope<T>(value: unknown): value is PaginatedResponse<T> {
   return Array.isArray(candidate.items) && typeof candidate.total === 'number'
 }
 
-export function useApi<T>(url: string, deps: unknown[] = []) {
+export function useApi<T>(url: string, deps: unknown[] = [], params?: QueryParams) {
   const [data, setData] = useState<T | null>(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -20,11 +24,25 @@ export function useApi<T>(url: string, deps: unknown[] = []) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const normalizedParams = Object.entries(params ?? {}).reduce<Record<string, string | number | boolean>>(
+    (acc, [key, value]) => {
+      if (value !== undefined && value !== null) {
+        acc[key] = value
+      }
+      return acc
+    },
+    {},
+  )
+
+  const serializedParams = JSON.stringify(normalizedParams)
+
   const fetch = async () => {
     try {
       setLoading(true)
       setError(null)
-      const res = await api.get<PaginatedResponse<unknown> | T>(url)
+      const res = await api.get<PaginatedResponse<unknown> | T>(url, {
+        params: normalizedParams,
+      })
 
       if (isPaginatedEnvelope(res.data)) {
         setData(res.data.items as T)
@@ -48,7 +66,7 @@ export function useApi<T>(url: string, deps: unknown[] = []) {
   useEffect(() => {
     fetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, ...deps])
+  }, [url, serializedParams, ...deps])
 
   return { data, total, page, totalPages, loading, error, refetch: fetch }
 }

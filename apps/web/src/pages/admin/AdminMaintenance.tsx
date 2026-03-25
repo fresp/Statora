@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Plus, Pencil } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { Maintenance, Component, MaintenanceStatus } from '../../types'
 import { formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const STATUSES: MaintenanceStatus[] = ['scheduled', 'in_progress', 'completed']
 
@@ -44,8 +46,9 @@ function toDatetimeLocal(iso: string) {
 }
 
 export default function AdminMaintenance() {
-  const { data: maintenance, total: totalMaintenance, refetch } = useApi<Maintenance[]>('/maintenance')
-  const { data: components } = useApi<Component[]>('/components')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: maintenance, total: totalMaintenance, totalPages, loading, refetch } = useApi<Maintenance[]>('/maintenance', [], apiParams)
+  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Maintenance | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -166,6 +169,16 @@ export default function AdminMaintenance() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalMaintenance}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {showModal && (

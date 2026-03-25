@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -67,12 +68,54 @@ func mapUser(user models.User) userResponse {
 	}
 }
 
+func clampPageToTotalPages(page, limit, total int) int {
+	if page < 1 {
+		return 1
+	}
+
+	if total <= 0 || limit <= 0 {
+		return page
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+	if totalPages < 1 {
+		return page
+	}
+
+	if page > totalPages {
+		return totalPages
+	}
+
+	return page
+}
+
 func GetUsers(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("users").Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}))
+		filter := bson.M{}
+		total64, err := db.Collection("users").CountDocuments(ctx, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		total := int(total64)
+		page = clampPageToTotalPages(page, limit, total)
+
+		opts := options.Find().
+			SetSort(bson.D{{Key: "createdAt", Value: 1}}).
+			SetSkip(int64((page - 1) * limit)).
+			SetLimit(int64(limit))
+
+		cursor, err := db.Collection("users").Find(ctx, filter, opts)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -94,7 +137,7 @@ func GetUsers(db *mongo.Database) gin.HandlerFunc {
 			items = []userResponse{}
 		}
 
-		c.JSON(http.StatusOK, items)
+		writePaginatedResponse(c, items, total, page, limit)
 	}
 }
 
@@ -288,13 +331,35 @@ func CreateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 
 func GetUserInvitations(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		page, limit, err := parsePaginationParams(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		cursor, err := db.Collection("user_invitations").Find(ctx, bson.M{
+		filter := bson.M{
 			"acceptedAt": bson.M{"$exists": false},
 			"revokedAt":  bson.M{"$exists": false},
-		}, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+		}
+
+		total64, err := db.Collection("user_invitations").CountDocuments(ctx, filter)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		total := int(total64)
+		page = clampPageToTotalPages(page, limit, total)
+
+		opts := options.Find().
+			SetSort(bson.D{{Key: "createdAt", Value: -1}}).
+			SetSkip(int64((page - 1) * limit)).
+			SetLimit(int64(limit))
+
+		cursor, err := db.Collection("user_invitations").Find(ctx, filter, opts)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -324,7 +389,7 @@ func GetUserInvitations(db *mongo.Database) gin.HandlerFunc {
 			items = []userInvitationResponse{}
 		}
 
-		c.JSON(http.StatusOK, items)
+		writePaginatedResponse(c, items, total, page, limit)
 	}
 }
 

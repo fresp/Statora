@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import { Trash2, Link as LinkIcon } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { WebhookChannel } from '../../types'
 import { formatDate } from '../../lib/utils'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 export default function AdminWebhookChannels() {
-  const { data: channels, total: totalChannels, refetch } = useApi<WebhookChannel[]>('/webhook-channels')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: channels, total: totalChannels, totalPages, loading, refetch } = useApi<WebhookChannel[]>('/webhook-channels', [], apiParams)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
@@ -141,6 +144,16 @@ export default function AdminWebhookChannels() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalChannels}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
     </div>
   )

@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Plus, Pencil } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
+import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
 import type { SubComponent, Component, ComponentStatus } from '../../types'
 import { STATUS_LABELS, STATUS_COLORS } from '../../lib/utils'
 import Modal from '../../components/Modal'
+import AdminPaginationControls from '../../components/AdminPaginationControls'
 
 const STATUSES: ComponentStatus[] = ['operational', 'degraded_performance', 'partial_outage', 'major_outage', 'maintenance']
 
@@ -18,8 +20,15 @@ interface FormState {
 const DEFAULT_FORM: FormState = { componentId: '', name: '', description: '', status: 'operational' }
 
 export default function AdminSubComponents() {
-  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components')
-  const { data: subComponents, total: totalSubComponents, refetch: refetchSubComponents } = useApi<SubComponent[]>('/subcomponents')
+  const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
+  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const {
+    data: subComponents,
+    total: totalSubComponents,
+    totalPages,
+    loading,
+    refetch: refetchSubComponents,
+  } = useApi<SubComponent[]>('/subcomponents', [], apiParams)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<SubComponent | null>(null)
 
@@ -133,6 +142,16 @@ export default function AdminSubComponents() {
             )}
           </tbody>
         </table>
+
+        <AdminPaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={totalSubComponents}
+          limit={limit}
+          loading={loading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       {showModal && (
