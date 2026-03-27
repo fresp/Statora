@@ -2,7 +2,10 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/url"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,13 +16,19 @@ var client *mongo.Client
 var database *mongo.Database
 
 func ConnectMongo(uri string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second) // ⬅️ increase timeout
+	if uri == "" {
+		return fmt.Errorf("MONGODB_URI is empty")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	clientOpts := options.Client().
 		ApplyURI(uri).
-		SetMaxPoolSize(100). // ⬅️ basic pooling
-		SetMinPoolSize(5)
+		SetMaxPoolSize(100).
+		SetMinPoolSize(5).
+		SetServerSelectionTimeout(10 * time.Second).
+		SetRetryWrites(true)
 
 	c, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
@@ -31,9 +40,21 @@ func ConnectMongo(uri string) error {
 	}
 
 	client = c
-	database = c.Database("")
 
-	log.Printf("Connected to MongoDB")
+	// 🔥 Extract DB name dari URI
+	u, err := url.Parse(uri)
+	if err != nil {
+		return fmt.Errorf("invalid Mongo URI: %v", err)
+	}
+
+	dbName := strings.TrimPrefix(u.Path, "/")
+	if dbName == "" {
+		return fmt.Errorf("database name cannot be empty (missing /dbname in URI)")
+	}
+
+	database = c.Database(dbName)
+
+	log.Printf("Connected to MongoDB (db=%s)", dbName)
 
 	return nil
 }
