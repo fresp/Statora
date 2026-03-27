@@ -74,7 +74,6 @@ func TestAPIRoutesRegistration(t *testing.T) {
 
 	cfg := &configs.Config{
 		MongoURI:     "mongodb://localhost:27017",
-		MongoDBName:  "test_db",
 		RedisAddr:    "localhost:6379",
 		JWTSecret:    "test-secret",
 		Port:         "8081",
@@ -106,7 +105,6 @@ func TestUnifiedStartupWithMockDB(t *testing.T) {
 	// This test attempts to verify the server startup flow with mock database
 	cfg := &configs.Config{
 		MongoURI:     "mongodb://localhost:27017",
-		MongoDBName:  "test_db",
 		RedisAddr:    "localhost:6379",
 		JWTSecret:    "test-secret",
 		Port:         "8081",
@@ -121,7 +119,7 @@ func TestUnifiedStartupWithMockDB(t *testing.T) {
 	defer cancel()
 
 	// Initialize database connection
-	if err := database.ConnectMongo(cfg.MongoURI, cfg.MongoDBName); err != nil {
+	if err := database.ConnectMongo(cfg.MongoURI); err != nil {
 		// Skip test if database not available
 		t.Skip("Skipping integration test: MongoDB not available")
 	}

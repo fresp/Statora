@@ -22,9 +22,8 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		MongoURI:     		getEnv("MONGO_URI", "mongodb://localhost:27017"),
-		MongoDBName:  		getEnv("MONGO_DB_NAME", "statusplatform"),
-		RedisAddr:    		getEnv("REDIS_ADDR", "localhost:6379"),
+		MongoURI:     		getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+		RedisAddr:    		getEnv("REDIS_URI", "localhost:6379"),
 		JWTSecret:    		getEnv("JWT_SECRET", "super-secret-jwt-key-change-in-production"),
 		MFASecretKey: 		getEnv("MFA_SECRET_KEY", ""),
 		Port:         		getEnv("PORT", "8080"),

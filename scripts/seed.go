@@ -18,13 +18,9 @@ import (
 func main() {
 	godotenv.Load()
 
-	mongoURI := os.Getenv("MONGO_URI")
+	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
 		mongoURI = "mongodb://root:strongpassword@host.docker.internal:27017/admin?authSource=admin"
-	}
-	dbName := os.Getenv("MONGO_DB_NAME")
-	if dbName == "" {
-		dbName = "statusplatform"
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
