@@ -22,6 +22,10 @@ func main() {
 	if mongoURI == "" {
 		mongoURI = "mongodb://root:strongpassword@host.docker.internal:27017/admin?authSource=admin"
 	}
+	dbName := os.Getenv("MONGODB_DB")
+	if dbName == "" {
+		dbName = "statusplatform"
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

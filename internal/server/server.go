@@ -21,7 +21,7 @@ func RunServer() error {
 	cfg := configs.Load()
 
 	// Connect to databases
-	if err := database.ConnectMongo(cfg.MongoURI); err != nil {
+	if err := database.ConnectMongo(cfg.MongoURI, cfg.MongoDBName); err != nil {
 		log.Fatalf("[SERVER] MongoDB connection failed: %v", err)
 	}
 	if err := database.ConnectRedis(cfg.RedisAddr); err != nil {
