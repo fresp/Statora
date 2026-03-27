@@ -22,6 +22,7 @@ func TestGracefulShutdown(t *testing.T) {
 	// Override config for test to disable worker initially
 	testCfg := &configs.Config{
 		MongoURI:     originalCfg.MongoURI,
+		MongoDBName:  originalCfg.MongoDBName,
 		RedisAddr:    originalCfg.RedisAddr,
 		JWTSecret:    originalCfg.JWTSecret,
 		Port:         "0", // Use port 0 to let OS assign free port (but we won't actually listen)
@@ -32,7 +33,7 @@ func TestGracefulShutdown(t *testing.T) {
 	}
 
 	dbInitialized := true
-	if err := database.ConnectMongo(testCfg.MongoURI); err != nil {
+	if err := database.ConnectMongo(testCfg.MongoURI, testCfg.MongoDBName); err != nil {
 		dbInitialized = false
 		t.Log("Skipping graceful shutdown test: MongoDB not available")
 	}
