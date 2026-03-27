@@ -32,25 +32,6 @@ func ConnectMongo(uri, dbName string) error {
 	return nil
 }
 
-// 🔥 safe untuk replica set URI
-func extractDBName(uri string) string {
-	// ambil bagian setelah host
-	parts := strings.Split(uri, "/")
-	if len(parts) < 4 {
-		return ""
-	}
-
-	// bagian setelah "/" terakhir sebelum query
-	dbPart := parts[3]
-
-	// buang query param
-	if i := strings.Index(dbPart, "?"); i != -1 {
-		dbPart = dbPart[:i]
-	}
-
-	return dbPart
-}
-
 func GetDB() *mongo.Database {
 	return database
 }
