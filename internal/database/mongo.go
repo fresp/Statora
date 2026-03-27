@@ -2,9 +2,7 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,21 +12,11 @@ import (
 var client *mongo.Client
 var database *mongo.Database
 
-func ConnectMongo(uri string) error {
-	if uri == "" {
-		return fmt.Errorf("MONGODB_URI is empty")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+func ConnectMongo(uri, dbName string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	clientOpts := options.Client().
-		ApplyURI(uri).
-		SetMaxPoolSize(100).
-		SetMinPoolSize(5).
-		SetServerSelectionTimeout(10 * time.Second).
-		SetRetryWrites(true)
-
+	clientOpts := options.Client().ApplyURI(uri)
 	c, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		return err
@@ -39,17 +27,8 @@ func ConnectMongo(uri string) error {
 	}
 
 	client = c
-
-	// 🔥 Extract DB name (tanpa url.Parse)
-	dbName := extractDBName(uri)
-	if dbName == "" {
-		return fmt.Errorf("database name cannot be empty (missing /dbname in URI)")
-	}
-
 	database = c.Database(dbName)
-
-	log.Printf("Connected to MongoDB (db=%s)", dbName)
-
+	log.Printf("Connected to MongoDB: %s/%s", uri, dbName)
 	return nil
 }
 
