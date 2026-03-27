@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +14,7 @@ var client *mongo.Client
 var database *mongo.Database
 
 func ConnectMongo(uri, dbName string) error {
+	uri = strings.TrimSpace(uri)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
