@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 	"strings"
 	"time"
 
@@ -41,13 +40,8 @@ func ConnectMongo(uri string) error {
 
 	client = c
 
-	// 🔥 Extract DB name dari URI
-	u, err := url.Parse(uri)
-	if err != nil {
-		return fmt.Errorf("invalid Mongo URI: %v", err)
-	}
-
-	dbName := strings.TrimPrefix(u.Path, "/")
+	// 🔥 Extract DB name (tanpa url.Parse)
+	dbName := extractDBName(uri)
 	if dbName == "" {
 		return fmt.Errorf("database name cannot be empty (missing /dbname in URI)")
 	}
@@ -57,6 +51,25 @@ func ConnectMongo(uri string) error {
 	log.Printf("Connected to MongoDB (db=%s)", dbName)
 
 	return nil
+}
+
+// 🔥 safe untuk replica set URI
+func extractDBName(uri string) string {
+	// ambil bagian setelah host
+	parts := strings.Split(uri, "/")
+	if len(parts) < 4 {
+		return ""
+	}
+
+	// bagian setelah "/" terakhir sebelum query
+	dbPart := parts[3]
+
+	// buang query param
+	if i := strings.Index(dbPart, "?"); i != -1 {
+		dbPart = dbPart[:i]
+	}
+
+	return dbPart
 }
 
 func GetDB() *mongo.Database {
