@@ -60,14 +60,15 @@ Ensure you have Docker and Docker Compose installed on your system.
     cp .env.example .env
     ```
     You can customize these variables in the `.env` file. Important variables include:
-    -   `MONGO_URI`: MongoDB connection string.
-    -   `MONGO_DB_NAME`: Database name for MongoDB.
-    -   `REDIS_ADDR`: Redis connection address.
+    -   `MONGODB_URI`: MongoDB connection string. The database name is expected to be part of this URI.
+    -   `REDIS_URI`: Redis connection address. The app accepts either `host:port` or a `redis://` URI.
     -   `JWT_SECRET`: Secret key for JWT authentication ( **change this in production!** ).
     -   `MFA_SECRET_KEY`: Secret key for MFA ( **change this in production!** ).
     -   `PORT`: The port StatusForge will run on (default: `8080`).
     -   `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`: Credentials for the initial admin user (used for bootstrap only).
     -   `ENABLE_WORKER`: Enables the background worker that executes monitor checks and writes monitor status updates.
+    -   `GRACEFUL_SHUTDOWN`: Enables signal-aware graceful shutdown handling (default: `true`).
+    -   `SHUTDOWN_TIMEOUT`: Timeout in seconds for graceful shutdown (default: `30`).
 
 3.  **Start the Services:**
     Build and start all services using Docker Compose:
@@ -86,6 +87,13 @@ Ensure you have Docker and Docker Compose installed on your system.
     -   **Health Check**: `http://localhost:8080/health`
 
     The default admin credentials are `admin@statusplatform.com` with password `admin123`. **It is crucial to change these credentials immediately after the first login in a production environment.**
+
+### Runtime Notes
+
+-   The Docker Compose stack provisions `server`, `mongo`, and `redis` services and wires them together through `.env`.
+-   The backend defaults to `MONGODB_URI=mongodb://localhost:27017` and `REDIS_URI=localhost:6379` when environment variables are not provided.
+-   The checked-in `.env` file overrides those defaults for the Compose network, so containerized development uses the in-stack MongoDB and Redis services by default.
+-   The MongoDB and Redis clients both apply basic connection-pool tuning in the current backend implementation.
 
 ## ⚙️ Local Development
 
@@ -109,6 +117,7 @@ For developers who want to contribute or customize StatusForge, you can run the 
     ```bash
     go run cmd/server/main.go
     ```
+    By default the backend listens on `http://localhost:8080`.
 
 ### Frontend
 
@@ -145,7 +154,7 @@ To build the frontend and backend for production:
 
 ### Docker Deployment
 
-The provided `Dockerfile` creates a minimal Alpine-based image embedding the built frontend assets into the Go binary. The `docker-compose.yml` orchestrates the `server`, `mongo`, and `redis` services.
+The provided `Dockerfile` creates a minimal Alpine-based image embedding the built frontend assets into the Go binary. The `docker-compose.yml` orchestrates the `server`, `mongo`, and `redis` services, exposes the application on port `8080`, and includes health checks for the backing data stores.
 
 For detailed Docker operations, refer to the `Makefile` for convenient commands like `make up`, `make up-build`, `make down`, `make down-v`, `make logs`, `make logs-server`, `make ps`, and `make shell-server`.
 

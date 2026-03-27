@@ -22,7 +22,7 @@ func TestHealthCheckHandler(t *testing.T) {
 	mongoConnected := true
 	redisConnected := true
 
-	if err := database.ConnectMongo(cfg.MongoURI, cfg.MongoDBName); err != nil {
+	if err := database.ConnectMongo(cfg.MongoURI); err != nil {
 		mongoConnected = false
 		t.Log("MongoDB connection unavailable for health test")
 	}

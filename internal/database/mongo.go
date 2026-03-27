@@ -12,11 +12,15 @@ import (
 var client *mongo.Client
 var database *mongo.Database
 
-func ConnectMongo(uri, dbName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func ConnectMongo(uri string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second) // ⬅️ increase timeout
 	defer cancel()
 
-	clientOpts := options.Client().ApplyURI(uri)
+	clientOpts := options.Client().
+		ApplyURI(uri).
+		SetMaxPoolSize(100). // ⬅️ basic pooling
+		SetMinPoolSize(5)
+
 	c, err := mongo.Connect(ctx, clientOpts)
 	if err != nil {
 		return err
@@ -27,8 +31,10 @@ func ConnectMongo(uri, dbName string) error {
 	}
 
 	client = c
-	database = c.Database(dbName)
-	log.Printf("Connected to MongoDB: %s/%s", uri, dbName)
+	database = c.Database("")
+
+	log.Printf("Connected to MongoDB")
+
 	return nil
 }
 
