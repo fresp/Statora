@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
 import type { Incident } from '../types'
 import { formatDate, INCIDENT_IMPACT_LABELS, INCIDENT_STATUS_LABELS } from '../lib/utils'
@@ -72,22 +72,6 @@ export function IncidentCarouselGroup({
       : (currentIncident.affectedComponents || []).map(component => component.name).join(', '))
     : ''
 
-  const severityStyle = useMemo(() => {
-    if (!currentIncident) {
-      return {
-        backgroundColor: 'var(--surface-incident)',
-        borderColor: 'var(--border-incident)',
-      }
-    }
-
-    const impactToken = getImpactToken(currentIncident.impact)
-    return {
-      backgroundColor: 'color-mix(in srgb, var(--surface) 88%, var(--surface-incident))',
-      borderColor: `color-mix(in srgb, var(${impactToken}) 22%, var(--border))`,
-      boxShadow: `inset 4px 0 0 var(${impactToken})`,
-    }
-  }, [currentIncident])
-
   const move = (delta: number) => {
     if (incidents.length <= 1) return
     setCurrentIndex((prev) => {
@@ -116,28 +100,16 @@ export function IncidentCarouselGroup({
   }
 
   return (
-    <div
-      className="rounded-2xl border p-4 sm:p-5"
-      style={{
-        borderColor: 'var(--border)',
-        backgroundColor: 'var(--surface)',
-      }}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-semibold" style={{ color: 'var(--text)' }}>{title}</h3>
-            <span
-              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{
-                backgroundColor: 'var(--surface-incident)',
-                color: 'var(--text-muted)',
-                border: '1px solid var(--border-incident)',
-              }}
-            >
-              {incidents.length}
+    <div className="py-1">
+      <div className="flex flex-wrap items-start justify-between gap-3 pb-2">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-base font-medium" style={{ color: 'var(--text)' }}>{title}</h3>
+            <span className="text-sm" style={{ color: 'var(--text-subtle)' }}>
+              ({incidents.length})
             </span>
           </div>
+          {subtitle && <p className="text-sm mt-1" style={{ color: 'var(--text-subtle)' }}>{subtitle}</p>}
         </div>
 
         <div className="flex items-center gap-2">
@@ -145,11 +117,10 @@ export function IncidentCarouselGroup({
             type="button"
             onClick={() => move(-1)}
             disabled={incidents.length <= 1}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              borderColor: 'var(--border)',
-              color: 'var(--text)',
-              backgroundColor: 'var(--surface)',
+              color: 'var(--text-subtle)',
+              backgroundColor: 'transparent',
             }}
             aria-label={`Previous incident in ${title}`}
           >
@@ -162,11 +133,10 @@ export function IncidentCarouselGroup({
             type="button"
             onClick={() => move(1)}
             disabled={incidents.length <= 1}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
-              borderColor: 'var(--border)',
-              color: 'var(--text)',
-              backgroundColor: 'var(--surface)',
+              color: 'var(--text-subtle)',
+              backgroundColor: 'transparent',
             }}
             aria-label={`Next incident in ${title}`}
           >
@@ -176,87 +146,65 @@ export function IncidentCarouselGroup({
       </div>
 
       {incidents.length === 0 || !currentIncident ? (
-        <div
-          className="rounded-2xl border border-dashed px-4 py-6 text-sm"
-          style={{
-            borderColor: 'var(--border)',
-            color: 'var(--text-muted)',
-            backgroundColor: 'var(--surface-uptime)',
-          }}
-        >
+        <div className="py-3 text-sm" style={{ color: 'var(--text-muted)' }}>
           {emptyMessage}
         </div>
       ) : (
         <div
-          className="rounded-2xl border p-4 sm:p-5 select-none"
-          style={severityStyle}
+          className="py-3 border-b select-none"
+          style={{ borderColor: 'color-mix(in srgb, var(--border) 60%, transparent)' }}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
         >
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-col gap-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2">
                   <span
-                    className="inline-flex h-2.5 w-2.5 rounded-full"
+                    className="inline-flex h-2 w-2 rounded-full"
                     style={{ backgroundColor: `var(${getImpactToken(currentIncident.impact)})` }}
                     aria-hidden="true"
                   />
-                  <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--text-subtle)' }}>
-                    {INCIDENT_IMPACT_LABELS[currentIncident.impact]} severity
-                  </span>
+                  <h4 className="text-base font-medium leading-tight" style={{ color: 'var(--text)' }}>
+                    {currentIncident.title}
+                  </h4>
                 </div>
 
-                <h4 className="text-lg font-semibold leading-tight" style={{ color: 'var(--text)' }}>
-                  {currentIncident.title}
-                </h4>
-                {componentNames && (
-                  <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--text-subtle)' }}>
-                    {componentNames}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--text-subtle)' }}>
+                  <span>{formatDate(currentIncident.createdAt)}</span>
+                  <span aria-hidden="true">•</span>
+                  <span style={{ color: `var(${getImpactToken(currentIncident.impact)})` }}>
+                    {INCIDENT_IMPACT_LABELS[currentIncident.impact]}
                   </span>
-                )}
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Status</p>
-                    <p className="text-sm font-medium mt-1" style={{ color: `var(${getStatusToken(currentIncident.status)})` }}>
-                      {INCIDENT_STATUS_LABELS[currentIncident.status]}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Started</p>
-                    <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-                      {formatDate(currentIncident.createdAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Severity</p>
-                    <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-                      {INCIDENT_IMPACT_LABELS[currentIncident.impact]}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Resolved</p>
-                    <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-                      {currentIncident.resolvedAt ? formatDate(currentIncident.resolvedAt) : 'Still active'}
-                    </p>
-                  </div>
+                  {componentNames && (
+                    <>
+                      <span aria-hidden="true">•</span>
+                      <span>{componentNames}</span>
+                    </>
+                  )}
+                  {currentIncident.resolvedAt && (
+                    <>
+                      <span aria-hidden="true">•</span>
+                      <span>Resolved {formatDate(currentIncident.resolvedAt)}</span>
+                    </>
+                  )}
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => onToggleExpand(currentIncident.id)}
-                className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border"
-                style={{
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-subtle)',
-                  backgroundColor: 'var(--surface)',
-                }}
-                aria-label={expandedIncidents.has(currentIncident.id) ? 'Collapse incident details' : 'Expand incident details'}
-              >
-                {expandedIncidents.has(currentIncident.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span className="text-xs font-medium" style={{ color: `var(${getStatusToken(currentIncident.status)})` }}>
+                  {INCIDENT_STATUS_LABELS[currentIncident.status]}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onToggleExpand(currentIncident.id)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md"
+                  style={{ color: 'var(--text-subtle)', backgroundColor: 'transparent' }}
+                  aria-label={expandedIncidents.has(currentIncident.id) ? 'Collapse incident details' : 'Expand incident details'}
+                >
+                  {expandedIncidents.has(currentIncident.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <p className="text-sm leading-6" style={{ color: 'var(--text-muted)' }}>
@@ -269,7 +217,11 @@ export function IncidentCarouselGroup({
               </p>
             )}
 
-            {expandedIncidents.has(currentIncident.id) && <IncidentTimeline updates={currentIncident.updates || []} />}
+            {expandedIncidents.has(currentIncident.id) && (
+              <div className="pl-3">
+                <IncidentTimeline updates={currentIncident.updates || []} />
+              </div>
+            )}
           </div>
         </div>
       )}
