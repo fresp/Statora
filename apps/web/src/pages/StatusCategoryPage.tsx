@@ -139,7 +139,6 @@ function PlatformStatus({ data, aggregateStatus }: { data: NonNullable<ReturnTyp
           </span>
         </div>
       </div>
-      <p className="mt-4 text-xs text-[var(--text-subtle)]">Uptime (90d): {data.uptime90d.toFixed(2)}%</p>
     </header>
   )
 }
@@ -159,7 +158,11 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold">{service.name}</h3>
-          <p className="text-xs text-[var(--text-muted)] mt-1">90-day uptime: {service.uptime90d.toFixed(2)}%</p>
+          {hasMonitoringData && (
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              90-day uptime: {service.uptime90d.toFixed(2)}%
+            </p>
+          )}
         </div>
         <div className="text-right">
           <span
@@ -183,11 +186,16 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
           />
         </div>
       ) : (
-        <p className="text-xs text-[var(--text-subtle)] mt-4">Monitoring data is not available for this service yet.</p>
+        <div className="py-4"></div>
       )}
-
-      {activeIncidents.length > 0 && (
-        <div className="rounded-md border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
+      {activeIncidents.length > 0 ? (
+        <div
+          className="rounded-md border p-5"
+          style={{
+            borderColor: 'var(--border)',
+            backgroundColor: 'var(--surface)',
+          }}
+        >
           <IncidentCarouselGroup
             title="Active incidents"
             incidents={activeIncidents}
@@ -205,7 +213,40 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
             }}
           />
         </div>
+      ) : (
+        <div
+          className="rounded-md border p-5"
+          style={{
+            borderColor: 'var(--border)',
+            backgroundColor: 'var(--surface)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            {/* Icon */}
+            <div className="mt-0.5 text-green-500">
+              ●
+            </div>
+
+            <div>
+              {/* Title */}
+              <p className="text-sm font-medium">
+                No known issues
+              </p>
+
+              {/* Timestamp */}
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {new Date().toLocaleString()}
+              </p>
+
+              {/* Description */}
+              <p className="text-sm text-[var(--text-muted)] mt-2">
+                The service is up and running with no known issues.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
+
     </article>
   )
 }
