@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 
 interface FooterProps {
   centerText?: string
+  showPoweredBy?: boolean
 }
 
-export default function Footer({ centerText }: FooterProps) {
+export default function Footer({ centerText, showPoweredBy }: FooterProps) {
   const year = new Date().getFullYear()
   const trimmedCenterText = centerText?.trim() ?? ''
   const hasCenterText = trimmedCenterText.length > 0
@@ -14,9 +15,14 @@ export default function Footer({ centerText }: FooterProps) {
     <footer className="border-t" style={{ borderColor: 'var(--border)' }}>
       <div className="max-w-5xl mx-auto px-4 py-4">
         <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="font-medium" style={{ color: 'var(--text-muted)' }}>
-            © {year} StatusForge
-          </div>
+          {showPoweredBy && (
+            <div className="font-medium" style={{ color: 'var(--text-muted)' }}>
+              Powered by{" "}
+              <a href="https://github.com/fresp/StatusForge">
+                StatusForge
+              </a>
+            </div>
+          )}
 
           {hasCenterText && (
             <div className="text-sm" style={{ color: 'var(--text-muted)' }}>

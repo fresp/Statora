@@ -383,7 +383,7 @@ export default function StatusCategoryPage() {
         <main className="flex-1">
           <div className="max-w-5xl mx-auto px-4 py-10">Loading category status…</div>
         </main>
-        <Footer centerText={settingsData?.footer?.text} />
+        <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
       </div>
     )
   }
@@ -404,7 +404,7 @@ export default function StatusCategoryPage() {
             </div>
           </div>
         </main>
-        <Footer centerText={settingsData?.footer?.text} />
+        <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
       </div>
     )
   }
@@ -424,51 +424,51 @@ export default function StatusCategoryPage() {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
       <main className="flex-1">
-      <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-        <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
-          <Link to="/" className="hover:underline">Status</Link>
-          <ChevronRight className="w-4 h-4" />
-          <span>{data.name}</span>
-        </nav>
+        <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+          <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
+            <Link to="/" className="hover:underline">Status</Link>
+            <ChevronRight className="w-4 h-4" />
+            <span>{data.name}</span>
+          </nav>
 
-        <header className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">{data.name}</h1>
-              {data.description && <p className="text-sm mt-1 text-[var(--text-muted)]">{data.description}</p>}
+          <header className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold">{data.name}</h1>
+                {data.description && <p className="text-sm mt-1 text-[var(--text-muted)]">{data.description}</p>}
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusIcon status={aggregateStatus} />
+                <span className="text-sm font-semibold" style={{ color: `var(${getStatusToken(aggregateStatus)})` }}>
+                  {STATUS_LABELS[aggregateStatus]}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <StatusIcon status={aggregateStatus} />
-              <span className="text-sm font-semibold" style={{ color: `var(${getStatusToken(aggregateStatus)})` }}>
-                {STATUS_LABELS[aggregateStatus]}
-              </span>
-            </div>
-          </div>
-          <p className="mt-4 text-xs text-[var(--text-subtle)]">Uptime (90d): {data.uptime90d.toFixed(2)}%</p>
-        </header>
+            <p className="mt-4 text-xs text-[var(--text-subtle)]">Uptime (90d): {data.uptime90d.toFixed(2)}%</p>
+          </header>
 
-        <section className="space-y-4">
-          {services.length === 0 ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
-              No sub-components are mapped to this category yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {services.map((service) => (
-                <ServiceRow
-                  key={service.id}
-                  service={service}
-                  incidents={incidentsByService.get(service.id) ?? []}
-                  expanded={expandedServiceIds.has(service.id)}
-                  onToggle={() => toggleService(service.id)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+          <section className="space-y-4">
+            {services.length === 0 ? (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
+                No sub-components are mapped to this category yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {services.map((service) => (
+                  <ServiceRow
+                    key={service.id}
+                    service={service}
+                    incidents={incidentsByService.get(service.id) ?? []}
+                    expanded={expandedServiceIds.has(service.id)}
+                    onToggle={() => toggleService(service.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </main>
-      <Footer centerText={settingsData?.footer?.text} />
+      <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
     </div>
   )
 }
