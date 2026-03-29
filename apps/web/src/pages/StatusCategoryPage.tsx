@@ -1,13 +1,13 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertCircle, AlertTriangle, CheckCircle, ChevronRight, Wrench, XCircle } from 'lucide-react'
 import { useApi, useCategorySummary } from '../hooks/useApi'
 import { STATUS_LABELS } from '../lib/utils'
-import type { CategoryServiceStatus, ComponentStatus, Incident, IncidentUpdate, StatusPageSettings } from '../types'
-import { INCIDENT_STATUS_LABELS } from '../lib/utils'
+import type { CategoryServiceStatus, ComponentStatus, Incident, StatusPageSettings } from '../types'
 import Footer from '../components/layout/Footer'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { UptimeTimeline } from '../components/status/UptimeTimeline'
+import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
 
 const EMPTY_INCIDENTS: Incident[] = []
 const EMPTY_SERVICES: CategoryServiceStatus[] = []
@@ -124,51 +124,6 @@ function incidentAffectsService(incident: Incident, service: CategoryServiceStat
   return false
 }
 
-function getLatestUpdate(incident: Incident): IncidentUpdate | null {
-  if (!incident.updates || incident.updates.length === 0) {
-    return null
-  }
-
-  return [...incident.updates].sort((a, b) => (
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  ))[0] ?? null
-}
-
-function getAffectedSummary(incident: Incident): string {
-  if (incident.affectedComponentTargets && incident.affectedComponentTargets.length > 0) {
-    return incident.affectedComponentTargets
-      .map((target) => {
-        const subNames = (target.subComponents ?? []).map((subComponent) => subComponent.name)
-        if (subNames.length > 0) {
-          return `${target.component.name} (${subNames.join(', ')})`
-        }
-        return target.component.name
-      })
-      .join(', ')
-  }
-
-  if (incident.affectedComponents.length > 0) {
-    return incident.affectedComponents.map((component) => component.name).join(', ')
-  }
-
-  return 'No affected systems listed'
-}
-
-function getIncidentStatusToken(status: string): string {
-  switch (status) {
-    case 'investigating':
-      return '--warning'
-    case 'identified':
-      return '--partial'
-    case 'monitoring':
-      return '--info'
-    case 'resolved':
-      return '--success'
-    default:
-      return '--text-subtle'
-  }
-}
-
 function PlatformStatus({ data, aggregateStatus }: { data: NonNullable<ReturnType<typeof useCategorySummary>['data']>; aggregateStatus: ComponentStatus }) {
   return (
     <header className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -191,6 +146,7 @@ function PlatformStatus({ data, aggregateStatus }: { data: NonNullable<ReturnTyp
 
 function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; incidents: Incident[] }) {
   const activeIncidents = incidents.filter((incident) => isIncidentActive(incident.status))
+  const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
   const highestImpact = activeIncidents.reduce<string>((current, incident) => {
     return impactRank(incident.impact) > impactRank(current) ? incident.impact : current
   }, '')
@@ -233,46 +189,23 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
       )}
 
       {activeIncidents.length > 0 && (
-        <div className="mt-4 space-y-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-subtle)' }}>
-            Active incidents
-          </p>
-          <div className="space-y-2">
-            {activeIncidents.map((incident) => {
-              const latestUpdate = getLatestUpdate(incident)
-              const statusLabel = INCIDENT_STATUS_LABELS[incident.status] ?? incident.status
-
-              return (
-                <article
-                  key={incident.id}
-                  className="rounded-lg border p-3"
-                  style={{
-                    borderColor: `color-mix(in srgb, var(${getStatusToken(impactToStatus(incident.impact))}) 22%, var(--border))`,
-                    backgroundColor: 'color-mix(in srgb, var(--surface) 88%, var(--surface-incident))',
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h4 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{incident.title}</h4>
-                    <span
-                      className="text-[11px] font-medium rounded-full px-2 py-0.5"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, var(${getIncidentStatusToken(incident.status)}) 18%, transparent)`,
-                        color: `var(${getIncidentStatusToken(incident.status)})`,
-                      }}
-                    >
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{incident.description}</p>
-                  {latestUpdate && (
-                    <p className="text-xs mt-1 italic" style={{ color: 'var(--text-subtle)' }}>
-                      Latest update: {latestUpdate.message}
-                    </p>
-                  )}
-                </article>
-              )
-            })}
-          </div>
+        <div className="mt-4">
+          <IncidentCarouselGroup
+            title="Active incidents"
+            incidents={activeIncidents}
+            expandedIncidents={expandedIncidents}
+            onToggleExpand={(incidentId) => {
+              setExpandedIncidents((prev) => {
+                const next = new Set(prev)
+                if (next.has(incidentId)) {
+                  next.delete(incidentId)
+                } else {
+                  next.add(incidentId)
+                }
+                return next
+              })
+            }}
+          />
         </div>
       )}
     </article>
