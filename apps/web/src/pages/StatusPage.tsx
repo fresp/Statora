@@ -4,7 +4,7 @@ import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench } from 'lucide
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { StatusSummary, ComponentWithSubs, Incident, Maintenance, StatusPageSettings } from '../types'
-import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, groupIncidentsByRecentDays, groupIncidentsByStatus } from '../lib/utils'
+import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, groupIncidentsByStatus } from '../lib/utils'
 import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
 import {
   DEFAULT_STATUS_PAGE_SETTINGS,
@@ -135,7 +135,6 @@ export default function StatusPage() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
     return new Date(incident.createdAt) >= sevenDaysAgo
   })
-  const recentIncidentGroups = groupIncidentsByRecentDays(recentIncidents, 7)
 
   useEffect(() => {
     applyStatusPageHeadSettings(settings)
@@ -353,56 +352,6 @@ export default function StatusPage() {
               )}
             </div>
           ))}
-
-          {/* Recent Incident History (last 7 days) */}
-          {recentIncidentGroups.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4" style={sectionTitleStyle}>Recent Incident History</h2>
-              <div className="space-y-6">
-                {recentIncidentGroups.map((group) => {
-                  const dayLabel = new Date(`${group.dateKey}T00:00:00`).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-
-                  return (
-                    <div key={group.dateKey}>
-                      <h3 className="text-lg font-semibold mb-3" style={{ color: mutedTextColor }}>{dayLabel}</h3>
-                      {group.incidents.length === 0 ? (
-                        <div className="rounded-xl border p-5" style={cardSurfaceStyle}>
-                          <p className="text-sm" style={{ color: mutedTextColor }}>No incidents reported.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {groupIncidentsByStatus(group.incidents).map((statusGroup) => (
-                            <IncidentCarouselGroup
-                              key={`${group.dateKey}-${statusGroup.key}`}
-                              title={statusGroup.label}
-                              subtitle={dayLabel}
-                              incidents={statusGroup.incidents}
-                              expandedIncidents={expandedIncidents}
-                              onToggleExpand={(incidentId) => setExpandedIncidents((prev) => {
-                                const next = new Set(prev)
-                                if (next.has(incidentId)) {
-                                  next.delete(incidentId)
-                                } else {
-                                  next.add(incidentId)
-                                }
-                                return next
-                              })}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-
-            </div>
-          )}
-
         </div>
       </main>
       <Footer centerText={settings.footer.text} />
