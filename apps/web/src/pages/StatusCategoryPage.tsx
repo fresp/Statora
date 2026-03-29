@@ -157,7 +157,7 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
     : (hasMonitoringData ? 'No known issues' : 'Monitoring unavailable')
 
   return (
-    <article className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-5">
+    <article className='py-2'>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold">{service.name}</h3>
@@ -177,7 +177,7 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
       </div>
 
       {hasMonitoringData ? (
-        <div className="py-4 border-t">
+        <div className="py-4">
           <UptimeTimeline
             history={service.uptimeHistory}
             showAverage
@@ -220,6 +220,10 @@ export default function StatusCategoryPage() {
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
   const aggregateStatus: ComponentStatus = data?.aggregateStatus ?? 'operational'
+  const subComponentDividerStyle: React.CSSProperties = {
+    borderColor: 'var(--subcomponent-divider)',
+    ['--tw-divide-color' as any]: 'var(--subcomponent-divider)',
+  }
 
   const incidentsByService = useMemo(() => {
     const serviceIncidentMap = new Map<string, Incident[]>()
@@ -285,7 +289,7 @@ export default function StatusCategoryPage() {
           <PlatformStatus data={data} aggregateStatus={aggregateStatus} />
 
           {services.length > 0 ? (
-            <div className="space-y-4" aria-label="Services">
+            <div className="divide-y divide-[color:var(--subcomponent-divider)] rounded-md border border-[var(--border)] bg-[var(--surface)]  p-5" aria-label="Services">
               {services.map((service) => (
                 <ServiceCard
                   key={service.id}
