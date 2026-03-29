@@ -175,7 +175,7 @@ export default function HistoryPage() {
                 backgroundColor: 'var(--surface)',
               }}
             >
-              View Current Status
+              Back to Main View
             </Link>
           </div>
         </div>

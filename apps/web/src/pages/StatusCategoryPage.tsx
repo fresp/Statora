@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertCircle, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Wrench, XCircle } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle, ChevronRight, Wrench, XCircle } from 'lucide-react'
 import { useApi, useCategorySummary } from '../hooks/useApi'
-import { STATUS_LABELS, formatDate } from '../lib/utils'
+import { STATUS_LABELS } from '../lib/utils'
 import type { CategoryServiceStatus, ComponentStatus, Incident, IncidentUpdate, StatusPageSettings } from '../types'
-import { INCIDENT_IMPACT_LABELS, INCIDENT_STATUS_LABELS } from '../lib/utils'
+import { INCIDENT_STATUS_LABELS } from '../lib/utils'
 import Footer from '../components/layout/Footer'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 const EMPTY_INCIDENTS: Incident[] = []
 const EMPTY_SERVICES: CategoryServiceStatus[] = []
@@ -167,122 +168,45 @@ function getIncidentStatusToken(status: string): string {
   }
 }
 
-function IncidentSummary({ incident, resolved }: { incident: Incident; resolved?: boolean }) {
-  const badgeStatus = impactToStatus(incident.impact)
-  const latestUpdate = getLatestUpdate(incident)
-  const affectedSummary = getAffectedSummary(incident)
-  const severityLabel = INCIDENT_IMPACT_LABELS[incident.impact] ?? incident.impact
-  const incidentStatusLabel = INCIDENT_STATUS_LABELS[incident.status] ?? incident.status
-
+function PlatformStatus({ data, aggregateStatus }: { data: NonNullable<ReturnType<typeof useCategorySummary>['data']>; aggregateStatus: ComponentStatus }) {
   return (
-    <article
-      className={`rounded-xl border p-4 sm:p-5 transition-colors hover:bg-[var(--surface-elevated)] ${resolved ? 'opacity-70' : ''}`}
-      style={{
-        borderColor: `color-mix(in srgb, var(${getStatusToken(badgeStatus)}) 22%, var(--border))`,
-        backgroundColor: 'color-mix(in srgb, var(--surface) 88%, var(--surface-incident))',
-        boxShadow: `inset 4px 0 0 var(${getStatusToken(badgeStatus)})`,
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-flex h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: `var(${getStatusToken(badgeStatus)})` }}
-          aria-hidden="true"
-        />
-        <span className="text-sm font-medium" style={{ color: `var(${getStatusToken(badgeStatus)})` }}>
-          {severityLabel}
-        </span>
-      </div>
-
-      <h4 className="mt-2 text-lg font-semibold leading-tight" style={{ color: 'var(--text)' }}>
-        {incident.title}
-      </h4>
-
-      <p className="mt-3 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-subtle)' }}>
-        Affected systems
-      </p>
-      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        {affectedSummary}
-      </span>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <header className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Status</p>
-          <p className="text-sm font-medium mt-1" style={{ color: `var(${getIncidentStatusToken(incident.status)})` }}>
-            {incidentStatusLabel}
-          </p>
+          <h1 className="text-2xl font-bold">{data.name}</h1>
+          {data.description && <p className="text-sm mt-1 text-[var(--text-muted)]">{data.description}</p>}
         </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Started</p>
-          <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-            {formatDate(incident.createdAt)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Severity</p>
-          <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-            {severityLabel}
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-subtle)' }}>Resolved</p>
-          <p className="text-sm font-medium mt-1" style={{ color: 'var(--text)' }}>
-            {incident.resolvedAt ? formatDate(incident.resolvedAt) : 'Still active'}
-          </p>
+        <div className="flex items-center gap-2">
+          <StatusIcon status={aggregateStatus} />
+          <span className="text-sm font-semibold" style={{ color: `var(${getStatusToken(aggregateStatus)})` }}>
+            {STATUS_LABELS[aggregateStatus]}
+          </span>
         </div>
       </div>
-
-      <p className="text-sm leading-6 mt-3" style={{ color: 'var(--text-muted)' }}>{incident.description}</p>
-
-      {incident.resolvedAt && (
-        <p className="text-xs mt-2" style={{ color: 'var(--text-subtle)' }}>
-          Resolved: {formatDate(incident.resolvedAt)}
-        </p>
-      )}
-
-      {latestUpdate && (
-        <p className="text-xs text-[var(--text-subtle)] mt-2 italic">Latest update: {latestUpdate.message}</p>
-      )}
-    </article>
+      <p className="mt-4 text-xs text-[var(--text-subtle)]">Uptime (90d): {data.uptime90d.toFixed(2)}%</p>
+    </header>
   )
 }
 
-function ServiceRow({
-  service,
-  incidents,
-  expanded,
-  onToggle,
-}: {
-  service: CategoryServiceStatus
-  incidents: Incident[]
-  expanded: boolean
-  onToggle: () => void
-}) {
-  const highestImpact = incidents.reduce<string>((current, incident) => {
-    return isIncidentActive(incident.status) && impactRank(incident.impact) > impactRank(current) ? incident.impact : current
+function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; incidents: Incident[] }) {
+  const activeIncidents = incidents.filter((incident) => isIncidentActive(incident.status))
+  const highestImpact = activeIncidents.reduce<string>((current, incident) => {
+    return impactRank(incident.impact) > impactRank(current) ? incident.impact : current
   }, '')
-
+  const hasMonitoringData = service.uptimeHistory.length > 0
   const displayStatus = highestImpact ? impactToStatus(highestImpact) : service.status
-  const displayLabel = highestImpact ? impactToLabel(highestImpact) : 'No known issues'
-
-  const groupedIncidents = useMemo(() => {
-    const active = incidents.filter((incident) => isIncidentActive(incident.status))
-    return { active }
-  }, [incidents]);
+  const displayLabel = highestImpact
+    ? impactToLabel(highestImpact)
+    : (hasMonitoringData ? 'No known issues' : 'Monitoring unavailable')
 
   return (
-    <article className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-[var(--surface-elevated)] transition-colors"
-        aria-expanded={expanded}
-      >
+    <article className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold">{service.name}</h3>
           <p className="text-xs text-[var(--text-muted)] mt-1">90-day uptime: {service.uptime90d.toFixed(2)}%</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="text-right">
           <span
             className="text-xs font-medium rounded-full px-2.5 py-1"
             style={{
@@ -292,39 +216,67 @@ function ServiceRow({
           >
             {displayLabel}
           </span>
-          <ChevronDown
-            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`}
-          />
         </div>
-      </button>
+      </div>
 
-      {expanded && (
-        <div className="border-t border-[var(--border)] p-0 space-y-4">
-          {incidents.length === 0 ? (
-            <div className="px-5 py-4">
-              <p className="text-sm text-[var(--text-muted)]">No known issues</p>
-            </div>
-          ) : (
-            <>
-              {groupedIncidents.active.length > 0 && (
-                <div className="px-5 py-4">
-                  <h4 className="text-sm font-semibold mb-3">Active Incidents ({groupedIncidents.active.length})</h4>
-                  <div className="space-y-4">
-                    {groupedIncidents.active.map((incident) => (
-                      <div key={incident.id}>
-                        <IncidentSummary incident={incident} />
-                      </div>
-                    ))}
+      {hasMonitoringData ? (
+        <div className="mt-3 grid gap-1">
+          <div className="h-2 rounded-full bg-[var(--surface-elevated)] overflow-hidden">
+            <div
+              className="h-full"
+              style={{
+                width: `${Math.max(0, Math.min(100, service.uptime90d))}%`,
+                backgroundColor: `var(${getStatusToken(service.status)})`,
+              }}
+            />
+          </div>
+          <p className="text-xs text-[var(--text-subtle)]">Based on {service.uptimeHistory.length} monitored day entries</p>
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--text-subtle)] mt-3">Monitoring data is not available for this service yet.</p>
+      )}
+
+      {activeIncidents.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-subtle)' }}>
+            Active incidents
+          </p>
+          <div className="space-y-2">
+            {activeIncidents.map((incident) => {
+              const latestUpdate = getLatestUpdate(incident)
+              const statusLabel = INCIDENT_STATUS_LABELS[incident.status] ?? incident.status
+
+              return (
+                <article
+                  key={incident.id}
+                  className="rounded-lg border p-3"
+                  style={{
+                    borderColor: `color-mix(in srgb, var(${getStatusToken(impactToStatus(incident.impact))}) 22%, var(--border))`,
+                    backgroundColor: 'color-mix(in srgb, var(--surface) 88%, var(--surface-incident))',
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{incident.title}</h4>
+                    <span
+                      className="text-[11px] font-medium rounded-full px-2 py-0.5"
+                      style={{
+                        backgroundColor: `color-mix(in srgb, var(${getIncidentStatusToken(incident.status)}) 18%, transparent)`,
+                        color: `var(${getIncidentStatusToken(incident.status)})`,
+                      }}
+                    >
+                      {statusLabel}
+                    </span>
                   </div>
-                </div>
-              )}
-              {groupedIncidents.active.length === 0 && (
-                <div className="px-5 py-4">
-                  <p className="text-sm text-[var(--text-muted)]">No known issues</p>
-                </div>
-              )}
-            </>
-          )}
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{incident.description}</p>
+                  {latestUpdate && (
+                    <p className="text-xs mt-1 italic" style={{ color: 'var(--text-subtle)' }}>
+                      Latest update: {latestUpdate.message}
+                    </p>
+                  )}
+                </article>
+              )
+            })}
+          </div>
         </div>
       )}
     </article>
@@ -333,17 +285,12 @@ function ServiceRow({
 
 export default function StatusCategoryPage() {
   const { categoryPrefix } = useParams<{ categoryPrefix: string }>()
-  const { data, loading, error } = useCategorySummary(categoryPrefix)
+  const { data, loading, error, refetch } = useCategorySummary(categoryPrefix)
   const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
 
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
   const aggregateStatus: ComponentStatus = data?.aggregateStatus ?? 'operational'
-
-  const activeIncidents = useMemo(
-    () => incidents.filter((incident) => isIncidentActive(incident.status)),
-    [incidents],
-  )
 
   const incidentsByService = useMemo(() => {
     const serviceIncidentMap = new Map<string, Incident[]>()
@@ -356,26 +303,13 @@ export default function StatusCategoryPage() {
     return serviceIncidentMap
   }, [incidents, services])
 
-  const defaultExpandedIds = useMemo(
-    () => services
-      .filter((service) => {
-        const serviceIncidents = incidentsByService.get(service.id) ?? EMPTY_INCIDENTS
-        return serviceIncidents.some((incident) => isIncidentActive(incident.status))
-      })
-      .map((service) => service.id),
-    [services, incidentsByService],
-  )
+  const handleWsMessage = useCallback((event: { type: string; data: unknown }) => {
+    if (['component_updated', 'component_created', 'incident_created', 'incident_updated', 'incident_resolved', 'incident_update_added'].includes(event.type)) {
+      refetch()
+    }
+  }, [refetch])
 
-  const [expandedServiceIds, setExpandedServiceIds] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    setExpandedServiceIds((current) => {
-      if (current.size === defaultExpandedIds.length && defaultExpandedIds.every((id) => current.has(id))) {
-        return current
-      }
-      return new Set(defaultExpandedIds)
-    })
-  }, [defaultExpandedIds])
+  useWebSocket(handleWsMessage)
 
   if (loading) {
     return (
@@ -409,18 +343,6 @@ export default function StatusCategoryPage() {
     )
   }
 
-  const toggleService = (serviceId: string) => {
-    setExpandedServiceIds((current) => {
-      const next = new Set(current)
-      if (next.has(serviceId)) {
-        next.delete(serviceId)
-      } else {
-        next.add(serviceId)
-      }
-      return next
-    })
-  }
-
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
       <main className="flex-1">
@@ -431,41 +353,23 @@ export default function StatusCategoryPage() {
             <span>{data.name}</span>
           </nav>
 
-          <header className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">{data.name}</h1>
-                {data.description && <p className="text-sm mt-1 text-[var(--text-muted)]">{data.description}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusIcon status={aggregateStatus} />
-                <span className="text-sm font-semibold" style={{ color: `var(${getStatusToken(aggregateStatus)})` }}>
-                  {STATUS_LABELS[aggregateStatus]}
-                </span>
-              </div>
-            </div>
-            <p className="mt-4 text-xs text-[var(--text-subtle)]">Uptime (90d): {data.uptime90d.toFixed(2)}%</p>
-          </header>
+          <PlatformStatus data={data} aggregateStatus={aggregateStatus} />
 
-          <section className="space-y-4">
-            {services.length === 0 ? (
-              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
-                No sub-components are mapped to this category yet.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {services.map((service) => (
-                  <ServiceRow
-                    key={service.id}
-                    service={service}
-                    incidents={incidentsByService.get(service.id) ?? []}
-                    expanded={expandedServiceIds.has(service.id)}
-                    onToggle={() => toggleService(service.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          {services.length > 0 ? (
+            <div className="space-y-4" aria-label="Services">
+              {services.map((service) => (
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  incidents={incidentsByService.get(service.id) ?? EMPTY_INCIDENTS}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
+              No services are configured for this category yet.
+            </div>
+          )}
         </div>
       </main>
       <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
