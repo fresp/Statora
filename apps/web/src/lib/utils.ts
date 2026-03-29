@@ -2,7 +2,7 @@ import type { ComponentStatus } from '../types'
 import type { Incident } from '../types'
 
 export const STATUS_LABELS: Record<ComponentStatus, string> = {
-  operational: 'Operational',
+  operational: 'No known issues',
   degraded_performance: 'Degraded Performance',
   partial_outage: 'Partial Outage',
   major_outage: 'Major Outage',

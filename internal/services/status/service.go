@@ -277,7 +277,14 @@ func componentPrefix(name string) string {
 	return normalizeCategoryPrefix(name)
 }
 
-func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
+func build90DayBars(
+	monitorIDs []primitive.ObjectID,
+	uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime,
+) []DailyUptimeBar {
+	if len(monitorIDs) == 0 {
+		return []DailyUptimeBar{}
+	}
+
 	bars := make([]DailyUptimeBar, 0, 90)
 	now := time.Now()
 
@@ -287,6 +294,7 @@ func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primi
 
 		totalChecks := 0
 		successfulChecks := 0
+
 		for _, monitorID := range monitorIDs {
 			for _, record := range uptimeByMonitorID[monitorID] {
 				if record.Date.Format("2006-01-02") == dayKey {
@@ -295,11 +303,12 @@ func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primi
 				}
 			}
 		}
-
 		uptime := 100.0
 		status := string(models.StatusOperational)
+
 		if totalChecks > 0 {
 			uptime = (float64(successfulChecks) / float64(totalChecks)) * 100
+
 			switch {
 			case uptime < 50:
 				status = string(models.StatusMajorOutage)

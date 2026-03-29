@@ -152,9 +152,7 @@ function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; i
   }, '')
   const hasMonitoringData = service.uptimeHistory.length > 0
   const displayStatus = highestImpact ? impactToStatus(highestImpact) : service.status
-  const displayLabel = highestImpact
-    ? impactToLabel(highestImpact)
-    : (hasMonitoringData ? 'No known issues' : 'Monitoring unavailable')
+  const displayLabel = STATUS_LABELS[displayStatus] ?? 'Unknown status'
 
   return (
     <article className='py-2'>
