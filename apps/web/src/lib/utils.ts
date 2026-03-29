@@ -158,29 +158,30 @@ export function groupIncidentsByRecentDays(incidents: Incident[], days = 7): Rec
   }))
 }
 
-export function groupIncidentsByStatus(incidents: Incident[]): IncidentStatusGroup[] {
+export function groupIncidentsByStatus(
+  incidents: Incident[]
+): IncidentStatusGroup[] {
   const groupOrder = ['investigating', 'identified', 'monitoring', 'resolved']
-  const groups = new Map<string, Incident[]>()
 
-  incidents.forEach((incident) => {
-    const current = groups.get(incident.status) ?? []
-    current.push(incident)
-    groups.set(incident.status, current)
+  const sortedIncidents = [...incidents].sort((a, b) => {
+    const statusDiff =
+      groupOrder.indexOf(a.status) - groupOrder.indexOf(b.status)
+
+    if (statusDiff !== 0) return statusDiff
+
+    return (
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+    )
   })
 
-  return groupOrder
-    .filter((status) => (groups.get(status) ?? []).length > 0)
-    .map((status) => {
-      const groupedIncidents = (groups.get(status) ?? []).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-
-      return {
-        key: status,
-        label: `${INCIDENT_STATUS_LABELS[status] ?? status} Incidents`,
-        incidents: groupedIncidents,
-      }
-    })
+  return [
+    {
+      key: 'active',
+      label: 'Active Incidents',
+      incidents: sortedIncidents,
+    },
+  ]
 }
 
 export function groupIncidentsByDate(incidents: Incident[]): IncidentDateGroup[] {

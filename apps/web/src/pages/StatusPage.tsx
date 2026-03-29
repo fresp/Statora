@@ -6,132 +6,16 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import type { StatusSummary, ComponentWithSubs, Incident, Maintenance, StatusPageSettings } from '../types'
 import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, groupIncidentsByRecentDays, groupIncidentsByStatus } from '../lib/utils'
 import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
-import { loadThemePresetStylesheet, getThemePresets, DEFAULT_THEME_PRESET } from '../lib/themePresetLoader'
-
-const DEFAULT_SETTINGS: StatusPageSettings = {
-  head: {
-    title: 'StatusForge',
-    description: 'Live system status and incident updates.',
-    keywords: 'status, uptime, incidents, maintenance',
-    faviconUrl: '/vite.svg',
-    metaTags: {},
-  },
-  branding: {
-    siteName: 'StatusForge',
-    logoUrl: '',
-    backgroundImageUrl: '',
-    heroImageUrl: '',
-  },
-  theme: {
-    preset: DEFAULT_THEME_PRESET,
-  },
-  footer: {
-    text: '',
-    showPoweredBy: true,
-  },
-  customCss: '',
-  updatedAt: '',
-  createdAt: '',
-}
-
-function normalizeSettings(settings?: StatusPageSettings | null): StatusPageSettings {
-  if (!settings) {
-    return DEFAULT_SETTINGS
-  }
-
-  const preset = settings.theme?.preset?.trim() || DEFAULT_THEME_PRESET
-  const normalizedPreset = preset.endsWith('.css') ? preset : `${preset}.css`
-
-  return {
-    head: {
-      title: settings.head?.title ?? DEFAULT_SETTINGS.head.title,
-      description: settings.head?.description ?? DEFAULT_SETTINGS.head.description,
-      keywords: settings.head?.keywords ?? DEFAULT_SETTINGS.head.keywords,
-      faviconUrl: settings.head?.faviconUrl ?? DEFAULT_SETTINGS.head.faviconUrl,
-      metaTags: settings.head?.metaTags || {},
-    },
-    branding: {
-      siteName: settings.branding?.siteName ?? DEFAULT_SETTINGS.branding.siteName,
-      logoUrl: settings.branding?.logoUrl ?? '',
-      backgroundImageUrl: settings.branding?.backgroundImageUrl ?? '',
-      heroImageUrl: settings.branding?.heroImageUrl ?? '',
-    },
-    theme: {
-      preset: normalizedPreset,
-      appliedPreset: settings.theme?.appliedPreset,
-    },
-    footer: {
-      text: settings.footer?.text ?? '',
-      showPoweredBy: settings.footer?.showPoweredBy ?? true,
-    },
-    customCss: settings.customCss ?? '',
-    updatedAt: settings.updatedAt ?? '',
-    createdAt: settings.createdAt ?? '',
-  }
-}
-
-function upsertMetaTag(selector: string, content: string) {
-  const existing = document.head.querySelector(`meta[${selector}]`)
-  if (content) {
-    if (existing) {
-      existing.setAttribute('content', content)
-      return
-    }
-
-    const meta = document.createElement('meta')
-    const [attr, value] = selector.split('=')
-    meta.setAttribute(attr, value.replace(/"/g, ''))
-    meta.setAttribute('content', content)
-    document.head.appendChild(meta)
-    return
-  }
-
-  if (existing) {
-    existing.remove()
-  }
-}
-
-function setCustomMetaTags(metaTags: Record<string, string>) {
-  const existing = document.head.querySelectorAll('meta[data-status-page-meta="true"]')
-  existing.forEach(node => node.remove())
-
-  Object.entries(metaTags).forEach(([key, value]) => {
-    if (!key || !value) {
-      return
-    }
-
-    const meta = document.createElement('meta')
-    if (key.startsWith('og:') || key.startsWith('twitter:')) {
-      meta.setAttribute('property', key)
-    } else {
-      meta.setAttribute('name', key)
-    }
-    meta.setAttribute('content', value)
-    meta.setAttribute('data-status-page-meta', 'true')
-    document.head.appendChild(meta)
-  })
-}
-
-function upsertFavicon(url: string) {
-  let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
-  if (!link) {
-    link = document.createElement('link')
-    link.rel = 'icon'
-    document.head.appendChild(link)
-  }
-  link.href = url
-}
-
-function upsertCustomCss(css: string) {
-  const id = 'status-page-custom-css'
-  let styleEl = document.getElementById(id) as HTMLStyleElement | null
-  if (!styleEl) {
-    styleEl = document.createElement('style')
-    styleEl.id = id
-    document.head.appendChild(styleEl)
-  }
-  styleEl.textContent = css
-}
+import {
+  DEFAULT_STATUS_PAGE_SETTINGS,
+  applyStatusPageHeadSettings,
+  applyStatusPageThemePreset,
+  cacheStatusPageSettings,
+  getBootstrappedStatusPageSettings,
+  normalizeStatusPageSettings,
+  parseStatusPageSettingsPayload,
+  readCachedStatusPageSettings,
+} from '../lib/statusPageSettings'
 
 function getStatusToken(status: string): string {
   switch (status) {
@@ -196,11 +80,17 @@ export default function StatusPage() {
   const { data: summary, refetch: refetchSummary } = useApi<StatusSummary>('/status/summary')
   const { data: components, refetch: refetchComponents } = useApi<ComponentWithSubs[]>('/status/components')
   const { data: incidentData, refetch: refetchIncidents } = useApi<{ active: Incident[]; resolved: Incident[] }>('/status/incidents')
-  const { data: settingsData, refetch: refetchSettings } = useApi<StatusPageSettings>('/status/settings')
+  const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
 
   const { data: maintenanceData } = useApi<Maintenance[]>('/status/maintenance')
 
-  const handleWsMessage = useCallback((event: { type: string }) => {
+  const [settings, setSettings] = useState<StatusPageSettings>(() => (
+    getBootstrappedStatusPageSettings()
+    ?? readCachedStatusPageSettings()
+    ?? DEFAULT_STATUS_PAGE_SETTINGS
+  ))
+
+  const handleWsMessage = useCallback((event: { type: string; data: unknown }) => {
     if (['component_updated', 'component_created'].includes(event.type)) {
       refetchComponents()
       refetchSummary()
@@ -210,18 +100,33 @@ export default function StatusPage() {
       refetchSummary()
     }
     if (event.type === 'status_page_settings_updated') {
-      refetchSettings()
+      const nextSettings = parseStatusPageSettingsPayload(event.data)
+      if (!nextSettings) {
+        return
+      }
+
+      setSettings(nextSettings)
+      cacheStatusPageSettings(nextSettings)
     }
-  }, [refetchComponents, refetchSummary, refetchIncidents, refetchSettings])
+  }, [refetchComponents, refetchSummary, refetchIncidents])
 
   useWebSocket(handleWsMessage)
 
   const overallStatus = summary?.overallStatus || 'operational'
-  const settings = normalizeSettings(settingsData)
   const activeIncidents = incidentData?.active || []
   const resolvedIncidents = incidentData?.resolved || []
   const upcomingMaintenance = maintenanceData?.filter(m => m.status !== 'completed') || []
   const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!settingsData) {
+      return
+    }
+
+    const nextSettings = normalizeStatusPageSettings(settingsData)
+    setSettings(nextSettings)
+    cacheStatusPageSettings(nextSettings)
+  }, [settingsData])
 
   const recentIncidents = [...activeIncidents, ...resolvedIncidents].filter((incident: Incident) => {
     const sevenDaysAgo = new Date()
@@ -232,18 +137,12 @@ export default function StatusPage() {
   const recentIncidentGroups = groupIncidentsByRecentDays(recentIncidents, 7)
 
   useEffect(() => {
-    document.title = settings.head.title
-    upsertMetaTag('name="description"', settings.head.description)
-    upsertMetaTag('name="keywords"', settings.head.keywords)
-    setCustomMetaTags(settings.head.metaTags)
-    upsertFavicon(settings.head.faviconUrl)
-    upsertCustomCss(settings.customCss)
+    applyStatusPageHeadSettings(settings)
   }, [settings])
 
   useEffect(() => {
-    const presets = getThemePresets().presets
-    loadThemePresetStylesheet(settings.theme.preset, presets).catch(() => { })
-  }, [settings.theme.preset])
+    applyStatusPageThemePreset(settings)
+  }, [settings])
 
   const headerStatusToken = getStatusToken(overallStatus)
 
