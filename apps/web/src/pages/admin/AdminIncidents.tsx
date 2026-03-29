@@ -3,7 +3,7 @@ import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
-import type { Incident, IncidentUpdate, Component, IncidentStatus, IncidentImpact } from '../../types'
+import type { Incident, IncidentUpdate, Component, IncidentStatus, IncidentImpact, SubComponent } from '../../types'
 import { INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS, formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
@@ -16,7 +16,10 @@ interface IncidentForm {
   description: string
   status: IncidentStatus
   impact: IncidentImpact
-  affectedComponents: string[]
+  affectedComponentTargets: Array<{
+    componentId: string
+    subComponentIds: string[]
+  }>
 }
 
 const DEFAULT_FORM: IncidentForm = {
@@ -24,7 +27,7 @@ const DEFAULT_FORM: IncidentForm = {
   description: '',
   status: 'investigating',
   impact: 'minor',
-  affectedComponents: [],
+  affectedComponentTargets: [],
 }
 
 function IncidentRow({ incident, components, onRefetch }: {
@@ -170,6 +173,7 @@ export default function AdminIncidents() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: incidents, total: totalIncidents, totalPages, loading, refetch } = useApi<Incident[]>('/incidents', [], apiParams)
   const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: subComponents } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 500 })
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<IncidentForm>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
@@ -197,13 +201,49 @@ export default function AdminIncidents() {
     }
   }
 
-  function toggleComponent(id: string) {
+  function toggleComponent(componentId: string) {
     setForm(f => ({
       ...f,
-      affectedComponents: f.affectedComponents.includes(id)
-        ? f.affectedComponents.filter(c => c !== id)
-        : [...f.affectedComponents, id],
+      affectedComponentTargets: f.affectedComponentTargets.some(t => t.componentId === componentId)
+        ? f.affectedComponentTargets.filter(t => t.componentId !== componentId)
+        : [...f.affectedComponentTargets, { componentId, subComponentIds: [] }],
     }))
+  }
+
+  function toggleSubComponent(componentId: string, subComponentId: string) {
+    setForm((current) => {
+      const index = current.affectedComponentTargets.findIndex(target => target.componentId === componentId)
+      if (index === -1) {
+        return {
+          ...current,
+          affectedComponentTargets: [
+            ...current.affectedComponentTargets,
+            { componentId, subComponentIds: [subComponentId] },
+          ],
+        }
+      }
+
+      const target = current.affectedComponentTargets[index]
+      const hasSub = target.subComponentIds.includes(subComponentId)
+      const nextSubComponentIds = hasSub
+        ? target.subComponentIds.filter(id => id !== subComponentId)
+        : [...target.subComponentIds, subComponentId]
+
+      const nextTargets = [...current.affectedComponentTargets]
+      nextTargets[index] = {
+        ...target,
+        subComponentIds: nextSubComponentIds,
+      }
+
+      return {
+        ...current,
+        affectedComponentTargets: nextTargets,
+      }
+    })
+  }
+
+  function getTarget(componentId: string) {
+    return form.affectedComponentTargets.find(t => t.componentId === componentId)
   }
 
   const filtered = (incidents || []).filter(i => {
@@ -328,17 +368,49 @@ export default function AdminIncidents() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Affected Components</label>
                 <div className="space-y-1">
-                  {(components || []).map(c => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.affectedComponents.includes(c.id)}
-                        onChange={() => toggleComponent(c.id)}
-                        className="rounded"
-                      />
-                      {c.name}
-                    </label>
-                  ))}
+                  {(components || []).map((component) => {
+                    const target = getTarget(component.id)
+                    const checked = Boolean(target)
+                    const relatedSubComponents = (subComponents || []).filter(
+                      (subComponent) => subComponent.componentId === component.id,
+                    )
+
+                    return (
+                      <div key={component.id} className="rounded-lg border border-gray-200 px-3 py-2">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-800">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleComponent(component.id)}
+                            className="rounded"
+                          />
+                          {component.name}
+                        </label>
+
+                        {checked && relatedSubComponents.length > 0 && (
+                          <div className="mt-2 pl-6 space-y-1">
+                            {relatedSubComponents.map((subComponent) => {
+                              const isSubChecked = target?.subComponentIds.includes(subComponent.id) || false
+                              return (
+                                <label key={subComponent.id} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSubChecked}
+                                    onChange={() => toggleSubComponent(component.id, subComponent.id)}
+                                    className="rounded"
+                                  />
+                                  {subComponent.name}
+                                </label>
+                              )
+                            })}
+                            <p className="text-[11px] text-gray-500 pt-1">
+                              Leave sub-components unchecked to affect the whole component.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}

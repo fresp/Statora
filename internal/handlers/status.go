@@ -16,6 +16,32 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+func normalizeIncidentTargetsForExpansion(incident models.Incident) []models.IncidentAffectedComponent {
+	if len(incident.AffectedComponentTargets) > 0 {
+		return incident.AffectedComponentTargets
+	}
+
+	targets := make([]models.IncidentAffectedComponent, 0, len(incident.AffectedComponents))
+	for _, componentID := range incident.AffectedComponents {
+		targets = append(targets, models.IncidentAffectedComponent{ComponentID: componentID})
+	}
+
+	return targets
+}
+
+func dedupeObjectIDs(ids []primitive.ObjectID) []primitive.ObjectID {
+	seen := make(map[primitive.ObjectID]struct{}, len(ids))
+	result := make([]primitive.ObjectID, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
+}
+
 type ComponentWithSubs struct {
 	models.Component
 	SubComponents []models.SubComponent `json:"subComponents"`
@@ -278,7 +304,12 @@ func build90DayBars(compID primitive.ObjectID, monitorsByComp map[primitive.Obje
 
 // getLastIncidentForComponent retrieves the most recent incident associated with a component
 func getLastIncidentForComponent(ctx context.Context, db *mongo.Database, compID primitive.ObjectID) *IncidentStatusInfo {
-	inFilter := bson.M{"affectedComponents": bson.M{"$in": []primitive.ObjectID{compID}}}
+	inFilter := bson.M{
+		"$or": []bson.M{
+			{"affectedComponents": bson.M{"$in": []primitive.ObjectID{compID}}},
+			{"affectedComponentTargets.componentId": compID},
+		},
+	}
 
 	var incident models.Incident
 	err := db.Collection("incidents").FindOne(ctx,
@@ -420,9 +451,16 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 		// 🔥 FETCH COMPONENTS (NEW)
 		// =========================
 		componentIDSet := make(map[primitive.ObjectID]struct{})
+		subComponentIDSet := make(map[primitive.ObjectID]struct{})
 		for _, inc := range incidents {
 			for _, compID := range inc.AffectedComponents {
 				componentIDSet[compID] = struct{}{}
+			}
+			for _, target := range normalizeIncidentTargetsForExpansion(inc) {
+				componentIDSet[target.ComponentID] = struct{}{}
+				for _, subID := range target.SubComponentIDs {
+					subComponentIDSet[subID] = struct{}{}
+				}
 			}
 		}
 
@@ -432,6 +470,7 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		componentMap := make(map[primitive.ObjectID]models.Component)
+		subComponentMap := make(map[primitive.ObjectID]models.SubComponent)
 
 		if len(componentIDs) > 0 {
 			cursor, err := db.Collection("components").Find(ctx, bson.M{
@@ -449,6 +488,27 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 			}
 		}
 
+		subComponentIDs := make([]primitive.ObjectID, 0, len(subComponentIDSet))
+		for id := range subComponentIDSet {
+			subComponentIDs = append(subComponentIDs, id)
+		}
+
+		if len(subComponentIDs) > 0 {
+			cursor, err := db.Collection("subcomponents").Find(ctx, bson.M{
+				"_id": bson.M{"$in": subComponentIDs},
+			})
+			if err == nil {
+				defer cursor.Close(ctx)
+
+				var subComponents []models.SubComponent
+				cursor.All(ctx, &subComponents)
+
+				for _, subComponent := range subComponents {
+					subComponentMap[subComponent.ID] = subComponent
+				}
+			}
+		}
+
 		// =========================
 		// BUILD RESPONSE
 		// =========================
@@ -456,18 +516,48 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 		resolvedWithUpdates := []models.IncidentWithUpdates{}
 
 		for _, inc := range incidents {
-			// 🔥 expand components
-			expandedComponents := []models.Component{}
-			for _, compID := range inc.AffectedComponents {
+			targets := normalizeIncidentTargetsForExpansion(inc)
+
+			componentIDs := make([]primitive.ObjectID, 0, len(inc.AffectedComponents)+len(targets))
+			componentIDs = append(componentIDs, inc.AffectedComponents...)
+			for _, target := range targets {
+				componentIDs = append(componentIDs, target.ComponentID)
+			}
+
+			componentIDs = dedupeObjectIDs(componentIDs)
+
+			expandedComponents := make([]models.Component, 0, len(componentIDs))
+			for _, compID := range componentIDs {
 				if comp, ok := componentMap[compID]; ok {
 					expandedComponents = append(expandedComponents, comp)
 				}
 			}
 
+			expandedTargets := make([]models.IncidentAffectedComponentExpanded, 0, len(targets))
+			for _, target := range targets {
+				component, ok := componentMap[target.ComponentID]
+				if !ok {
+					continue
+				}
+
+				expandedSubComponents := make([]models.SubComponent, 0, len(target.SubComponentIDs))
+				for _, subID := range target.SubComponentIDs {
+					if subComponent, exists := subComponentMap[subID]; exists {
+						expandedSubComponents = append(expandedSubComponents, subComponent)
+					}
+				}
+
+				expandedTargets = append(expandedTargets, models.IncidentAffectedComponentExpanded{
+					Component:     component,
+					SubComponents: expandedSubComponents,
+				})
+			}
+
 			item := models.IncidentWithUpdates{
-				Incident:           inc,
-				Updates:            updatesMap[inc.ID],
-				AffectedComponents: expandedComponents,
+				Incident:                 inc,
+				Updates:                  updatesMap[inc.ID],
+				AffectedComponents:       expandedComponents,
+				AffectedComponentTargets: expandedTargets,
 			}
 
 			if inc.Status == models.IncidentResolved {

@@ -76,10 +76,16 @@ export interface Incident {
   creatorId?: string
   creatorUsername?: string
   affectedComponents: Component[]
+  affectedComponentTargets?: IncidentAffectedComponentTarget[]
   createdAt: string
   updatedAt: string
   resolvedAt?: string
   updates?: IncidentUpdate[]
+}
+
+export interface IncidentAffectedComponentTarget {
+  component: Component
+  subComponents?: SubComponent[]
 }
 
 export interface IncidentUpdate {

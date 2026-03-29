@@ -142,7 +142,13 @@ func (r *MongoStatusRepository) ListIncidentsByAffectedComponents(ctx context.Co
 
 	cursor, err := r.db.Collection("incidents").Find(
 		ctx,
-		bson.M{"affectedComponents": bson.M{"$in": affectedIDs}},
+		bson.M{
+			"$or": []bson.M{
+				{"affectedComponents": bson.M{"$in": affectedIDs}},
+				{"affectedComponentTargets.componentId": bson.M{"$in": affectedIDs}},
+				{"affectedComponentTargets.subComponentIds": bson.M{"$in": affectedIDs}},
+			},
+		},
 		findOptions,
 	)
 	if err != nil {

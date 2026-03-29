@@ -58,8 +58,19 @@ export function IncidentCarouselGroup({
 
   const currentIncident = incidents[currentIndex]
   const currentPositionLabel = `${Math.min(currentIndex + 1, Math.max(incidents.length, 1))} / ${Math.max(incidents.length, 1)}`
-  const componentNames =
-    currentIncident.affectedComponents?.map(c => c.name).join(', ') || ''
+  const componentNames = currentIncident
+    ? (currentIncident.affectedComponentTargets && currentIncident.affectedComponentTargets.length > 0
+      ? currentIncident.affectedComponentTargets
+          .map((target) => {
+            const subNames = (target.subComponents || []).map((subComponent) => subComponent.name)
+            if (subNames.length === 0) {
+              return target.component.name
+            }
+            return `${target.component.name} (${subNames.join(', ')})`
+          })
+          .join(', ')
+      : (currentIncident.affectedComponents || []).map(component => component.name).join(', '))
+    : ''
 
   const severityStyle = useMemo(() => {
     if (!currentIncident) {
