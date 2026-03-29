@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	idsdomain "github.com/fresp/StatusForge/internal/domain/ids"
 	"github.com/fresp/StatusForge/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -31,19 +32,6 @@ type incidentRequestBody struct {
 	Components               []string                         `json:"components"`
 	AffectedComponentTargets []incidentAffectedComponentInput `json:"affectedComponentTargets"`
 	AffectedComponentsNew    []incidentAffectedComponentInput `json:"affected_components"`
-}
-
-func uniqueObjectIDs(ids []primitive.ObjectID) []primitive.ObjectID {
-	seen := make(map[primitive.ObjectID]struct{}, len(ids))
-	result := make([]primitive.ObjectID, 0, len(ids))
-	for _, id := range ids {
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		result = append(result, id)
-	}
-	return result
 }
 
 func normalizeIncidentTargets(
@@ -111,7 +99,7 @@ func normalizeIncidentTargets(
 		})
 	}
 
-	componentIDs = uniqueObjectIDs(componentIDs)
+	componentIDs = idsdomain.DedupeObjectIDs(componentIDs)
 
 	if !allowEmpty && len(componentIDs) == 0 {
 		return nil, nil, mongo.ErrNoDocuments
@@ -134,7 +122,7 @@ func validateIncidentTargets(ctx context.Context, db *mongo.Database, targets []
 	if err != nil {
 		return err
 	}
-	if componentCount != int64(len(uniqueObjectIDs(componentIDs))) {
+	if componentCount != int64(len(idsdomain.DedupeObjectIDs(componentIDs))) {
 		return mongo.ErrNoDocuments
 	}
 
@@ -149,7 +137,7 @@ func validateIncidentTargets(ctx context.Context, db *mongo.Database, targets []
 		if countErr != nil {
 			return countErr
 		}
-		if subCount != int64(len(uniqueObjectIDs(t.SubComponentIDs))) {
+		if subCount != int64(len(idsdomain.DedupeObjectIDs(t.SubComponentIDs))) {
 			return mongo.ErrNoDocuments
 		}
 	}

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	statusdomain "github.com/fresp/StatusForge/internal/domain/status"
+	uptimedomain "github.com/fresp/StatusForge/internal/domain/uptime"
 	"github.com/fresp/StatusForge/internal/models"
 	"github.com/fresp/StatusForge/internal/repository"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -277,55 +279,16 @@ func componentPrefix(name string) string {
 	return normalizeCategoryPrefix(name)
 }
 
-func build90DayBars(
-	monitorIDs []primitive.ObjectID,
-	uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime,
-) []DailyUptimeBar {
-	if len(monitorIDs) == 0 {
-		return []DailyUptimeBar{}
-	}
-
-	bars := make([]DailyUptimeBar, 0, 90)
-	now := time.Now()
-
-	for i := 89; i >= 0; i-- {
-		day := now.AddDate(0, 0, -i)
-		dayKey := day.Format("2006-01-02")
-
-		totalChecks := 0
-		successfulChecks := 0
-
-		for _, monitorID := range monitorIDs {
-			for _, record := range uptimeByMonitorID[monitorID] {
-				if record.Date.Format("2006-01-02") == dayKey {
-					totalChecks += record.TotalChecks
-					successfulChecks += record.SuccessfulChecks
-				}
-			}
-		}
-		uptime := 100.0
-		status := string(models.StatusOperational)
-
-		if totalChecks > 0 {
-			uptime = (float64(successfulChecks) / float64(totalChecks)) * 100
-
-			switch {
-			case uptime < 50:
-				status = string(models.StatusMajorOutage)
-			case uptime < 99.9:
-				status = string(models.StatusDegradedPerf)
-			default:
-				status = string(models.StatusOperational)
-			}
-		}
-
+func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
+	domainBars := uptimedomain.Build90DayBars(monitorIDs, uptimeByMonitorID)
+	bars := make([]DailyUptimeBar, 0, len(domainBars))
+	for _, bar := range domainBars {
 		bars = append(bars, DailyUptimeBar{
-			Date:          dayKey,
-			UptimePercent: uptime,
-			Status:        status,
+			Date:          bar.Date,
+			UptimePercent: bar.UptimePercent,
+			Status:        string(bar.Status),
 		})
 	}
-
 	return bars
 }
 
@@ -353,25 +316,8 @@ func aggregateStatusFromServices(services []CategoryService) string {
 	}
 
 	sort.SliceStable(statuses, func(i, j int) bool {
-		return severityScore(statuses[i]) > severityScore(statuses[j])
+		return statusdomain.ComponentSeverityRank(statuses[i]) > statusdomain.ComponentSeverityRank(statuses[j])
 	})
 
 	return string(statuses[0])
-}
-
-func severityScore(status models.ComponentStatus) int {
-	switch status {
-	case models.StatusMajorOutage:
-		return 5
-	case models.StatusPartialOutage:
-		return 4
-	case models.StatusDegradedPerf:
-		return 3
-	case models.StatusMaintenance:
-		return 2
-	case models.StatusOperational:
-		return 1
-	default:
-		return 0
-	}
 }

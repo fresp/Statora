@@ -3,11 +3,11 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/url"
 	"strings"
 	"time"
 
+	monitordomain "github.com/fresp/StatusForge/internal/domain/monitor"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/fresp/StatusForge/internal/models"
@@ -126,7 +126,7 @@ func ValidateAdvancedOptions(monitorType models.MonitorType, target string, adva
 	}
 
 	if advanced.DomainExpiry {
-		if _, err := extractDomain(target, monitorType); err != nil {
+		if _, err := monitordomain.ExtractDomain(target, string(monitorType)); err != nil {
 			return &ValidationError{Message: fmt.Sprintf("invalid domain target for domain_expiry: %v", err)}
 		}
 	}
@@ -195,35 +195,4 @@ func supportsCertExpiry(monitorType models.MonitorType) bool {
 
 func supportsIgnoreTLSError(monitorType models.MonitorType) bool {
 	return monitorType == models.MonitorHTTP
-}
-
-func extractDomain(target string, monitorType models.MonitorType) (string, error) {
-	if monitorType == models.MonitorHTTP {
-		u, err := url.Parse(target)
-		if err != nil {
-			return "", err
-		}
-		host := u.Hostname()
-		if host == "" {
-			return "", fmt.Errorf("target has no hostname")
-		}
-		if net.ParseIP(host) != nil {
-			return "", fmt.Errorf("domain_expiry does not support IP targets")
-		}
-		return host, nil
-	}
-
-	host, _, err := net.SplitHostPort(target)
-	if err != nil {
-		host = target
-	}
-	host = strings.TrimSpace(host)
-	if host == "" {
-		return "", fmt.Errorf("empty host")
-	}
-	if net.ParseIP(host) != nil {
-		return "", fmt.Errorf("domain_expiry does not support IP targets")
-	}
-
-	return host, nil
 }

@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	idsdomain "github.com/fresp/StatusForge/internal/domain/ids"
+	statusdomain "github.com/fresp/StatusForge/internal/domain/status"
+	uptimedomain "github.com/fresp/StatusForge/internal/domain/uptime"
 	"github.com/fresp/StatusForge/internal/models"
 	"github.com/fresp/StatusForge/internal/repository"
 	statusservice "github.com/fresp/StatusForge/internal/services/status"
@@ -27,28 +30,8 @@ type componentAggregationState struct {
 	ImpactedSubIDs  map[primitive.ObjectID]struct{}
 }
 
-func statusRank(status models.ComponentStatus) int {
-	switch status {
-	case models.StatusMajorOutage:
-		return 5
-	case models.StatusPartialOutage:
-		return 4
-	case models.StatusDegradedPerf:
-		return 3
-	case models.StatusMaintenance:
-		return 2
-	case models.StatusOperational:
-		return 1
-	default:
-		return 0
-	}
-}
-
 func maxStatus(a, b models.ComponentStatus) models.ComponentStatus {
-	if statusRank(a) >= statusRank(b) {
-		return a
-	}
-	return b
+	return statusdomain.MaxComponentStatus(a, b)
 }
 
 func mapIncidentImpactToStatus(impact models.IncidentImpact) models.ComponentStatus {
@@ -247,19 +230,6 @@ func normalizeIncidentTargetsForExpansion(incident models.Incident) []models.Inc
 	}
 
 	return targets
-}
-
-func dedupeObjectIDs(ids []primitive.ObjectID) []primitive.ObjectID {
-	seen := make(map[primitive.ObjectID]struct{}, len(ids))
-	result := make([]primitive.ObjectID, 0, len(ids))
-	for _, id := range ids {
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		result = append(result, id)
-	}
-	return result
 }
 
 type ComponentWithSubs struct {
@@ -524,59 +494,16 @@ func GetStatusComponents(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func build90DayBars(
-	compID primitive.ObjectID,
-	monitorsByComp map[primitive.ObjectID][]primitive.ObjectID,
-	uptimeByMonitor map[primitive.ObjectID][]models.DailyUptime,
-) []UptimeBar {
-
-	monitorIDs := monitorsByComp[compID]
-
-	if len(monitorIDs) == 0 {
-		return []UptimeBar{}
+func build90DayBars(compID primitive.ObjectID, monitorsByComp map[primitive.ObjectID][]primitive.ObjectID, uptimeByMonitor map[primitive.ObjectID][]models.DailyUptime) []UptimeBar {
+	domainBars := uptimedomain.Build90DayBars(monitorsByComp[compID], uptimeByMonitor)
+	bars := make([]UptimeBar, 0, len(domainBars))
+	for _, bar := range domainBars {
+		bars = append(bars, UptimeBar{
+			Date:          bar.Date,
+			UptimePercent: bar.UptimePercent,
+			Status:        string(bar.Status),
+		})
 	}
-
-	bars := make([]UptimeBar, 90)
-	now := time.Now()
-
-	for i := 89; i >= 0; i-- {
-		day := now.AddDate(0, 0, -i)
-		dayStr := day.Format("2006-01-02")
-
-		bars[89-i] = UptimeBar{
-			Date:          dayStr,
-			UptimePercent: 100.0,
-			Status:        "operational",
-		}
-
-		var totalUp, total int
-
-		for _, mID := range monitorIDs {
-			for _, u := range uptimeByMonitor[mID] {
-				if u.Date.Format("2006-01-02") == dayStr {
-					totalUp += u.SuccessfulChecks
-					total += u.TotalChecks
-				}
-			}
-		}
-
-		if total > 0 {
-			pct := float64(totalUp) / float64(total) * 100.0
-			bars[89-i].UptimePercent = pct
-
-			switch {
-			case pct >= 99.9:
-				bars[89-i].Status = "operational"
-			case pct >= 90.0:
-				bars[89-i].Status = "degraded_performance"
-			case pct >= 50.0:
-				bars[89-i].Status = "partial_outage"
-			default:
-				bars[89-i].Status = "major_outage"
-			}
-		}
-	}
-
 	return bars
 }
 
@@ -802,7 +729,7 @@ func GetStatusIncidents(db *mongo.Database) gin.HandlerFunc {
 				componentIDs = append(componentIDs, target.ComponentID)
 			}
 
-			componentIDs = dedupeObjectIDs(componentIDs)
+			componentIDs = idsdomain.DedupeObjectIDs(componentIDs)
 
 			expandedComponents := make([]models.Component, 0, len(componentIDs))
 			for _, compID := range componentIDs {
