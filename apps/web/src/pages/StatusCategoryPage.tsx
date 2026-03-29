@@ -137,11 +137,11 @@ function getAffectedSummary(incident: Incident): string {
       .map((target) => {
         const subNames = (target.subComponents ?? []).map((subComponent) => subComponent.name)
         if (subNames.length > 0) {
-          return `${target.component.name} → ${subNames.join(', ')}`
+          return `${target.component.name} (${subNames.join(', ')})`
         }
         return target.component.name
       })
-      .join(' | ')
+      .join(', ')
   }
 
   if (incident.affectedComponents.length > 0) {
@@ -175,29 +175,32 @@ function IncidentSummary({ incident, resolved }: { incident: Incident; resolved?
 
   return (
     <article
-      className={`rounded-2xl border p-4 sm:p-5 ${resolved ? 'opacity-70' : ''}`}
+      className={`rounded-xl border p-4 sm:p-5 transition-colors hover:bg-[var(--surface-elevated)] ${resolved ? 'opacity-70' : ''}`}
       style={{
         borderColor: `color-mix(in srgb, var(${getStatusToken(badgeStatus)}) 22%, var(--border))`,
         backgroundColor: 'color-mix(in srgb, var(--surface) 88%, var(--surface-incident))',
         boxShadow: `inset 4px 0 0 var(${getStatusToken(badgeStatus)})`,
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2">
         <span
           className="inline-flex h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: `var(${getStatusToken(badgeStatus)})` }}
           aria-hidden="true"
         />
-        <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--text-subtle)' }}>
-          {severityLabel} severity
+        <span className="text-sm font-medium" style={{ color: `var(${getStatusToken(badgeStatus)})` }}>
+          {severityLabel}
         </span>
       </div>
 
-      <h4 className="text-lg font-semibold leading-tight" style={{ color: 'var(--text)' }}>
+      <h4 className="mt-2 text-lg font-semibold leading-tight" style={{ color: 'var(--text)' }}>
         {incident.title}
       </h4>
 
-      <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--text-subtle)' }}>
+      <p className="mt-3 text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--text-subtle)' }}>
+        Affected systems
+      </p>
+      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
         {affectedSummary}
       </span>
 
@@ -228,9 +231,13 @@ function IncidentSummary({ incident, resolved }: { incident: Incident; resolved?
         </div>
       </div>
 
-      <p className="text-sm leading-6 mt-4" style={{ color: 'var(--text-muted)' }}>{incident.description}</p>
+      <p className="text-sm leading-6 mt-3" style={{ color: 'var(--text-muted)' }}>{incident.description}</p>
 
-      <p className="text-xs text-[var(--text-subtle)] mt-3">Affected systems: {affectedSummary}</p>
+      {incident.resolvedAt && (
+        <p className="text-xs mt-2" style={{ color: 'var(--text-subtle)' }}>
+          Resolved: {formatDate(incident.resolvedAt)}
+        </p>
+      )}
 
       {latestUpdate && (
         <p className="text-xs text-[var(--text-subtle)] mt-2 italic">Latest update: {latestUpdate.message}</p>
@@ -301,9 +308,9 @@ function ServiceRow({
               {groupedIncidents.active.length > 0 && (
                 <div className="px-5 py-4">
                   <h4 className="text-sm font-semibold mb-3">Active Incidents ({groupedIncidents.active.length})</h4>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {groupedIncidents.active.map((incident) => (
-                      <div key={incident.id} className="pl-4 border-l-2" style={{ borderColor: `var(${getStatusToken(impactToStatus(incident.impact))})` }}>
+                      <div key={incident.id}>
                         <IncidentSummary incident={incident} />
                       </div>
                     ))}
