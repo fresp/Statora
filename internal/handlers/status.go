@@ -16,6 +16,226 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+type derivedStatusResult struct {
+	ComponentStatus map[primitive.ObjectID]models.ComponentStatus
+	SubStatus       map[primitive.ObjectID]models.ComponentStatus
+}
+
+type componentAggregationState struct {
+	HasDirectImpact bool
+	DirectStatus    models.ComponentStatus
+	ImpactedSubIDs  map[primitive.ObjectID]struct{}
+}
+
+func statusRank(status models.ComponentStatus) int {
+	switch status {
+	case models.StatusMajorOutage:
+		return 5
+	case models.StatusPartialOutage:
+		return 4
+	case models.StatusDegradedPerf:
+		return 3
+	case models.StatusMaintenance:
+		return 2
+	case models.StatusOperational:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func maxStatus(a, b models.ComponentStatus) models.ComponentStatus {
+	if statusRank(a) >= statusRank(b) {
+		return a
+	}
+	return b
+}
+
+func mapIncidentImpactToStatus(impact models.IncidentImpact) models.ComponentStatus {
+	switch impact {
+	case models.ImpactCritical:
+		return models.StatusMajorOutage
+	case models.ImpactMajor:
+		return models.StatusPartialOutage
+	case models.ImpactMinor:
+		return models.StatusDegradedPerf
+	default:
+		return models.StatusOperational
+	}
+}
+
+func partialAggregateStatusFromSubStatus(status models.ComponentStatus) models.ComponentStatus {
+	switch status {
+	case models.StatusMajorOutage:
+		return models.StatusPartialOutage
+	case models.StatusPartialOutage:
+		return models.StatusPartialOutage
+	default:
+		return status
+	}
+}
+
+func deriveStatusesFromActiveIncidentsAndMaintenance(
+	ctx context.Context,
+	db *mongo.Database,
+	components []models.Component,
+	subs []models.SubComponent,
+) (derivedStatusResult, error) {
+	activeIncidentsCursor, err := db.Collection("incidents").Find(
+		ctx,
+		bson.M{"status": bson.M{"$ne": models.IncidentResolved}},
+	)
+	if err != nil {
+		return derivedStatusResult{}, err
+	}
+	defer activeIncidentsCursor.Close(ctx)
+
+	var activeIncidents []models.Incident
+	if err := activeIncidentsCursor.All(ctx, &activeIncidents); err != nil {
+		return derivedStatusResult{}, err
+	}
+
+	now := time.Now()
+	maintenanceCursor, err := db.Collection("maintenance").Find(
+		ctx,
+		bson.M{
+			"status":    models.MaintenanceInProgress,
+			"startTime": bson.M{"$lte": now},
+			"endTime":   bson.M{"$gte": now},
+		},
+	)
+	if err != nil {
+		return derivedStatusResult{}, err
+	}
+	defer maintenanceCursor.Close(ctx)
+
+	var activeMaintenance []models.Maintenance
+	if err := maintenanceCursor.All(ctx, &activeMaintenance); err != nil {
+		return derivedStatusResult{}, err
+	}
+
+	return deriveStatuses(
+		components,
+		subs,
+		activeIncidents,
+		activeMaintenance,
+	)
+}
+
+func deriveStatuses(
+	components []models.Component,
+	subs []models.SubComponent,
+	activeIncidents []models.Incident,
+	activeMaintenance []models.Maintenance,
+) (derivedStatusResult, error) {
+	componentStatus := make(map[primitive.ObjectID]models.ComponentStatus, len(components))
+	subStatus := make(map[primitive.ObjectID]models.ComponentStatus, len(subs))
+
+	for _, comp := range components {
+		componentStatus[comp.ID] = comp.Status
+	}
+	for _, sub := range subs {
+		subStatus[sub.ID] = sub.Status
+	}
+
+	subsByComp := make(map[primitive.ObjectID][]primitive.ObjectID)
+	for _, sub := range subs {
+		subsByComp[sub.ComponentID] = append(subsByComp[sub.ComponentID], sub.ID)
+	}
+
+	aggByComponent := make(map[primitive.ObjectID]*componentAggregationState, len(components))
+	for _, comp := range components {
+		aggByComponent[comp.ID] = &componentAggregationState{
+			DirectStatus:   models.StatusOperational,
+			ImpactedSubIDs: map[primitive.ObjectID]struct{}{},
+		}
+	}
+
+	for _, inc := range activeIncidents {
+		incidentStatus := mapIncidentImpactToStatus(inc.Impact)
+		if incidentStatus == models.StatusOperational {
+			continue
+		}
+
+		targets := normalizeIncidentTargetsForExpansion(inc)
+		for _, target := range targets {
+			state, exists := aggByComponent[target.ComponentID]
+			if !exists {
+				continue
+			}
+
+			if len(target.SubComponentIDs) == 0 {
+				state.HasDirectImpact = true
+				state.DirectStatus = maxStatus(state.DirectStatus, incidentStatus)
+				for _, subID := range subsByComp[target.ComponentID] {
+					state.ImpactedSubIDs[subID] = struct{}{}
+					subStatus[subID] = maxStatus(subStatus[subID], incidentStatus)
+				}
+				continue
+			}
+
+			for _, subID := range target.SubComponentIDs {
+				state.ImpactedSubIDs[subID] = struct{}{}
+				subStatus[subID] = maxStatus(subStatus[subID], incidentStatus)
+			}
+		}
+	}
+
+	for _, maintenance := range activeMaintenance {
+		for _, componentID := range maintenance.Components {
+			state, exists := aggByComponent[componentID]
+			if !exists {
+				continue
+			}
+
+			state.HasDirectImpact = true
+			state.DirectStatus = maxStatus(state.DirectStatus, models.StatusMaintenance)
+
+			for _, subID := range subsByComp[componentID] {
+				state.ImpactedSubIDs[subID] = struct{}{}
+				subStatus[subID] = maxStatus(subStatus[subID], models.StatusMaintenance)
+			}
+		}
+	}
+
+	for _, comp := range components {
+		state := aggByComponent[comp.ID]
+		if state == nil {
+			continue
+		}
+
+		totalSubs := len(subsByComp[comp.ID])
+		impactedSubCount := len(state.ImpactedSubIDs)
+
+		if !state.HasDirectImpact && impactedSubCount == 0 {
+			continue
+		}
+
+		derived := state.DirectStatus
+		if !state.HasDirectImpact {
+			derived = models.StatusOperational
+		}
+
+		worstSubStatus := models.StatusOperational
+		for subID := range state.ImpactedSubIDs {
+			worstSubStatus = maxStatus(worstSubStatus, subStatus[subID])
+		}
+
+		if impactedSubCount > 0 && impactedSubCount < totalSubs {
+			derived = maxStatus(derived, partialAggregateStatusFromSubStatus(worstSubStatus))
+		} else {
+			derived = maxStatus(derived, worstSubStatus)
+		}
+
+		componentStatus[comp.ID] = derived
+	}
+
+	return derivedStatusResult{
+		ComponentStatus: componentStatus,
+		SubStatus:       subStatus,
+	}, nil
+}
+
 func normalizeIncidentTargetsForExpansion(incident models.Incident) []models.IncidentAffectedComponent {
 	if len(incident.AffectedComponentTargets) > 0 {
 		return incident.AffectedComponentTargets
@@ -115,6 +335,25 @@ func GetStatusSummary(db *mongo.Database) gin.HandlerFunc {
 		compCursor.All(ctx, &components)
 		compCursor.Close(ctx)
 
+		subCursor, err := db.Collection("subcomponents").Find(ctx, bson.M{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer subCursor.Close(ctx)
+
+		var subComponents []models.SubComponent
+		if err := subCursor.All(ctx, &subComponents); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		derivedStatuses, err := deriveStatusesFromActiveIncidentsAndMaintenance(ctx, db, components, subComponents)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		counts := map[string]int{
 			"operational":          0,
 			"degraded_performance": 0,
@@ -123,7 +362,8 @@ func GetStatusSummary(db *mongo.Database) gin.HandlerFunc {
 			"maintenance":          0,
 		}
 		for _, comp := range components {
-			counts[string(comp.Status)]++
+			status := derivedStatuses.ComponentStatus[comp.ID]
+			counts[string(status)]++
 		}
 
 		// Determine overall status
@@ -143,8 +383,13 @@ func GetStatusSummary(db *mongo.Database) gin.HandlerFunc {
 			bson.M{"status": bson.M{"$ne": models.IncidentResolved}})
 
 		// Scheduled maintenance
+		now := time.Now()
 		maintCount, _ := db.Collection("maintenance").CountDocuments(ctx,
-			bson.M{"status": bson.M{"$in": []string{"scheduled", "in_progress"}}})
+			bson.M{
+				"status":    models.MaintenanceInProgress,
+				"startTime": bson.M{"$lte": now},
+				"endTime":   bson.M{"$gte": now},
+			})
 
 		c.JSON(http.StatusOK, StatusSummary{
 			OverallStatus:   overall,
@@ -225,6 +470,29 @@ func GetStatusComponents(db *mongo.Database) gin.HandlerFunc {
 		uptimeByMonitor := map[primitive.ObjectID][]models.DailyUptime{}
 		for _, u := range uptimeRecords {
 			uptimeByMonitor[u.MonitorID] = append(uptimeByMonitor[u.MonitorID], u)
+		}
+
+		derivedStatuses, err := deriveStatusesFromActiveIncidentsAndMaintenance(ctx, db, components, allSubs)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		for i := range components {
+			if status, ok := derivedStatuses.ComponentStatus[components[i].ID]; ok {
+				components[i].Status = status
+			}
+		}
+
+		for i := range allSubs {
+			if status, ok := derivedStatuses.SubStatus[allSubs[i].ID]; ok {
+				allSubs[i].Status = status
+			}
+		}
+
+		subsByComp = map[primitive.ObjectID][]models.SubComponent{}
+		for _, s := range allSubs {
+			subsByComp[s.ComponentID] = append(subsByComp[s.ComponentID], s)
 		}
 
 		// Build response with additional outage info
