@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
+import Footer from '../components/layout/Footer'
 import type { Incident, StatusPageSettings } from '../types'
 import {
   formatDate,
@@ -143,13 +144,14 @@ export default function HistoryPage() {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen flex flex-col"
       style={{
         backgroundColor: 'var(--bg)',
         color: 'var(--text)',
         fontFamily: 'var(--font-family)',
       }}
     >
+      <main className="flex-1">
       <div
         className="py-10 px-4 border-b"
         style={{
@@ -293,6 +295,8 @@ export default function HistoryPage() {
           </section>
         )}
       </div>
+      </main>
+      <Footer centerText={settingsData?.footer?.text} />
     </div>
   )
 }

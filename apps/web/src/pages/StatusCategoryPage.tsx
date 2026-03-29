@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertCircle, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, Wrench, XCircle } from 'lucide-react'
-import { useCategorySummary } from '../hooks/useApi'
+import { useApi, useCategorySummary } from '../hooks/useApi'
 import { STATUS_LABELS, formatDate } from '../lib/utils'
-import type { CategoryServiceStatus, ComponentStatus, Incident, IncidentUpdate } from '../types'
+import type { CategoryServiceStatus, ComponentStatus, Incident, IncidentUpdate, StatusPageSettings } from '../types'
 import { INCIDENT_IMPACT_LABELS, INCIDENT_STATUS_LABELS } from '../lib/utils'
+import Footer from '../components/layout/Footer'
 
 const EMPTY_INCIDENTS: Incident[] = []
 const EMPTY_SERVICES: CategoryServiceStatus[] = []
@@ -333,6 +334,7 @@ function ServiceRow({
 export default function StatusCategoryPage() {
   const { categoryPrefix } = useParams<{ categoryPrefix: string }>()
   const { data, loading, error } = useCategorySummary(categoryPrefix)
+  const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
 
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
@@ -377,26 +379,32 @@ export default function StatusCategoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-        <div className="max-w-5xl mx-auto px-4 py-10">Loading category status…</div>
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
+        <main className="flex-1">
+          <div className="max-w-5xl mx-auto px-4 py-10">Loading category status…</div>
+        </main>
+        <Footer centerText={settingsData?.footer?.text} />
       </div>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
-        <div className="max-w-5xl mx-auto px-4 py-10 space-y-3">
-          <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
-            <Link to="/" className="hover:underline">Status</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>{categoryPrefix ?? 'Unknown category'}</span>
-          </nav>
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <h1 className="text-xl font-semibold mb-2">Category unavailable</h1>
-            <p className="text-sm text-[var(--text-muted)]">{error ?? 'Unable to load this category right now.'}</p>
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
+        <main className="flex-1">
+          <div className="max-w-5xl mx-auto px-4 py-10 space-y-3">
+            <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
+              <Link to="/" className="hover:underline">Status</Link>
+              <ChevronRight className="w-4 h-4" />
+              <span>{categoryPrefix ?? 'Unknown category'}</span>
+            </nav>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
+              <h1 className="text-xl font-semibold mb-2">Category unavailable</h1>
+              <p className="text-sm text-[var(--text-muted)]">{error ?? 'Unable to load this category right now.'}</p>
+            </div>
           </div>
-        </div>
+        </main>
+        <Footer centerText={settingsData?.footer?.text} />
       </div>
     )
   }
@@ -414,7 +422,8 @@ export default function StatusCategoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
+      <main className="flex-1">
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
         <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
           <Link to="/" className="hover:underline">Status</Link>
@@ -458,6 +467,8 @@ export default function StatusCategoryPage() {
           )}
         </section>
       </div>
+      </main>
+      <Footer centerText={settingsData?.footer?.text} />
     </div>
   )
 }
