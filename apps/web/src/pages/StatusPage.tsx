@@ -402,26 +402,44 @@ export default function StatusPage() {
           </div>
         )}
 
-        <div className="py-8 border-t" style={{ borderColor: 'var(--border)' }}>
-          {settings.footer.text && (
-            <p className="text-sm mb-3 text-center" style={{ color: mutedTextColor }}>{settings.footer.text}</p>
-          )}
+        <div className="py-10 border-t" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex items-center justify-between">
 
-          <div className="flex items-center justify-end gap-3 flex-wrap">
-            {settings.footer.showPoweredBy && (
-              <p className="text-sm" style={{ color: subtleTextColor }}>Powered by <a href='https://github.com/fresp/StatusForge'>StatusForge</a></p>
-            )}
-            {recentIncidentGroups.length > 0 && (
-              <Link to="/history" className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
-                style={{
-                  borderColor: 'var(--border)',
-                  color: 'var(--text)',
-                  backgroundColor: 'var(--surface)',
-                }}
-              >
-                View History
-              </Link>
-            )}
+            {/* LEFT BLOCK */}
+            <div className="flex flex-col gap-2">
+              <div className="text-sm" style={{ color: mutedTextColor }}>
+                {settings.footer.text}
+              </div>
+
+              {settings.footer.showPoweredBy && (
+                <div
+                  className="text-xs opacity-40"
+                  style={{ color: subtleTextColor }}
+                >
+                  Powered by{" "}
+                  <a href="https://github.com/fresp/StatusForge">
+                    StatusForge
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT CTA */}
+            <div>
+              {recentIncidentGroups.length > 0 && (
+                <Link
+                  to="/history"
+                  className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
+                  style={{
+                    borderColor: 'var(--border)',
+                    color: 'var(--text)',
+                    backgroundColor: 'var(--surface)',
+                  }}
+                >
+                  View History
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>
