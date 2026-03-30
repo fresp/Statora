@@ -196,18 +196,6 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 	}
 
 	incidentsWithUpdates := make([]models.IncidentWithUpdates, 0, len(incidents))
-	incidentComponentIDs := make([]primitive.ObjectID, 0)
-	incidentSubComponentIDs := make([]primitive.ObjectID, 0)
-	for _, incident := range incidents {
-		if len(incident.AffectedComponentTargets) > 0 {
-			for _, target := range incident.AffectedComponentTargets {
-				incidentComponentIDs = append(incidentComponentIDs, target.ComponentID)
-				incidentSubComponentIDs = append(incidentSubComponentIDs, target.SubComponentIDs...)
-			}
-			continue
-		}
-		incidentComponentIDs = append(incidentComponentIDs, incident.AffectedComponents...)
-	}
 
 	incidentComponentMap := map[primitive.ObjectID]models.Component{}
 	incidentSubComponentMap := map[primitive.ObjectID]models.SubComponent{}
