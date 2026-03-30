@@ -10,6 +10,7 @@ import AdminSubComponents from './pages/admin/AdminSubComponents'
 import AdminIncidents from './pages/admin/AdminIncidents'
 import AdminMaintenance from './pages/admin/AdminMaintenance'
 import AdminMonitors from './pages/admin/AdminMonitors'
+import AdminMonitorLogs from './pages/admin/AdminMonitorLogs'
 import AdminSubscribers from './pages/admin/AdminSubscribers'
 import AdminMembers from './pages/admin/AdminMembers'
 import AdminActivate from './pages/admin/AdminActivate'
@@ -116,6 +117,14 @@ export default function App() {
           element={
             <RoleRoute allowed={['admin']}>
               <AdminMonitors />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="monitors/:id/logs"
+          element={
+            <RoleRoute allowed={['admin']}>
+              <AdminMonitorLogs />
             </RoleRoute>
           }
         />

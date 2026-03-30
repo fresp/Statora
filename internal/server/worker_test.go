@@ -1,13 +1,97 @@
 package server
 
 import (
+	"bytes"
+	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/fresp/StatusForge/configs"
+	"github.com/fresp/StatusForge/internal/models"
 )
+
+func TestShouldRunMonitor_FirstRun(t *testing.T) {
+	mon := models.Monitor{}
+
+	assert.True(t, shouldRunMonitor(mon))
+}
+
+func TestShouldRunMonitor_DueByInterval(t *testing.T) {
+	mon := models.Monitor{
+		IntervalSeconds: 60,
+		LastCheckedAt:   time.Now().Add(-61 * time.Second),
+	}
+
+	assert.True(t, shouldRunMonitor(mon))
+}
+
+func TestShouldRunMonitor_NotDueByInterval(t *testing.T) {
+	mon := models.Monitor{
+		IntervalSeconds: 60,
+		LastCheckedAt:   time.Now().Add(-30 * time.Second),
+	}
+
+	assert.False(t, shouldRunMonitor(mon))
+}
+
+func TestShouldRunMonitor_ZeroIntervalFallsBackToDefault(t *testing.T) {
+	mon := models.Monitor{
+		IntervalSeconds: 0,
+		LastCheckedAt:   time.Now().Add(-30 * time.Second),
+	}
+
+	assert.False(t, shouldRunMonitor(mon))
+
+	mon.LastCheckedAt = time.Now().Add(-(time.Duration(defaultMonitorIntervalSeconds) + 1) * time.Second)
+	assert.True(t, shouldRunMonitor(mon))
+}
+
+func TestEffectiveIntervalSeconds_DefaultFallback(t *testing.T) {
+	assert.Equal(t, defaultMonitorIntervalSeconds, effectiveIntervalSeconds(0))
+	assert.Equal(t, defaultMonitorIntervalSeconds, effectiveIntervalSeconds(-1))
+	assert.Equal(t, 120, effectiveIntervalSeconds(120))
+}
+
+func TestDueMonitors_LogsExecuteAndSkip(t *testing.T) {
+	var buf bytes.Buffer
+	origWriter := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(origWriter)
+
+	notDue := models.Monitor{
+		Name:            "not-due-monitor",
+		IntervalSeconds: 60,
+		LastCheckedAt:   time.Now().Add(-10 * time.Second),
+	}
+	due := models.Monitor{
+		Name:            "due-monitor",
+		IntervalSeconds: 0,
+		LastCheckedAt:   time.Now().Add(-(time.Duration(defaultMonitorIntervalSeconds) + 1) * time.Second),
+	}
+
+	result := dueMonitors([]models.Monitor{notDue, due})
+
+	if assert.Len(t, result, 1) {
+		assert.Equal(t, "due-monitor", result[0].Name)
+	}
+
+	output := buf.String()
+	assert.Contains(t, output, "[WORKER] Skipping monitor (not due): not-due-monitor")
+	assert.Contains(t, output, "[WORKER] Executing monitor: due-monitor interval: 60")
+	t.Log(output)
+}
+
+func TestWorkerCycleOverlapGuard(t *testing.T) {
+	workerCycleRunning.Store(false)
+	assert.True(t, workerCycleRunning.CompareAndSwap(false, true))
+	assert.False(t, workerCycleRunning.CompareAndSwap(false, true))
+	workerCycleRunning.Store(false)
+	assert.True(t, workerCycleRunning.CompareAndSwap(false, true))
+	workerCycleRunning.Store(false)
+}
 
 // TestWorkerModeToggle tests that the ENABLE_WORKER flag works correctly
 func TestWorkerModeToggle(t *testing.T) {
