@@ -2,7 +2,7 @@ import type { ComponentStatus } from '../types'
 import type { Incident } from '../types'
 
 export const STATUS_LABELS: Record<ComponentStatus, string> = {
-  operational: 'Operational',
+  operational: 'No known issues',
   degraded_performance: 'Degraded Performance',
   partial_outage: 'Partial Outage',
   major_outage: 'Major Outage',
@@ -158,29 +158,50 @@ export function groupIncidentsByRecentDays(incidents: Incident[], days = 7): Rec
   }))
 }
 
-export function groupIncidentsByStatus(incidents: Incident[]): IncidentStatusGroup[] {
+export function groupIncidentsByStatus(
+  incidents: Incident[]
+): IncidentStatusGroup[] {
   const groupOrder = ['investigating', 'identified', 'monitoring', 'resolved']
-  const groups = new Map<string, Incident[]>()
 
-  incidents.forEach((incident) => {
-    const current = groups.get(incident.status) ?? []
-    current.push(incident)
-    groups.set(incident.status, current)
+  const sortedIncidents = [...incidents].sort((a, b) => {
+    const statusDiff =
+      groupOrder.indexOf(a.status) - groupOrder.indexOf(b.status)
+
+    if (statusDiff !== 0) return statusDiff
+
+    return (
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+    )
   })
 
-  return groupOrder
-    .filter((status) => (groups.get(status) ?? []).length > 0)
-    .map((status) => {
-      const groupedIncidents = (groups.get(status) ?? []).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+  const activeIncidents = sortedIncidents.filter(
+    (i) => i.status !== 'resolved'
+  )
 
-      return {
-        key: status,
-        label: `${INCIDENT_STATUS_LABELS[status] ?? status} Incidents`,
-        incidents: groupedIncidents,
-      }
+  const resolvedIncidents = sortedIncidents.filter(
+    (i) => i.status === 'resolved'
+  )
+
+  const groups: IncidentStatusGroup[] = []
+
+  if (activeIncidents.length > 0) {
+    groups.push({
+      key: 'active',
+      label: 'Active Incidents',
+      incidents: activeIncidents,
     })
+  }
+
+  if (resolvedIncidents.length > 0) {
+    groups.push({
+      key: 'resolved',
+      label: 'Resolved Incidents',
+      incidents: resolvedIncidents,
+    })
+  }
+
+  return groups
 }
 
 export function groupIncidentsByDate(incidents: Incident[]): IncidentDateGroup[] {

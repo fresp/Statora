@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/fresp/StatusForge/internal/models"
@@ -12,6 +14,156 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+var errInvalidAffectedComponentPayload = errors.New("invalid affected component payload")
+
+type incidentAffectedComponentInput struct {
+	ComponentID     string   `json:"componentId"`
+	SubComponentIDs []string `json:"subComponentIds"`
+}
+
+type incidentRequestBody struct {
+	Title                    string                           `json:"title" binding:"required"`
+	Description              string                           `json:"description"`
+	Status                   models.IncidentStatus            `json:"status"`
+	Impact                   models.IncidentImpact            `json:"impact"`
+	AffectedComponents       []string                         `json:"affectedComponents"`
+	Components               []string                         `json:"components"`
+	AffectedComponentTargets []incidentAffectedComponentInput `json:"affectedComponentTargets"`
+	AffectedComponentsNew    []incidentAffectedComponentInput `json:"affected_components"`
+}
+
+func uniqueObjectIDs(ids []primitive.ObjectID) []primitive.ObjectID {
+	seen := make(map[primitive.ObjectID]struct{}, len(ids))
+	result := make([]primitive.ObjectID, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
+}
+
+func normalizeIncidentTargets(
+	targets []incidentAffectedComponentInput,
+	legacy []string,
+	legacyAlias []string,
+	allowEmpty bool,
+) ([]primitive.ObjectID, []models.IncidentAffectedComponent, error) {
+	bucket := make(map[primitive.ObjectID]map[primitive.ObjectID]struct{})
+	componentOrder := make([]primitive.ObjectID, 0)
+
+	mergeTarget := func(componentID primitive.ObjectID, subIDs []primitive.ObjectID) {
+		if _, ok := bucket[componentID]; !ok {
+			bucket[componentID] = map[primitive.ObjectID]struct{}{}
+			componentOrder = append(componentOrder, componentID)
+		}
+		for _, subID := range subIDs {
+			bucket[componentID][subID] = struct{}{}
+		}
+	}
+
+	for _, t := range targets {
+		if t.ComponentID == "" {
+			return nil, nil, errInvalidAffectedComponentPayload
+		}
+		componentID, err := primitive.ObjectIDFromHex(t.ComponentID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		subIDs := make([]primitive.ObjectID, 0, len(t.SubComponentIDs))
+		for _, sid := range t.SubComponentIDs {
+			subID, subErr := primitive.ObjectIDFromHex(sid)
+			if subErr != nil {
+				return nil, nil, subErr
+			}
+			subIDs = append(subIDs, subID)
+		}
+		mergeTarget(componentID, subIDs)
+	}
+
+	for _, rawID := range append(legacy, legacyAlias...) {
+		componentID, err := primitive.ObjectIDFromHex(rawID)
+		if err != nil {
+			return nil, nil, err
+		}
+		mergeTarget(componentID, nil)
+	}
+
+	componentIDs := make([]primitive.ObjectID, 0, len(componentOrder))
+	normalizedTargets := make([]models.IncidentAffectedComponent, 0, len(componentOrder))
+
+	for _, componentID := range componentOrder {
+		subMap := bucket[componentID]
+		subIDs := make([]primitive.ObjectID, 0, len(subMap))
+		for sid := range subMap {
+			subIDs = append(subIDs, sid)
+		}
+		sort.Slice(subIDs, func(i, j int) bool { return subIDs[i].Hex() < subIDs[j].Hex() })
+
+		componentIDs = append(componentIDs, componentID)
+		normalizedTargets = append(normalizedTargets, models.IncidentAffectedComponent{
+			ComponentID:     componentID,
+			SubComponentIDs: subIDs,
+		})
+	}
+
+	componentIDs = uniqueObjectIDs(componentIDs)
+
+	if !allowEmpty && len(componentIDs) == 0 {
+		return nil, nil, mongo.ErrNoDocuments
+	}
+
+	return componentIDs, normalizedTargets, nil
+}
+
+func validateIncidentTargets(ctx context.Context, db *mongo.Database, targets []models.IncidentAffectedComponent) error {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	componentIDs := make([]primitive.ObjectID, 0, len(targets))
+	for _, t := range targets {
+		componentIDs = append(componentIDs, t.ComponentID)
+	}
+
+	componentCount, err := db.Collection("components").CountDocuments(ctx, bson.M{"_id": bson.M{"$in": componentIDs}})
+	if err != nil {
+		return err
+	}
+	if componentCount != int64(len(uniqueObjectIDs(componentIDs))) {
+		return mongo.ErrNoDocuments
+	}
+
+	for _, t := range targets {
+		if len(t.SubComponentIDs) == 0 {
+			continue
+		}
+		subCount, countErr := db.Collection("subcomponents").CountDocuments(ctx, bson.M{
+			"_id":         bson.M{"$in": t.SubComponentIDs},
+			"componentId": t.ComponentID,
+		})
+		if countErr != nil {
+			return countErr
+		}
+		if subCount != int64(len(uniqueObjectIDs(t.SubComponentIDs))) {
+			return mongo.ErrNoDocuments
+		}
+	}
+
+	return nil
+}
+
+func invalidAffectedComponentsError() gin.H {
+	return gin.H{"error": "invalid affected components payload"}
+}
+
+func invalidAffectedComponentsReferenceError() gin.H {
+	return gin.H{"error": "one or more affected components or subcomponents are invalid"}
+}
 
 func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -80,13 +232,7 @@ func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 
 func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req struct {
-			Title              string                `json:"title" binding:"required"`
-			Description        string                `json:"description"`
-			Status             models.IncidentStatus `json:"status"`
-			Impact             models.IncidentImpact `json:"impact"`
-			AffectedComponents []string              `json:"affectedComponents"`
-		}
+		var req incidentRequestBody
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -120,32 +266,42 @@ func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		creatorUsername, _ := c.Get("username")
 		creatorName, _ := creatorUsername.(string)
 
-		var compIDs []primitive.ObjectID
-		for _, s := range req.AffectedComponents {
-			oid, err := primitive.ObjectIDFromHex(s)
-			if err == nil {
-				compIDs = append(compIDs, oid)
-			}
-		}
-		if compIDs == nil {
-			compIDs = []primitive.ObjectID{}
-		}
-
-		incident := models.Incident{
-			ID:                 primitive.NewObjectID(),
-			Title:              req.Title,
-			Description:        req.Description,
-			Status:             req.Status,
-			Impact:             req.Impact,
-			CreatorID:          &userID,
-			CreatorUsername:    creatorName,
-			AffectedComponents: compIDs,
-			CreatedAt:          time.Now(),
-			UpdatedAt:          time.Now(),
+		compIDs, targets, err := normalizeIncidentTargets(
+			append(req.AffectedComponentTargets, req.AffectedComponentsNew...),
+			req.AffectedComponents,
+			req.Components,
+			true,
+		)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, invalidAffectedComponentsError())
+			return
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		if err := validateIncidentTargets(ctx, db, targets); err != nil {
+			if err == mongo.ErrNoDocuments {
+				c.JSON(http.StatusBadRequest, invalidAffectedComponentsReferenceError())
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		incident := models.Incident{
+			ID:                       primitive.NewObjectID(),
+			Title:                    req.Title,
+			Description:              req.Description,
+			Status:                   req.Status,
+			Impact:                   req.Impact,
+			CreatorID:                &userID,
+			CreatorUsername:          creatorName,
+			AffectedComponents:       compIDs,
+			AffectedComponentTargets: targets,
+			CreatedAt:                time.Now(),
+			UpdatedAt:                time.Now(),
+		}
 
 		if _, err := db.Collection("incidents").InsertOne(ctx, incident); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -166,13 +322,7 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			return
 		}
 
-		var req struct {
-			Title              string                `json:"title"`
-			Description        string                `json:"description"`
-			Status             models.IncidentStatus `json:"status"`
-			Impact             models.IncidentImpact `json:"impact"`
-			AffectedComponents []string              `json:"affectedComponents"`
-		}
+		var req incidentRequestBody
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -195,19 +345,35 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		if req.Impact != "" {
 			setFields["impact"] = req.Impact
 		}
-		if len(req.AffectedComponents) > 0 {
-			var compIDs []primitive.ObjectID
-			for _, s := range req.AffectedComponents {
-				oid, err := primitive.ObjectIDFromHex(s)
-				if err == nil {
-					compIDs = append(compIDs, oid)
-				}
-			}
-			setFields["affectedComponents"] = compIDs
-		}
+		hasTargetPayload := len(req.AffectedComponentTargets) > 0 || len(req.AffectedComponentsNew) > 0 || len(req.AffectedComponents) > 0 || len(req.Components) > 0
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		if hasTargetPayload {
+			compIDs, targets, targetErr := normalizeIncidentTargets(
+				append(req.AffectedComponentTargets, req.AffectedComponentsNew...),
+				req.AffectedComponents,
+				req.Components,
+				true,
+			)
+			if targetErr != nil {
+				c.JSON(http.StatusBadRequest, invalidAffectedComponentsError())
+				return
+			}
+
+			if validationErr := validateIncidentTargets(ctx, db, targets); validationErr != nil {
+				if validationErr == mongo.ErrNoDocuments {
+					c.JSON(http.StatusBadRequest, invalidAffectedComponentsReferenceError())
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": validationErr.Error()})
+				return
+			}
+
+			setFields["affectedComponents"] = compIDs
+			setFields["affectedComponentTargets"] = targets
+		}
 
 		var incident models.Incident
 		opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
