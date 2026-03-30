@@ -38,13 +38,30 @@ StatusForge is designed for teams that want to run their own status platform and
 
 StatusForge includes documentation images under `docs/screenshots/`.
 
-| Public Status Page | Admin Dashboard | Admin Setting |
-|---|---|---|
-| ![Public Status Page](docs/screenshots/public-statuspage.png) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-settings.png) |
+## 🌐 Public Pages
 
-| Incident History| Monitoring | Maintenance | Service Info |
+| Public Status Page | Incident History | Service Info |
+|---|---|---|
+| ![Public Status Page](docs/screenshots/public-statuspage.png) | ![Incident History](docs/screenshots/incident-history.png) | ![Service Info](docs/screenshots/public-service-info.png) |
+
+**Description:**
+- **Public Status Page** → Overview status layanan
+- **Incident History** → Riwayat gangguan
+- **Service Info** → Detail service (uptime, latency, dll)
+
+---
+
+## 🔐 Admin Pages
+
+| Admin Dashboard | Admin Setting | Admin Monitoring | Admin Maintenance |
 |---|---|---|---|
-| ![Incident History](docs/screenshots/incident-history.png) | ![Monitoring](docs/screenshots/admin-monitoring.png) | ![Maintenance](docs/screenshots/admin-maintenance.png) | ![Service Info](docs/screenshots/public-service-info.png) |
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-settings.png) | ![Monitoring](docs/screenshots/admin-monitoring.png) | ![Maintenance](docs/screenshots/admin-maintenance.png) |
+
+**Description:**
+- **Admin Dashboard** → Ringkasan sistem
+- **Admin Setting** → Konfigurasi global
+- **Admin Monitoring** → Setup & kontrol monitoring
+- **Admin Maintenance** → Jadwal maintenance
 
 ## Architecture Diagram
 
