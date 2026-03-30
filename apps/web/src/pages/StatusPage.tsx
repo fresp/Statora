@@ -1,137 +1,23 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { StatusSummary, ComponentWithSubs, Incident, Maintenance, StatusPageSettings } from '../types'
-import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, groupIncidentsByRecentDays, groupIncidentsByStatus } from '../lib/utils'
+import { STATUS_LABELS, getOverallStatusLabel, formatDate, formatDateShort, groupIncidentsByStatus } from '../lib/utils'
 import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
-import { loadThemePresetStylesheet, getThemePresets, DEFAULT_THEME_PRESET } from '../lib/themePresetLoader'
-
-const DEFAULT_SETTINGS: StatusPageSettings = {
-  head: {
-    title: 'StatusForge',
-    description: 'Live system status and incident updates.',
-    keywords: 'status, uptime, incidents, maintenance',
-    faviconUrl: '/vite.svg',
-    metaTags: {},
-  },
-  branding: {
-    siteName: 'StatusForge',
-    logoUrl: '',
-    backgroundImageUrl: '',
-    heroImageUrl: '',
-  },
-  theme: {
-    preset: DEFAULT_THEME_PRESET,
-  },
-  footer: {
-    text: '',
-    showPoweredBy: true,
-  },
-  customCss: '',
-  updatedAt: '',
-  createdAt: '',
-}
-
-function normalizeSettings(settings?: StatusPageSettings | null): StatusPageSettings {
-  if (!settings) {
-    return DEFAULT_SETTINGS
-  }
-
-  const preset = settings.theme?.preset?.trim() || DEFAULT_THEME_PRESET
-  const normalizedPreset = preset.endsWith('.css') ? preset : `${preset}.css`
-
-  return {
-    head: {
-      title: settings.head?.title ?? DEFAULT_SETTINGS.head.title,
-      description: settings.head?.description ?? DEFAULT_SETTINGS.head.description,
-      keywords: settings.head?.keywords ?? DEFAULT_SETTINGS.head.keywords,
-      faviconUrl: settings.head?.faviconUrl ?? DEFAULT_SETTINGS.head.faviconUrl,
-      metaTags: settings.head?.metaTags || {},
-    },
-    branding: {
-      siteName: settings.branding?.siteName ?? DEFAULT_SETTINGS.branding.siteName,
-      logoUrl: settings.branding?.logoUrl ?? '',
-      backgroundImageUrl: settings.branding?.backgroundImageUrl ?? '',
-      heroImageUrl: settings.branding?.heroImageUrl ?? '',
-    },
-    theme: {
-      preset: normalizedPreset,
-      appliedPreset: settings.theme?.appliedPreset,
-    },
-    footer: {
-      text: settings.footer?.text ?? '',
-      showPoweredBy: settings.footer?.showPoweredBy ?? true,
-    },
-    customCss: settings.customCss ?? '',
-    updatedAt: settings.updatedAt ?? '',
-    createdAt: settings.createdAt ?? '',
-  }
-}
-
-function upsertMetaTag(selector: string, content: string) {
-  const existing = document.head.querySelector(`meta[${selector}]`)
-  if (content) {
-    if (existing) {
-      existing.setAttribute('content', content)
-      return
-    }
-
-    const meta = document.createElement('meta')
-    const [attr, value] = selector.split('=')
-    meta.setAttribute(attr, value.replace(/"/g, ''))
-    meta.setAttribute('content', content)
-    document.head.appendChild(meta)
-    return
-  }
-
-  if (existing) {
-    existing.remove()
-  }
-}
-
-function setCustomMetaTags(metaTags: Record<string, string>) {
-  const existing = document.head.querySelectorAll('meta[data-status-page-meta="true"]')
-  existing.forEach(node => node.remove())
-
-  Object.entries(metaTags).forEach(([key, value]) => {
-    if (!key || !value) {
-      return
-    }
-
-    const meta = document.createElement('meta')
-    if (key.startsWith('og:') || key.startsWith('twitter:')) {
-      meta.setAttribute('property', key)
-    } else {
-      meta.setAttribute('name', key)
-    }
-    meta.setAttribute('content', value)
-    meta.setAttribute('data-status-page-meta', 'true')
-    document.head.appendChild(meta)
-  })
-}
-
-function upsertFavicon(url: string) {
-  let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]')
-  if (!link) {
-    link = document.createElement('link')
-    link.rel = 'icon'
-    document.head.appendChild(link)
-  }
-  link.href = url
-}
-
-function upsertCustomCss(css: string) {
-  const id = 'status-page-custom-css'
-  let styleEl = document.getElementById(id) as HTMLStyleElement | null
-  if (!styleEl) {
-    styleEl = document.createElement('style')
-    styleEl.id = id
-    document.head.appendChild(styleEl)
-  }
-  styleEl.textContent = css
-}
+import {
+  DEFAULT_STATUS_PAGE_SETTINGS,
+  applyStatusPageHeadSettings,
+  applyStatusPageThemePreset,
+  cacheStatusPageSettings,
+  getBootstrappedStatusPageSettings,
+  normalizeStatusPageSettings,
+  parseStatusPageSettingsPayload,
+  readCachedStatusPageSettings,
+} from '../lib/statusPageSettings'
+import Footer from '../components/layout/Footer'
+import { UptimeTimeline } from '../components/status/UptimeTimeline'
 
 function getStatusToken(status: string): string {
   switch (status) {
@@ -173,34 +59,22 @@ function StatusIcon({ status }: { status: string }) {
   }
 }
 
-function UptimeBar({ bars }: { bars: { date: string; uptimePercent: number; status: string }[] }) {
-  return (
-    <div className="flex gap-px items-end h-8 mt-2">
-      {bars.map((bar, i) => (
-        <div
-          key={i}
-          className="flex-1 rounded-sm opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-          style={{
-            backgroundColor: `var(${getStatusToken(bar.status)})`,
-            height: `${Math.max(20, bar.uptimePercent / 100 * 32)}px`,
-          }}
-          title={`${bar.date}: ${bar.uptimePercent.toFixed(2)}% uptime`}
-        />
-      ))}
-    </div>
-  )
-}
-
 export default function StatusPage() {
   const navigate = useNavigate()
   const { data: summary, refetch: refetchSummary } = useApi<StatusSummary>('/status/summary')
   const { data: components, refetch: refetchComponents } = useApi<ComponentWithSubs[]>('/status/components')
   const { data: incidentData, refetch: refetchIncidents } = useApi<{ active: Incident[]; resolved: Incident[] }>('/status/incidents')
-  const { data: settingsData, refetch: refetchSettings } = useApi<StatusPageSettings>('/status/settings')
+  const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
 
   const { data: maintenanceData } = useApi<Maintenance[]>('/status/maintenance')
 
-  const handleWsMessage = useCallback((event: { type: string }) => {
+  const [settings, setSettings] = useState<StatusPageSettings>(() => (
+    getBootstrappedStatusPageSettings()
+    ?? readCachedStatusPageSettings()
+    ?? DEFAULT_STATUS_PAGE_SETTINGS
+  ))
+
+  const handleWsMessage = useCallback((event: { type: string; data: unknown }) => {
     if (['component_updated', 'component_created'].includes(event.type)) {
       refetchComponents()
       refetchSummary()
@@ -210,18 +84,33 @@ export default function StatusPage() {
       refetchSummary()
     }
     if (event.type === 'status_page_settings_updated') {
-      refetchSettings()
+      const nextSettings = parseStatusPageSettingsPayload(event.data)
+      if (!nextSettings) {
+        return
+      }
+
+      setSettings(nextSettings)
+      cacheStatusPageSettings(nextSettings)
     }
-  }, [refetchComponents, refetchSummary, refetchIncidents, refetchSettings])
+  }, [refetchComponents, refetchSummary, refetchIncidents])
 
   useWebSocket(handleWsMessage)
 
   const overallStatus = summary?.overallStatus || 'operational'
-  const settings = normalizeSettings(settingsData)
   const activeIncidents = incidentData?.active || []
   const resolvedIncidents = incidentData?.resolved || []
   const upcomingMaintenance = maintenanceData?.filter(m => m.status !== 'completed') || []
   const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!settingsData) {
+      return
+    }
+
+    const nextSettings = normalizeStatusPageSettings(settingsData)
+    setSettings(nextSettings)
+    cacheStatusPageSettings(nextSettings)
+  }, [settingsData])
 
   const recentIncidents = [...activeIncidents, ...resolvedIncidents].filter((incident: Incident) => {
     const sevenDaysAgo = new Date()
@@ -229,21 +118,14 @@ export default function StatusPage() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
     return new Date(incident.createdAt) >= sevenDaysAgo
   })
-  const recentIncidentGroups = groupIncidentsByRecentDays(recentIncidents, 7)
 
   useEffect(() => {
-    document.title = settings.head.title
-    upsertMetaTag('name="description"', settings.head.description)
-    upsertMetaTag('name="keywords"', settings.head.keywords)
-    setCustomMetaTags(settings.head.metaTags)
-    upsertFavicon(settings.head.faviconUrl)
-    upsertCustomCss(settings.customCss)
+    applyStatusPageHeadSettings(settings)
   }, [settings])
 
   useEffect(() => {
-    const presets = getThemePresets().presets
-    loadThemePresetStylesheet(settings.theme.preset, presets).catch(() => { })
-  }, [settings.theme.preset])
+    applyStatusPageThemePreset(settings)
+  }, [settings])
 
   const headerStatusToken = getStatusToken(overallStatus)
 
@@ -266,7 +148,7 @@ export default function StatusPage() {
     borderRadius: '0px 0px 8px 8px'
   }
 
-  const contentClassName = 'max-w-4xl mx-auto px-4 py-8 space-y-8'
+  const contentClassName = 'max-w-5xl mx-auto px-4 py-8 space-y-8'
 
   const cardSurfaceStyle: React.CSSProperties = {
     backgroundColor: 'var(--surface)',
@@ -306,47 +188,63 @@ export default function StatusPage() {
 
 
   return (
-    <div className="min-h-screen" style={pageStyle}>
-      {/* Header */}
-      <div
-        className="max-w-4xl mx-auto px-4 py-8 space-y-8"
-        style={headerStyle}
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-2">
-            {settings.branding.logoUrl && (
+    <div className="min-h-screen flex flex-col" style={pageStyle}>
+      <main className="flex-1">
+        {/* Header */}
+        <div
+          className="max-w-5xl mx-auto px-4 py-8 space-y-8"
+          style={headerStyle}
+        >
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-3 mb-2">
+              {settings.branding.logoUrl && (
+                <img
+                  src={settings.branding.logoUrl}
+                  alt={`${settings.branding.siteName} logo`}
+                  className="w-10 h-10 object-contain rounded"
+                />
+              )}
+              <h1 className="text-3xl font-bold">{settings.branding.siteName}</h1>
+            </div>
+            {settings.branding.heroImageUrl && (
               <img
-                src={settings.branding.logoUrl}
-                alt={`${settings.branding.siteName} logo`}
-                className="w-10 h-10 object-contain rounded"
+                src={settings.branding.heroImageUrl}
+                alt="Status page hero"
+                className="w-full max-h-48 object-cover rounded-md border mb-4"
+                style={heroImageStyle}
               />
             )}
-            <h1 className="text-3xl font-bold">{settings.branding.siteName}</h1>
+            <div className="flex items-center gap-3 text-xl">
+              <StatusIcon status={overallStatus} />
+              <span>{getOverallStatusLabel(overallStatus as any)}</span>
+            </div>
+            {activeIncidents.length > 0 && (
+              <p className="mt-2 text-sm" style={{ color: 'var(--on-primary-subtle)' }}>{activeIncidents.length} active incident{activeIncidents.length > 1 ? 's' : ''}</p>
+            )}
           </div>
-          {settings.branding.heroImageUrl && (
-            <img
-              src={settings.branding.heroImageUrl}
-              alt="Status page hero"
-              className="w-full max-h-48 object-cover rounded-xl border mb-4"
-              style={heroImageStyle}
-            />
-          )}
-          <div className="flex items-center gap-3 text-xl">
-            <StatusIcon status={overallStatus} />
-            <span>{getOverallStatusLabel(overallStatus as any)}</span>
-          </div>
-          {activeIncidents.length > 0 && (
-            <p className="mt-2 text-sm" style={{ color: 'var(--on-primary-subtle)' }}>{activeIncidents.length} active incident{activeIncidents.length > 1 ? 's' : ''}</p>
-          )}
         </div>
-      </div>
 
-      <div className={contentClassName}>
+        <div className={contentClassName}>
+          {/* Upcoming Maintenance */}
+          {upcomingMaintenance.map(m => (
+            <div key={m.id} className="border rounded-lg p-4" style={maintenanceSurfaceStyle}>
+              <div className="flex items-start gap-3">
+                <Wrench className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--status-maintenance)' }} />
+                <div>
+                  <h3 className="font-semibold">{m.title}</h3>
+                  <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{m.description}</p>
+                  <div className="flex gap-4 mt-2 text-xs" style={{ color: subtleTextColor }}>
+                    <span>Status: {m.status.replace('_', ' ')}</span>
+                    <span>{formatDate(m.startTime)} → {formatDate(m.endTime)}</span>
+                    {m.creatorUsername && <span>Created by: {m.creatorUsername}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
 
-        {activeIncidents.length > 0 && (
-          <section className="space-y-4">
-
-            <div className="space-y-4">
+          {activeIncidents.length > 0 && (
+            <section className="rounded-md border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}>
               {groupIncidentsByStatus(activeIncidents).map((group) => (
                 <IncidentCarouselGroup
                   key={`active-${group.key}`}
@@ -365,164 +263,72 @@ export default function StatusPage() {
                   })}
                 />
               ))}
-            </div>
-          </section>
-        )}
+            </section>
+          )}
 
-        {/* Upcoming Maintenance */}
-        {upcomingMaintenance.map(m => (
-          <div key={m.id} className="border rounded-lg p-4" style={maintenanceSurfaceStyle}>
-            <div className="flex items-start gap-3">
-              <Wrench className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--status-maintenance)' }} />
-              <div>
-                <h3 className="font-semibold">{m.title}</h3>
-                <p className="text-sm mt-1" style={{ color: mutedTextColor }}>{m.description}</p>
-                <div className="flex gap-4 mt-2 text-xs" style={{ color: subtleTextColor }}>
-                  <span>Status: {m.status.replace('_', ' ')}</span>
-                  <span>{formatDate(m.startTime)} → {formatDate(m.endTime)}</span>
-                  {m.creatorUsername && <span>Created by: {m.creatorUsername}</span>}
+          {/* Components */}
+          {(components || []).map(comp => (
+            <div
+              key={comp.id}
+              className="rounded-md shadow-sm border overflow-hidden cursor-pointer transition-colors hover:bg-[var(--surface-uptime)]"
+              style={cardSurfaceStyle}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/status/${toCategoryPrefix(comp.name)}`)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  navigate(`/status/${toCategoryPrefix(comp.name)}`)
+                }
+              }}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={componentHeaderStyle}>
+                <div>
+                  <h2 className="text-lg font-semibold" style={sectionTitleStyle}>{comp.name}</h2>
+                  {comp.description && <p className="text-sm mt-0.5" style={{ color: subtleTextColor }}>{comp.description}</p>}
                 </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Components */}
-        {(components || []).map(comp => (
-          <div
-            key={comp.id}
-            className="rounded-xl shadow-sm border overflow-hidden cursor-pointer transition-colors hover:bg-[var(--surface-uptime)]"
-            style={cardSurfaceStyle}
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate(`/status/${toCategoryPrefix(comp.name)}`)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                navigate(`/status/${toCategoryPrefix(comp.name)}`)
-              }
-            }}
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={componentHeaderStyle}>
-              <div>
-                <h2 className="text-lg font-semibold" style={sectionTitleStyle}>{comp.name}</h2>
-                {comp.description && <p className="text-sm mt-0.5" style={{ color: subtleTextColor }}>{comp.description}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusIcon status={comp.status} />
-                <span className="text-sm font-medium" style={{ color: `var(${getStatusToken(comp.status)})` }}>
-                  {STATUS_LABELS[comp.status]}
-                </span>
-              </div>
-            </div>
-
-            {/* SubComponents */}
-            {comp.subComponents && comp.subComponents.length > 0 && (
-              <div className="divide-y" style={subComponentDividerStyle}>
-                {comp.subComponents.map(sub => (
-                  <div key={sub.id} className="flex items-center justify-between px-6 py-3">
-                    <span className="text-sm pl-4" style={{ color: mutedTextColor }}>{sub.name}</span>
-                    <div className="flex items-center gap-2">
-                      <StatusIcon status={sub.status} />
-                      <span className="text-xs font-medium" style={{ color: `var(${getStatusToken(sub.status)})` }}>
-                        {STATUS_LABELS[sub.status]}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 90-day uptime */}
-            {comp.uptimeHistory && comp.uptimeHistory.length > 0 && (
-              <div className="px-6 py-4 border-t" style={uptimeSurfaceStyle}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: subtleTextColor }}>90-day uptime</span>
-                  <span className="text-xs" style={{ color: subtleTextColor }}>
-                    {comp.uptimeHistory.length > 0
-                      ? `${(comp.uptimeHistory.reduce((s, b) => s + b.uptimePercent, 0) / comp.uptimeHistory.length).toFixed(2)}% avg`
-                      : ''}
+                <div className="flex items-center gap-2">
+                  <StatusIcon status={comp.status} />
+                  <span className="text-sm font-medium" style={{ color: `var(${getStatusToken(comp.status)})` }}>
+                    {STATUS_LABELS[comp.status]}
                   </span>
                 </div>
-                <UptimeBar bars={comp.uptimeHistory} />
-                <div className="flex justify-between mt-1">
-                  <span className="text-xs" style={{ color: subtleTextColor }}>{formatDateShort(comp.uptimeHistory[0]?.date)}</span>
-                  <span className="text-xs" style={{ color: subtleTextColor }}>Today</span>
-                </div>
               </div>
-            )}
-          </div>
-        ))}
 
-        {/* Recent Incident History (last 7 days) */}
-        {recentIncidentGroups.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4" style={sectionTitleStyle}>Recent Incident History</h2>
-            <div className="space-y-6">
-              {recentIncidentGroups.map((group) => {
-                const dayLabel = new Date(`${group.dateKey}T00:00:00`).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })
-
-                return (
-                  <div key={group.dateKey}>
-                    <h3 className="text-lg font-semibold mb-3" style={{ color: mutedTextColor }}>{dayLabel}</h3>
-                    {group.incidents.length === 0 ? (
-                      <div className="rounded-xl border p-5" style={cardSurfaceStyle}>
-                        <p className="text-sm" style={{ color: mutedTextColor }}>No incidents reported.</p>
+              {/* SubComponents */}
+              {comp.subComponents && comp.subComponents.length > 0 && (
+                <div className="divide-y divide-[color:var(--subcomponent-divider)]" style={subComponentDividerStyle}>
+                  {comp.subComponents.map(sub => (
+                    <div key={sub.id} className="flex items-center justify-between px-6 py-3">
+                      <span className="text-sm pl-4" style={{ color: mutedTextColor }}>{sub.name}</span>
+                      <div className="flex items-center gap-2">
+                        <StatusIcon status={sub.status} />
+                        <span className="text-xs font-medium" style={{ color: `var(${getStatusToken(sub.status)})` }}>
+                          {STATUS_LABELS[sub.status]}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {groupIncidentsByStatus(group.incidents).map((statusGroup) => (
-                          <IncidentCarouselGroup
-                            key={`${group.dateKey}-${statusGroup.key}`}
-                            title={statusGroup.label}
-                            subtitle={dayLabel}
-                            incidents={statusGroup.incidents}
-                            expandedIncidents={expandedIncidents}
-                            onToggleExpand={(incidentId) => setExpandedIncidents((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(incidentId)) {
-                                next.delete(incidentId)
-                              } else {
-                                next.add(incidentId)
-                              }
-                              return next
-                            })}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            <div className="text-center mt-8">
-              <Link to="/history" className="inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium border transition-colors"
-                style={{
-                  borderColor: 'var(--border)',
-                  color: 'var(--text)',
-                  backgroundColor: 'var(--surface)',
-                }}
-              >
-                View Full Incident History
-              </Link>
+              {/* 90-day uptime */}
+              {comp.uptimeHistory && comp.uptimeHistory.length > 0 && (
+                <div className="px-6 py-4 border-t" style={uptimeSurfaceStyle}>
+                  <UptimeTimeline
+                    history={comp.uptimeHistory}
+                    showAverage
+                    average={comp.uptimeHistory.length > 0
+                      ? comp.uptimeHistory.reduce((s, b) => s + b.uptimePercent, 0) / comp.uptimeHistory.length
+                      : undefined}
+                  />
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        <div className="text-center py-8 border-t" style={{ borderColor: 'var(--border)' }}>
-          {settings.footer.text && (
-            <p className="text-sm mb-1" style={{ color: mutedTextColor }}>{settings.footer.text}</p>
-          )}
-          {settings.footer.showPoweredBy && (
-            <p className="text-sm" style={{ color: subtleTextColor }}>Powered by <a href='https://github.com/fresp/StatusForge'>StatusForge</a></p>
-          )}
+          ))}
         </div>
-      </div>
+      </main>
+      <Footer centerText={settings.footer.text} />
     </div>
   )
 }

@@ -8,8 +8,19 @@ import (
 
 type IncidentWithUpdates struct {
 	Incident
-	Updates 		   []IncidentUpdate `json:"updates"`
-	AffectedComponents []Component `json:"affectedComponents"`
+	Updates                  []IncidentUpdate                    `json:"updates"`
+	AffectedComponents       []Component                         `json:"affectedComponents"`
+	AffectedComponentTargets []IncidentAffectedComponentExpanded `json:"affectedComponentTargets,omitempty"`
+}
+
+type IncidentAffectedComponent struct {
+	ComponentID     primitive.ObjectID   `bson:"componentId" json:"componentId"`
+	SubComponentIDs []primitive.ObjectID `bson:"subComponentIds,omitempty" json:"subComponentIds,omitempty"`
+}
+
+type IncidentAffectedComponentExpanded struct {
+	Component     Component      `json:"component"`
+	SubComponents []SubComponent `json:"subComponents,omitempty"`
 }
 
 type IncidentStatus string
@@ -31,17 +42,18 @@ const (
 )
 
 type Incident struct {
-	ID                 primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
-	Title              string               `bson:"title" json:"title"`
-	Description        string               `bson:"description" json:"description"`
-	Status             IncidentStatus       `bson:"status" json:"status"`
-	Impact             IncidentImpact       `bson:"impact" json:"impact"`
-	CreatorID          *primitive.ObjectID  `bson:"creatorId,omitempty" json:"creatorId,omitempty"`
-	CreatorUsername    string               `bson:"creatorUsername,omitempty" json:"creatorUsername,omitempty"`
-	AffectedComponents []primitive.ObjectID `bson:"affectedComponents" json:"affectedComponents"`
-	CreatedAt          time.Time            `bson:"createdAt" json:"createdAt"`
-	UpdatedAt          time.Time            `bson:"updatedAt" json:"updatedAt"`
-	ResolvedAt         *time.Time           `bson:"resolvedAt,omitempty" json:"resolvedAt,omitempty"`
+	ID                       primitive.ObjectID          `bson:"_id,omitempty" json:"id"`
+	Title                    string                      `bson:"title" json:"title"`
+	Description              string                      `bson:"description" json:"description"`
+	Status                   IncidentStatus              `bson:"status" json:"status"`
+	Impact                   IncidentImpact              `bson:"impact" json:"impact"`
+	CreatorID                *primitive.ObjectID         `bson:"creatorId,omitempty" json:"creatorId,omitempty"`
+	CreatorUsername          string                      `bson:"creatorUsername,omitempty" json:"creatorUsername,omitempty"`
+	AffectedComponents       []primitive.ObjectID        `bson:"affectedComponents" json:"affectedComponents"`
+	AffectedComponentTargets []IncidentAffectedComponent `bson:"affectedComponentTargets,omitempty" json:"affectedComponentTargets,omitempty"`
+	CreatedAt                time.Time                   `bson:"createdAt" json:"createdAt"`
+	UpdatedAt                time.Time                   `bson:"updatedAt" json:"updatedAt"`
+	ResolvedAt               *time.Time                  `bson:"resolvedAt,omitempty" json:"resolvedAt,omitempty"`
 }
 
 type IncidentUpdate struct {

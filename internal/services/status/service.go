@@ -156,10 +156,70 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 	}
 
 	incidentsWithUpdates := make([]models.IncidentWithUpdates, 0, len(incidents))
+	incidentComponentIDs := make([]primitive.ObjectID, 0)
+	incidentSubComponentIDs := make([]primitive.ObjectID, 0)
 	for _, incident := range incidents {
+		if len(incident.AffectedComponentTargets) > 0 {
+			for _, target := range incident.AffectedComponentTargets {
+				incidentComponentIDs = append(incidentComponentIDs, target.ComponentID)
+				incidentSubComponentIDs = append(incidentSubComponentIDs, target.SubComponentIDs...)
+			}
+			continue
+		}
+		incidentComponentIDs = append(incidentComponentIDs, incident.AffectedComponents...)
+	}
+
+	incidentComponentMap := map[primitive.ObjectID]models.Component{}
+	incidentSubComponentMap := map[primitive.ObjectID]models.SubComponent{}
+
+	for _, component := range components {
+		incidentComponentMap[component.ID] = component
+	}
+	for _, subComponent := range subs {
+		incidentSubComponentMap[subComponent.ID] = subComponent
+	}
+
+	for _, incident := range incidents {
+		targets := incident.AffectedComponentTargets
+		if len(targets) == 0 {
+			targets = make([]models.IncidentAffectedComponent, 0, len(incident.AffectedComponents))
+			for _, componentID := range incident.AffectedComponents {
+				targets = append(targets, models.IncidentAffectedComponent{ComponentID: componentID})
+			}
+		}
+
+		expandedTargets := make([]models.IncidentAffectedComponentExpanded, 0, len(targets))
+		expandedComponents := make([]models.Component, 0, len(targets))
+		seenComponents := map[primitive.ObjectID]struct{}{}
+		for _, target := range targets {
+			component, ok := incidentComponentMap[target.ComponentID]
+			if !ok {
+				continue
+			}
+
+			if _, exists := seenComponents[component.ID]; !exists {
+				expandedComponents = append(expandedComponents, component)
+				seenComponents[component.ID] = struct{}{}
+			}
+
+			expandedSubComponents := make([]models.SubComponent, 0, len(target.SubComponentIDs))
+			for _, subComponentID := range target.SubComponentIDs {
+				if subComponent, exists := incidentSubComponentMap[subComponentID]; exists {
+					expandedSubComponents = append(expandedSubComponents, subComponent)
+				}
+			}
+
+			expandedTargets = append(expandedTargets, models.IncidentAffectedComponentExpanded{
+				Component:     component,
+				SubComponents: expandedSubComponents,
+			})
+		}
+
 		incidentsWithUpdates = append(incidentsWithUpdates, models.IncidentWithUpdates{
-			Incident: incident,
-			Updates:  updatesByIncident[incident.ID],
+			Incident:                 incident,
+			Updates:                  updatesByIncident[incident.ID],
+			AffectedComponents:       expandedComponents,
+			AffectedComponentTargets: expandedTargets,
 		})
 	}
 
@@ -217,7 +277,14 @@ func componentPrefix(name string) string {
 	return normalizeCategoryPrefix(name)
 }
 
-func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
+func build90DayBars(
+	monitorIDs []primitive.ObjectID,
+	uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime,
+) []DailyUptimeBar {
+	if len(monitorIDs) == 0 {
+		return []DailyUptimeBar{}
+	}
+
 	bars := make([]DailyUptimeBar, 0, 90)
 	now := time.Now()
 
@@ -227,6 +294,7 @@ func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primi
 
 		totalChecks := 0
 		successfulChecks := 0
+
 		for _, monitorID := range monitorIDs {
 			for _, record := range uptimeByMonitorID[monitorID] {
 				if record.Date.Format("2006-01-02") == dayKey {
@@ -235,11 +303,12 @@ func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primi
 				}
 			}
 		}
-
 		uptime := 100.0
 		status := string(models.StatusOperational)
+
 		if totalChecks > 0 {
 			uptime = (float64(successfulChecks) / float64(totalChecks)) * 100
+
 			switch {
 			case uptime < 50:
 				status = string(models.StatusMajorOutage)
