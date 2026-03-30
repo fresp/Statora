@@ -2,12 +2,14 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
 	monitordomain "github.com/fresp/StatusForge/internal/domain/monitor"
+	shared "github.com/fresp/StatusForge/internal/domain/shared"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/fresp/StatusForge/internal/models"
@@ -66,6 +68,33 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Monit
 	}
 
 	return s.repo.Update(ctx, id, monitor)
+}
+
+func (s *Service) Delete(ctx context.Context, id primitive.ObjectID) error {
+	deleted, err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+	if !deleted {
+		return shared.ErrNotFound
+	}
+	return nil
+}
+
+func (s *Service) Logs(ctx context.Context, monitorID primitive.ObjectID, limit int64) ([]models.MonitorLog, error) {
+	return s.repo.ListLogs(ctx, monitorID, limit)
+}
+
+func (s *Service) Uptime(ctx context.Context, monitorID primitive.ObjectID, since time.Time) ([]models.DailyUptime, error) {
+	return s.repo.ListUptime(ctx, monitorID, since)
+}
+
+func (s *Service) Outages(ctx context.Context) ([]models.Outage, error) {
+	return s.repo.ListOutages(ctx)
+}
+
+func (s *Service) History(ctx context.Context, monitorID primitive.ObjectID, limit int64) ([]models.EnhancedMonitorLog, error) {
+	return s.repo.ListHistory(ctx, monitorID, limit)
 }
 
 func SanitizeSSLThresholds(thresholds []int) []int {
@@ -183,6 +212,11 @@ func buildMonitor(input MonitorUpsertInput) (models.Monitor, error) {
 	}
 
 	return monitor, nil
+}
+
+func IsValidationError(err error) bool {
+	var validationErr *ValidationError
+	return errors.As(err, &validationErr)
 }
 
 func supportsDomainExpiry(monitorType models.MonitorType) bool {
