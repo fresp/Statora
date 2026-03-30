@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Plus, Trash2, X, Activity, Edit2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
@@ -47,7 +48,12 @@ const TYPE_PLACEHOLDERS: Record<MonitorType, string> = {
   ssl: 'example.com:443',
 }
 
+export function monitorLogsPath(id: string): string {
+  return `/admin/monitors/${id}/logs`
+}
+
 export default function AdminMonitors() {
+  const navigate = useNavigate()
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: monitors, total: totalMonitors, page: currentPage, totalPages, loading: monitorsLoading, error: monitorsError, refetch } = useApi<Monitor[]>('/monitors', [], apiParams)
   const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
@@ -219,7 +225,11 @@ export default function AdminMonitors() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {(monitors || []).map(m => (
-              <tr key={m.id} className="hover:bg-gray-50">
+              <tr
+                key={m.id}
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate(monitorLogsPath(m.id))}
+              >
                 <td className="px-6 py-4 font-medium text-gray-900">{m.name}</td>
                 <td className="px-6 py-4">
                   <span className="flex items-center gap-1.5">
@@ -250,10 +260,22 @@ export default function AdminMonitors() {
                 <td className="px-6 py-4 text-gray-500">{m.intervalSeconds}s</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => openEdit(m)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(m)
+                      }}
+                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                    >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(m)} className="text-gray-400 hover:text-red-600 transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void handleDelete(m)
+                      }}
+                      className="text-gray-400 hover:text-red-600 transition-colors"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>

@@ -7,6 +7,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -24,6 +25,17 @@ var workerCtx context.Context
 var workerCancel context.CancelFunc
 
 var workerWG sync.WaitGroup
+var workerCycleRunning atomic.Bool
+
+const defaultMonitorIntervalSeconds = 60
+
+func effectiveIntervalSeconds(interval int) int {
+	if interval <= 0 {
+		return defaultMonitorIntervalSeconds
+	}
+
+	return interval
+}
 
 // StartWorker starts the monitoring worker
 func StartWorker(ctx context.Context, db *mongo.Database, rdb *redis.Client) {
@@ -43,9 +55,14 @@ func StartWorker(ctx context.Context, db *mongo.Database, rdb *redis.Client) {
 			log.Println("[WORKER] Worker shutdown complete")
 			return
 		case <-ticker.C:
+			if !workerCycleRunning.CompareAndSwap(false, true) {
+				log.Println("[WORKER] Previous worker cycle still running, skipping tick")
+				continue
+			}
 			workerWG.Add(1)
 			go func() {
 				defer workerWG.Done()
+				defer workerCycleRunning.Store(false)
 				runChecks(db)
 				updateMaintenanceStatus(db)
 			}()
@@ -60,6 +77,33 @@ func StopWorker() error {
 	}
 	workerCancel()
 	return nil
+}
+
+func shouldRunMonitor(mon models.Monitor) bool {
+	if mon.LastCheckedAt.IsZero() {
+		return true
+	}
+
+	intervalSeconds := effectiveIntervalSeconds(mon.IntervalSeconds)
+
+	nextRun := mon.LastCheckedAt.Add(time.Duration(intervalSeconds) * time.Second)
+	return !time.Now().Before(nextRun)
+}
+
+func dueMonitors(monitors []models.Monitor) []models.Monitor {
+	due := make([]models.Monitor, 0, len(monitors))
+
+	for _, mon := range monitors {
+		if !shouldRunMonitor(mon) {
+			log.Println("[WORKER] Skipping monitor (not due):", mon.Name)
+			continue
+		}
+
+		log.Println("[WORKER] Executing monitor:", mon.Name, "interval:", effectiveIntervalSeconds(mon.IntervalSeconds))
+		due = append(due, mon)
+	}
+
+	return due
 }
 
 func runChecks(db *mongo.Database) {
@@ -78,7 +122,7 @@ func runChecks(db *mongo.Database) {
 		return
 	}
 
-	for _, m := range monitors {
+	for _, m := range dueMonitors(monitors) {
 		workerWG.Add(1)
 		go func(mon models.Monitor) {
 			defer workerWG.Done()
