@@ -40,7 +40,7 @@ StatusForge includes documentation images under `docs/screenshots/`.
 
 | Public Status Page | Admin Dashboard | Admin Setting |
 |---|---|---|
-| ![Public Status Page](docs/screenshots/public-statuspage.jpeg) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-setting.png) |
+| ![Public Status Page](docs/screenshots/public-statuspage.png) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-settings.png) |
 
 | Incident History| Monitoring | Maintenance |
 |---|---|---|
