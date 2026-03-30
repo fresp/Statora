@@ -36,15 +36,16 @@ StatusForge is designed for teams that want to run their own status platform and
 
 ## Screenshots
 
-StatusForge includes documentation images under `docs/images/`.
-
-| Public Status Page | Admin Dashboard | Component Management |
+StatusForge includes documentation images under `docs/screenshots/`.
+## Admin
+| Public Status Page | Admin Dashboard | Admin Setting |
 |---|---|---|
-| ![Public Status Page](docs/images/public-statuspage.jpeg) | ![Admin Dashboard](docs/images/admin-dashboard.png) | ![Admin Component](docs/images/admin-component.png) |
+| ![Public Status Page](docs/screenshots/public-statuspage.jpeg) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-setting.png) |
 
-| Incident Management | Monitoring | Maintenance |
+## Public
+| Incident History| Monitoring | Maintenance |
 |---|---|---|
-| ![Admin Incident](docs/images/admin-incident.png) | ![Admin Monitoring](docs/images/admin-monitoring.png) | ![Admin Maintenance](docs/images/admin-maintenance.png) |
+| ![Incident History](docs/screenshots/incident-history.png) | ![Monitoring](docs/screenshots/monitoring.png) | ![Maintenance](docs/screenshots/maintenance.png) |
 
 ## Architecture Diagram
 
