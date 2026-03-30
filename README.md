@@ -45,23 +45,23 @@ StatusForge includes documentation images under `docs/screenshots/`.
 | ![Public Status Page](docs/screenshots/public-statuspage.png) | ![Incident History](docs/screenshots/incident-history.png) | ![Service Info](docs/screenshots/public-service-info.png) |
 
 **Description:**
-- **Public Status Page** → Overview status layanan
-- **Incident History** → Riwayat gangguan
-- **Service Info** → Detail service (uptime, latency, dll)
+- **Public Status Page** → Overview of service status
+- **Incident History** → Historical incidents and outages
+- **Service Info** → Detailed service information (uptime, latency, etc.)
 
 ---
 
 ## 🔐 Admin Pages
 
-| Admin Dashboard | Admin Setting | Admin Monitoring | Admin Maintenance |
+| Admin Dashboard | Admin Settings | Admin Monitoring | Admin Maintenance |
 |---|---|---|---|
 | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-settings.png) | ![Monitoring](docs/screenshots/admin-monitoring.png) | ![Maintenance](docs/screenshots/admin-maintenance.png) |
 
 **Description:**
-- **Admin Dashboard** → Ringkasan sistem
-- **Admin Setting** → Konfigurasi global
-- **Admin Monitoring** → Setup & kontrol monitoring
-- **Admin Maintenance** → Jadwal maintenance
+- **Admin Dashboard** → System overview and summary
+- **Admin Settings** → Global configuration
+- **Admin Monitoring** → Monitoring setup and control
+- **Admin Maintenance** → Maintenance scheduling and management
 
 ## Architecture Diagram
 
