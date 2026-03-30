@@ -1,4 +1,6 @@
-# Multi-stage build for StatusForge unified server
+# =========================
+# Stage 1: Build Frontend
+# =========================
 FROM node:20-alpine AS frontend-build
 
 WORKDIR /app
@@ -10,7 +12,10 @@ COPY apps/web/ .
 RUN npm ci
 RUN npm run build
 
-# Build the Go backend
+
+# =========================
+# Stage 2: Build Backend (Go)
+# =========================
 FROM golang:1.26-alpine AS backend-build
 
 ARG TARGETARCH
@@ -30,23 +35,29 @@ COPY . .
 # Copy built frontend assets
 COPY --from=frontend-build /app/dist /app/internal/embed/dist
 
-# Build binary (auto-detect arch for M1/ARM64 support)
+# Build binary
 RUN CGO_ENABLED=0 GOARCH=$TARGETARCH go build -a -installsuffix cgo -o server cmd/server/main.go
 
-# Final minimal image
+
+# =========================
+# Stage 3: Final Runtime
+# =========================
 FROM alpine:latest
 
-# Upgrade packages and install ca-certificates
+# Upgrade + install CA + curl (for debugging)
 RUN apk upgrade --no-cache && \
-    apk --no-cache add ca-certificates
+    apk --no-cache add ca-certificates curl
 
+# Create non-root user
 RUN adduser -D -u 1001 appuser
 
 WORKDIR /app
 
+# Copy binary
 COPY --from=backend-build --chown=appuser:appuser /app/server /app/server
 RUN chmod +x /app/server
 
+# Switch user
 USER appuser
 
 # Expose port
@@ -56,4 +67,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost:8080/health || exit 1
 
+# Run app
 ENTRYPOINT ["/app/server"]
