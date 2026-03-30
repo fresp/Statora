@@ -143,6 +143,7 @@ export interface MonitorLog {
   responseTime: number
   statusCode: number
   checkedAt: string
+  region?: string
 }
 
 export interface DailyUptime {
