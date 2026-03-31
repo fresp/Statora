@@ -28,7 +28,7 @@ export default function AdminMonitorLogs() {
   const {
     data: monitors,
     loading: monitorsLoading,
-  } = useApi<Monitor[]>('/monitors', [], { page: 1, limit: 500 })
+  } = useApi<Monitor[]>('/monitors', [], { page: 1, limit: 10 })
 
   const {
     data: logs,

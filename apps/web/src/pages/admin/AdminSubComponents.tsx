@@ -21,7 +21,7 @@ const DEFAULT_FORM: FormState = { componentId: '', name: '', description: '', st
 
 export default function AdminSubComponents() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
-  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
   const {
     data: subComponents,
     total: totalSubComponents,

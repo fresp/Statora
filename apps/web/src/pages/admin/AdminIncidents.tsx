@@ -70,8 +70,8 @@ function IncidentRow({ incident, components, onRefetch }: {
   const statusColor = incident.status === 'resolved'
     ? 'bg-green-100 text-green-700'
     : incident.status === 'monitoring'
-    ? 'bg-blue-100 text-blue-700'
-    : 'bg-red-100 text-red-700'
+      ? 'bg-blue-100 text-blue-700'
+      : 'bg-red-100 text-red-700'
 
   const impactColor: Record<IncidentImpact, string> = {
     none: 'bg-gray-100 text-gray-600',
@@ -172,8 +172,8 @@ function IncidentRow({ incident, components, onRefetch }: {
 export default function AdminIncidents() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: incidents, total: totalIncidents, totalPages, loading, refetch } = useApi<Incident[]>('/incidents', [], apiParams)
-  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
-  const { data: subComponents } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 500 })
+  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
+  const { data: subComponents } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 10 })
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState<IncidentForm>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
@@ -273,9 +273,8 @@ export default function AdminIncidents() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-              filter === f ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
           >
             {f}
           </button>

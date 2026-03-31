@@ -56,8 +56,8 @@ export default function AdminMonitors() {
   const navigate = useNavigate()
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: monitors, total: totalMonitors, page: currentPage, totalPages, loading: monitorsLoading, error: monitorsError, refetch } = useApi<Monitor[]>('/monitors', [], apiParams)
-  const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
-  const { data: subcomponents, total: totalSubcomponents, loading: subcomponentsLoading, error: subcomponentsError } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 500 })
+  const { data: components, total: totalComponents, loading: componentsLoading, error: componentsError } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
+  const { data: subcomponents, total: totalSubcomponents, loading: subcomponentsLoading, error: subcomponentsError } = useApi<SubComponent[]>('/subcomponents', [], { page: 1, limit: 10 })
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -70,7 +70,7 @@ export default function AdminMonitors() {
   const supportsCertExpiry = form.type === 'http' || form.type === 'ssl'
   const supportsIgnoreTLSError = form.type === 'http'
   const needsThresholds = form.type === 'ssl' || form.domainExpiry || form.certExpiry
-  
+
   function openCreate() {
     setEditingId(null)
     setForm({ ...DEFAULT_FORM, componentId: (components || [])[0]?.id || '', subComponentId: '' })
@@ -182,9 +182,9 @@ export default function AdminMonitors() {
       const subcomponent = (subcomponents || []).find(sc => sc.id === monitor.subComponentId);
       const component = (components || []).find(c => c.id === monitor.componentId);
       if (subcomponent && component) {
-        return `${subcomponent.name} (Subcomponent of ${component.name})`; 
+        return `${subcomponent.name} (Subcomponent of ${component.name})`;
       } else if (subcomponent) {
-        return `${subcomponent.name} (SubComponent)`; 
+        return `${subcomponent.name} (SubComponent)`;
       } else {
         return `SubComponent: ${monitor.subComponentId}`; // Not found in the list
       }
@@ -468,7 +468,7 @@ export default function AdminMonitors() {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
-              
+
               {/* Subcomponent selection */}
               {form.componentId && (
                 <select

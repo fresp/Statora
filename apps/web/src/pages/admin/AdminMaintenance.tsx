@@ -48,7 +48,7 @@ function toDatetimeLocal(iso: string) {
 export default function AdminMaintenance() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: maintenance, total: totalMaintenance, totalPages, loading, refetch } = useApi<Maintenance[]>('/maintenance', [], apiParams)
-  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Maintenance | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
