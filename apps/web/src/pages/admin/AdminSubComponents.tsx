@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
@@ -7,6 +7,7 @@ import type { SubComponent, Component, ComponentStatus } from '../../types'
 import { STATUS_LABELS, STATUS_COLORS } from '../../lib/utils'
 import Modal from '../../components/Modal'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
+import { AdminListCard, AdminTableEmptyRow } from '../../components/AdminTableShell'
 
 const STATUSES: ComponentStatus[] = ['operational', 'degraded_performance', 'partial_outage', 'major_outage', 'maintenance']
 
@@ -21,7 +22,7 @@ const DEFAULT_FORM: FormState = { componentId: '', name: '', description: '', st
 
 export default function AdminSubComponents() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
-  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: components, total: totalComponents, refetch: refetchComponents } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
   const {
     data: subComponents,
     total: totalSubComponents,
@@ -35,6 +36,15 @@ export default function AdminSubComponents() {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const hasComponents = Boolean(components?.length)
+
+  const isUnchanged =
+    Boolean(editing) &&
+    editing?.componentId === form.componentId &&
+    editing?.name === form.name &&
+    (editing?.description || '') === form.description &&
+    editing?.status === form.status
 
   // Refetch both components and subcomponents
   const refetch = async () => {
@@ -65,6 +75,11 @@ export default function AdminSubComponents() {
     setSaving(true)
     setError('')
     try {
+      if (!form.componentId) {
+        setError('Parent component is required')
+        return
+      }
+
       if (editing) {
         await api.patch(`/subcomponents/${editing.id}`, form)
       } else {
@@ -76,6 +91,17 @@ export default function AdminSubComponents() {
       setError(err.response?.data?.error || 'Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete(s: SubComponent) {
+    if (!confirm(`Delete sub-component "${s.name}"?`)) return
+
+    try {
+      await api.delete(`/subcomponents/${s.id}`)
+      await refetch()
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete')
     }
   }
 
@@ -92,7 +118,7 @@ export default function AdminSubComponents() {
         </div>
         <button
           onClick={openCreate}
-          disabled={!components?.length}
+          disabled={!hasComponents}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" /> Add Sub-Component
@@ -105,7 +131,7 @@ export default function AdminSubComponents() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <AdminListCard>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
@@ -127,18 +153,21 @@ export default function AdminSubComponents() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center justify-end">
-                    <button onClick={() => openEdit(s)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openEdit(s)} className="text-gray-400 hover:text-blue-600 transition-colors" aria-label={`Edit ${s.name}`}>
                       <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(s)} className="text-gray-400 hover:text-red-600 transition-colors" aria-label={`Delete ${s.name}`}>
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
               </tr>
             ))}
             {(subComponents || []).length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-400">No sub-components yet.</td>
-              </tr>
+              <AdminTableEmptyRow colSpan={4}>
+                No sub-components yet.
+              </AdminTableEmptyRow>
             )}
           </tbody>
         </table>
@@ -152,7 +181,7 @@ export default function AdminSubComponents() {
           onPageChange={setPage}
           onLimitChange={setLimit}
         />
-      </div>
+      </AdminListCard>
 
       {showModal && (
         <Modal title={editing ? 'Edit Sub-Component' : 'New Sub-Component'} onClose={closeModal}>
@@ -205,7 +234,7 @@ export default function AdminSubComponents() {
               <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
                 Cancel
               </button>
-              <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
+              <button type="submit" disabled={saving || (Boolean(editing) && isUnchanged)} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
                 {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
               </button>
             </div>

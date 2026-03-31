@@ -7,6 +7,7 @@ import type { Maintenance, Component, MaintenanceStatus } from '../../types'
 import { formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
+import { AdminListCard, AdminTableEmptyRow, textOrEmDash } from '../../components/AdminTableShell'
 
 const STATUSES: MaintenanceStatus[] = ['scheduled', 'in_progress', 'completed']
 
@@ -48,7 +49,7 @@ function toDatetimeLocal(iso: string) {
 export default function AdminMaintenance() {
   const { page, limit, apiParams, setPage, setLimit } = useAdminPagination()
   const { data: maintenance, total: totalMaintenance, totalPages, loading, refetch } = useApi<Maintenance[]>('/maintenance', [], apiParams)
-  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 500 })
+  const { data: components } = useApi<Component[]>('/components', [], { page: 1, limit: 10 })
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Maintenance | null>(null)
   const [form, setForm] = useState<FormState>(DEFAULT_FORM)
@@ -129,7 +130,7 @@ export default function AdminMaintenance() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <AdminListCard>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
@@ -151,8 +152,8 @@ export default function AdminMaintenance() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-gray-500">{formatDate(m.startTime)}</td>
-                <td className="px-6 py-4 text-gray-500">{formatDate(m.endTime)}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{m.creatorUsername || '—'}</td>
+                 <td className="px-6 py-4 text-gray-500">{formatDate(m.endTime)}</td>
+                 <td className="px-6 py-4 text-sm text-gray-500">{textOrEmDash(m.creatorUsername)}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end">
                     <button onClick={() => openEdit(m)} className="text-gray-400 hover:text-blue-600 transition-colors">
@@ -162,11 +163,11 @@ export default function AdminMaintenance() {
                 </td>
               </tr>
             ))}
-            {(maintenance || []).length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">No maintenance windows scheduled.</td>
-              </tr>
-            )}
+             {(maintenance || []).length === 0 && (
+               <AdminTableEmptyRow colSpan={6}>
+                 No maintenance windows scheduled.
+               </AdminTableEmptyRow>
+             )}
           </tbody>
         </table>
 
@@ -177,9 +178,9 @@ export default function AdminMaintenance() {
           limit={limit}
           loading={loading}
           onPageChange={setPage}
-          onLimitChange={setLimit}
-        />
-      </div>
+           onLimitChange={setLimit}
+         />
+       </AdminListCard>
 
       {showModal && (
         <Modal title={editing ? 'Edit Maintenance' : 'Schedule Maintenance'} onClose={closeModal} size="lg">
