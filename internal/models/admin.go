@@ -6,6 +6,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type UserSSO struct {
+	Enabled  bool   `bson:"enabled,omitempty" json:"enabled,omitempty"`
+	Provider string `bson:"provider,omitempty" json:"provider,omitempty"`
+}
+
 type User struct {
 	ID                   primitive.ObjectID  `bson:"_id,omitempty" json:"id"`
 	Username             string              `bson:"username" json:"username"`
@@ -13,6 +18,7 @@ type User struct {
 	Role                 string              `bson:"role,omitempty" json:"role,omitempty"`
 	Status               string              `bson:"status,omitempty" json:"status,omitempty"`
 	MFAEnabled           bool                `bson:"mfaEnabled,omitempty" json:"mfaEnabled,omitempty"`
+	SSO                  UserSSO             `bson:"sso,omitempty" json:"sso,omitempty"`
 	MFASecretEnc         string              `bson:"mfaSecretEnc,omitempty" json:"-"`
 	MFARecoveryCodesHash []string            `bson:"mfaRecoveryCodesHash,omitempty" json:"-"`
 	LastLoginAt          *time.Time          `bson:"lastLoginAt,omitempty" json:"lastLoginAt,omitempty"`

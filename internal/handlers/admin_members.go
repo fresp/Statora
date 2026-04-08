@@ -32,11 +32,12 @@ var allowedUserStatuses = map[string]struct{}{
 }
 
 type userResponse struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	Status   string `json:"status"`
+	ID         string `json:"id"`
+	Username   string `json:"username"`
+	Email      string `json:"email"`
+	Role       string `json:"role"`
+	Status     string `json:"status"`
+	SSOEnabled bool   `json:"ssoEnabled"`
 }
 
 type userInvitationResponse struct {
@@ -60,11 +61,12 @@ func mapUser(user models.User) userResponse {
 	}
 
 	return userResponse{
-		ID:       user.ID.Hex(),
-		Username: user.Username,
-		Email:    user.Email,
-		Role:     role,
-		Status:   status,
+		ID:         user.ID.Hex(),
+		Username:   user.Username,
+		Email:      user.Email,
+		Role:       role,
+		Status:     status,
+		SSOEnabled: user.SSO.Enabled,
 	}
 }
 
@@ -150,8 +152,9 @@ func PatchUser(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Role   string `json:"role"`
-			Status string `json:"status"`
+			Role       string `json:"role"`
+			Status     string `json:"status"`
+			SSOEnabled *bool  `json:"ssoEnabled"`
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -175,6 +178,10 @@ func PatchUser(db *mongo.Database) gin.HandlerFunc {
 				return
 			}
 			set["status"] = req.Status
+		}
+
+		if req.SSOEnabled != nil {
+			set["sso.enabled"] = *req.SSOEnabled
 		}
 
 		if len(set) == 1 {

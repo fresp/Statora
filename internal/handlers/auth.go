@@ -49,6 +49,8 @@ func loginWithService(authSvc loginService) gin.HandlerFunc {
 			return
 		}
 
+		setAuthCookie(c, result.Token)
+
 		c.JSON(http.StatusOK, gin.H{
 			"token":       result.Token,
 			"mfaRequired": result.MFARequired,
@@ -59,6 +61,13 @@ func loginWithService(authSvc loginService) gin.HandlerFunc {
 				"role":     result.User.Role,
 			},
 		})
+	}
+}
+
+func Logout() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clearAuthCookie(c)
+		c.JSON(http.StatusOK, gin.H{"ok": true})
 	}
 }
 

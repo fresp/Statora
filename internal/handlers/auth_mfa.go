@@ -113,6 +113,8 @@ func mfaVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepository) g
 			return
 		}
 
+		setAuthCookie(c, result.Token)
+
 		c.JSON(http.StatusOK, gin.H{
 			"token":       result.Token,
 			"mfaVerified": result.MFAVerified,
@@ -150,6 +152,8 @@ func mfaRecoveryVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepos
 			handleMFAHandlerError(c, err)
 			return
 		}
+
+		setAuthCookie(c, result.Token)
 
 		user, err := userRepo.FindByID(ctx, userID)
 		if err != nil {

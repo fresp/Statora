@@ -1,19 +1,33 @@
-import type { User, StoredUserProfile } from '../types'
+import type { AuthMeResponse, User, StoredUserProfile } from '../types'
 
 const TOKEN_KEY = 'user_token'
 const PROFILE_KEY = 'user_profile'
 
+export function setStoredProfile(profile: StoredUserProfile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
+}
+
+export function storeProfileFromAuthMe(user: AuthMeResponse) {
+  setStoredProfile({
+    id: user.userId,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    mfaEnabled: user.mfaEnabled,
+    mfaVerified: user.mfaVerified,
+  })
+}
+
 export function setAuthSession(token: string, user: User) {
   localStorage.setItem(TOKEN_KEY, token)
-  const profile: StoredUserProfile = {
+  setStoredProfile({
     id: user.id,
     username: user.username,
     email: user.email,
     role: user.role,
     mfaEnabled: user.mfaEnabled,
     mfaVerified: user.mfaVerified,
-  }
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
+  })
 }
 
 export function updateStoredProfile(updates: Partial<StoredUserProfile>) {

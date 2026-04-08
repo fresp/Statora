@@ -206,6 +206,7 @@ export interface UserMember {
   email: string
   role: UserRole
   status: UserStatus
+  ssoEnabled: boolean
 }
 
 export interface UserInvitation {
@@ -261,6 +262,17 @@ export interface ProfileUpdateRequest {
   username: string
   currentPassword?: string
   newPassword?: string
+}
+
+export interface StatusPageSSOSettings {
+  enabled: boolean
+  provider: string
+  issuer: string
+  audience: string
+  algorithm: 'HS256' | 'RS256'
+  publicKeyPem: string
+  sharedSecret?: string
+  hasSecret?: boolean
 }
 
 export interface StatusPageSettings {
@@ -333,6 +345,7 @@ export interface StatusPageSettings {
     text: string
     showPoweredBy: boolean
   }
+  sso?: StatusPageSSOSettings
   customCss: string
   updatedAt: string
   createdAt: string
@@ -391,6 +404,15 @@ export interface StatusPageSettingsPatchRequest {
   footer?: {
     text?: string
     showPoweredBy?: boolean
+  }
+  sso?: {
+    enabled?: boolean
+    provider?: string
+    issuer?: string
+    audience?: string
+    algorithm?: 'HS256' | 'RS256'
+    sharedSecret?: string
+    publicKeyPem?: string
   }
   customCss?: string
 }

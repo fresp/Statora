@@ -116,7 +116,7 @@ export default function AdminMembers() {
     return []
   }, [invitationsData])
 
-  async function updateMember(id: string, payload: Partial<Pick<UserMember, 'role' | 'status'>>) {
+  async function updateMember(id: string, payload: Partial<Pick<UserMember, 'role' | 'status' | 'ssoEnabled'>>) {
     setSavingId(id)
     setActionError('')
     try {
@@ -353,9 +353,22 @@ export default function AdminMembers() {
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[member.status]}`}>
-                        {STATUS_LABELS[member.status]}
-                      </span>
+                      <div className="flex flex-col gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE_CLASS[member.status]}`}>
+                          {STATUS_LABELS[member.status]}
+                        </span>
+                        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={member.ssoEnabled}
+                            disabled={isSaving || isDeleting}
+                            onChange={(e) => {
+                              void updateMember(member.id, { ssoEnabled: e.target.checked })
+                            }}
+                          />
+                          SSO enabled
+                        </label>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">

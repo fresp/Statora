@@ -34,6 +34,7 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 
 	api := r.Group("/api")
 	r.GET("/ws", handlers.ServeWs(hub))
+	r.GET("/sso/callback", handlers.SSOCallback(database.GetDB(), cfg))
 
 	api.GET("/status/summary", handlers.GetStatusSummary(database.GetDB()))
 	api.GET("/status/components", handlers.GetStatusComponents(database.GetDB()))
@@ -45,6 +46,7 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	api.POST("/subscribe", handlers.Subscribe(database.GetDB()))
 
 	api.POST("/auth/login", handlers.Login(database.GetDB(), cfg.JWTSecret))
+	api.POST("/auth/logout", handlers.Logout())
 	api.POST("/users/invitations/activate", handlers.ActivateUserInvitation(database.GetDB()))
 
 	auth := api.Group("")

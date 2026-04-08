@@ -50,6 +50,16 @@ type StatusPageFooterSettings struct {
 	ShowPoweredBy bool   `bson:"showPoweredBy" json:"showPoweredBy"`
 }
 
+type StatusPageSSOSettings struct {
+	Enabled      bool   `bson:"enabled,omitempty" json:"enabled,omitempty"`
+	Provider     string `bson:"provider,omitempty" json:"provider,omitempty"`
+	Issuer       string `bson:"issuer,omitempty" json:"issuer,omitempty"`
+	Audience     string `bson:"audience,omitempty" json:"audience,omitempty"`
+	Algorithm    string `bson:"algorithm,omitempty" json:"algorithm,omitempty"`
+	SharedSecret string `bson:"sharedSecret,omitempty" json:"-"`
+	PublicKeyPEM string `bson:"publicKeyPem,omitempty" json:"publicKeyPem,omitempty"`
+}
+
 type StatusPageSettings struct {
 	Key       string                     `bson:"key" json:"-"`
 	Head      StatusPageHeadSettings     `bson:"head" json:"head"`
@@ -57,6 +67,7 @@ type StatusPageSettings struct {
 	Theme     StatusPageThemeSettings    `bson:"theme" json:"theme"`
 	Layout    StatusPageLayoutSettings   `bson:"layout" json:"layout"`
 	Footer    StatusPageFooterSettings   `bson:"footer" json:"footer"`
+	SSO       StatusPageSSOSettings      `bson:"sso,omitempty" json:"-"`
 	CustomCSS string                     `bson:"customCss" json:"customCss"`
 	UpdatedAt time.Time                  `bson:"updatedAt" json:"updatedAt"`
 	CreatedAt time.Time                  `bson:"createdAt" json:"createdAt"`
@@ -105,6 +116,10 @@ func DefaultStatusPageSettings() StatusPageSettings {
 		Footer: StatusPageFooterSettings{
 			Text:          "",
 			ShowPoweredBy: true,
+		},
+		SSO: StatusPageSSOSettings{
+			Enabled:   false,
+			Algorithm: "HS256",
 		},
 		CustomCSS: "",
 		UpdatedAt: now,

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import api from '../../lib/api'
 import {
   LayoutDashboard,
   Layers,
@@ -165,7 +166,13 @@ export default function AdminLayout() {
       .filter(section => section.items.length > 0)
     : navSections
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // ignore logout request failures and still clear local state
+    }
+
     localStorage.removeItem('user_token')
     localStorage.removeItem('user_profile')
     localStorage.removeItem('admin_token')

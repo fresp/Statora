@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { clearAuthSession, setAuthSession } from '../../lib/auth'
 import { useApi } from '../../hooks/useApi'
@@ -9,8 +9,26 @@ const DEFAULT_PAGE_TITLE = 'Statora'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
   const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
+  const ssoError = useMemo(() => {
+    const code = new URLSearchParams(location.search).get('error')
+    switch (code) {
+      case 'sso_not_configured':
+        return 'SSO is not configured.'
+      case 'sso_disabled':
+        return 'SSO is currently disabled.'
+      case 'user_not_found':
+        return 'No user account matches this SSO login.'
+      case 'sso_not_allowed':
+        return 'SSO is not enabled for this account.'
+      case 'invalid_token':
+        return 'The SSO token is invalid or expired.'
+      default:
+        return ''
+    }
+  }, [location.search])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -99,9 +117,9 @@ export default function AdminLogin() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">User Login</h1>
           <p className="text-sm text-gray-500 mb-6">{pageTitle}</p>
 
-          {error && (
+          {(error || ssoError) && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
+              {error || ssoError}
             </div>
           )}
 

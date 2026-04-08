@@ -6,7 +6,7 @@ import type {
 } from '../../types'
 import api from '../../lib/api'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
-import { CheckCircle, AlertTriangle, AlertCircle, XCircle, Wrench } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 
 const ADMIN_TITLE_SUFFIX = ' - Admin Panel'
 
@@ -30,6 +30,16 @@ const DEFAULT_SETTINGS: StatusPageSettings = {
   footer: {
     text: '',
     showPoweredBy: true,
+  },
+  sso: {
+    enabled: false,
+    provider: '',
+    issuer: '',
+    audience: '',
+    algorithm: 'HS256',
+    publicKeyPem: '',
+    sharedSecret: '',
+    hasSecret: false,
   },
   customCss: '',
   updatedAt: new Date().toISOString(),
@@ -63,6 +73,16 @@ function normalizeSettings(input: StatusPageSettings | null | undefined, presets
     footer: {
       text: input.footer?.text ?? '',
       showPoweredBy: input.footer?.showPoweredBy ?? true,
+    },
+    sso: {
+      enabled: input.sso?.enabled ?? false,
+      provider: input.sso?.provider ?? '',
+      issuer: input.sso?.issuer ?? '',
+      audience: input.sso?.audience ?? '',
+      algorithm: input.sso?.algorithm ?? 'HS256',
+      publicKeyPem: input.sso?.publicKeyPem ?? '',
+      sharedSecret: '',
+      hasSecret: input.sso?.hasSecret ?? false,
     },
     customCss: input.customCss ?? '',
     updatedAt: input.updatedAt ?? new Date().toISOString(),
@@ -128,6 +148,9 @@ export default function AdminSettings() {
       setThemePresetNotice(hasErrors ? 'Some local theme files are invalid or missing fields. Falling back to default values.' : null)
       setThemePresets(presets)
       const normalized = normalizeSettings(settingsRes.data, presets)
+      if (normalized.sso) {
+        normalized.sso.sharedSecret = ''
+      }
       setSettings(normalized)
       setMetaTagsText(metaTagsToText(normalized.head.metaTags || {}))
     } catch (err: any) {
@@ -181,11 +204,23 @@ export default function AdminSettings() {
           text: settings.footer.text,
           showPoweredBy: settings.footer.showPoweredBy,
         },
+        sso: {
+          enabled: settings.sso?.enabled,
+          provider: settings.sso?.provider,
+          issuer: settings.sso?.issuer,
+          audience: settings.sso?.audience,
+          algorithm: settings.sso?.algorithm,
+          sharedSecret: settings.sso?.sharedSecret,
+          publicKeyPem: settings.sso?.publicKeyPem,
+        },
         customCss: settings.customCss,
       }
 
       const res = await api.patch<StatusPageSettings>('/settings/status-page', payload)
       const normalized = normalizeSettings(res.data, themePresets)
+      if (normalized.sso) {
+        normalized.sso.sharedSecret = ''
+      }
       setSettings(normalized)
       setMetaTagsText(metaTagsToText(normalized.head.metaTags || {}))
       setSuccess('Settings saved successfully')
@@ -352,6 +387,84 @@ export default function AdminSettings() {
 
 
             </div>
+          </div>
+        </section>
+
+        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">SSO Settings</h2>
+          <div className="flex items-center gap-2">
+            <input
+              id="sso-enabled"
+              type="checkbox"
+              checked={settings.sso?.enabled ?? false}
+              onChange={(e) => setSettings(prev => ({
+                ...prev,
+                sso: {
+                  enabled: e.target.checked,
+                  provider: prev.sso?.provider ?? '',
+                  issuer: prev.sso?.issuer ?? '',
+                  audience: prev.sso?.audience ?? '',
+                  algorithm: prev.sso?.algorithm ?? 'HS256',
+                  publicKeyPem: prev.sso?.publicKeyPem ?? '',
+                  sharedSecret: prev.sso?.sharedSecret ?? '',
+                  hasSecret: prev.sso?.hasSecret ?? false,
+                },
+              }))}
+            />
+            <label htmlFor="sso-enabled" className="text-sm text-gray-700">Enable SSO</label>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={settings.sso?.provider ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, provider: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Issuer</label>
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={settings.sso?.issuer ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, issuer: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
+            <input
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={settings.sso?.audience ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, audience: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Algorithm</label>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={settings.sso?.algorithm ?? 'HS256'}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, algorithm: e.target.value as 'HS256' | 'RS256' } }))}
+            >
+              <option value="HS256">HS256</option>
+              <option value="RS256">RS256</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Shared Secret</label>
+            <input
+              type="password"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              value={settings.sso?.sharedSecret ?? ''}
+              placeholder={settings.sso?.hasSecret ? 'Stored secret exists; enter to replace' : 'Enter shared secret'}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, sharedSecret: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">RSA Public Key (PEM)</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[120px] font-mono"
+              value={settings.sso?.publicKeyPem ?? ''}
+              onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, publicKeyPem: e.target.value } }))}
+            />
           </div>
         </section>
 

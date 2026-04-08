@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/repository"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
@@ -58,6 +58,28 @@ func normalizeThemePreset(value string) string {
 	return strings.TrimSuffix(normalized, ".css")
 }
 
+type statusPageSSOResponse struct {
+	Enabled      bool   `json:"enabled"`
+	Provider     string `json:"provider"`
+	Issuer       string `json:"issuer"`
+	Audience     string `json:"audience"`
+	Algorithm    string `json:"algorithm"`
+	PublicKeyPEM string `json:"publicKeyPem"`
+	HasSecret    bool   `json:"hasSecret"`
+}
+
+type adminStatusPageSettingsResponse struct {
+	Head      models.StatusPageHeadSettings     `json:"head"`
+	Branding  models.StatusPageBrandingSettings `json:"branding"`
+	Theme     models.StatusPageThemeSettings    `json:"theme"`
+	Layout    models.StatusPageLayoutSettings   `json:"layout"`
+	Footer    models.StatusPageFooterSettings   `json:"footer"`
+	SSO       statusPageSSOResponse             `json:"sso"`
+	CustomCSS string                            `json:"customCss"`
+	UpdatedAt time.Time                         `json:"updatedAt"`
+	CreatedAt time.Time                         `json:"createdAt"`
+}
+
 type statusPageSettingsPatchRequest struct {
 	Head *struct {
 		Title       *string            `json:"title"`
@@ -99,6 +121,15 @@ type statusPageSettingsPatchRequest struct {
 		Text          *string `json:"text"`
 		ShowPoweredBy *bool   `json:"showPoweredBy"`
 	} `json:"footer"`
+	SSO *struct {
+		Enabled      *bool   `json:"enabled"`
+		Provider     *string `json:"provider"`
+		Issuer       *string `json:"issuer"`
+		Audience     *string `json:"audience"`
+		Algorithm    *string `json:"algorithm"`
+		SharedSecret *string `json:"sharedSecret"`
+		PublicKeyPEM *string `json:"publicKeyPem"`
+	} `json:"sso"`
 	CustomCSS *string `json:"customCss"`
 }
 
@@ -149,7 +180,29 @@ func GetAdminStatusPageSettings(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, settings)
+		c.JSON(http.StatusOK, buildAdminStatusPageSettingsResponse(settings))
+	}
+}
+
+func buildAdminStatusPageSettingsResponse(settings models.StatusPageSettings) adminStatusPageSettingsResponse {
+	return adminStatusPageSettingsResponse{
+		Head:     settings.Head,
+		Branding: settings.Branding,
+		Theme:    settings.Theme,
+		Layout:   settings.Layout,
+		Footer:   settings.Footer,
+		SSO: statusPageSSOResponse{
+			Enabled:      settings.SSO.Enabled,
+			Provider:     settings.SSO.Provider,
+			Issuer:       settings.SSO.Issuer,
+			Audience:     settings.SSO.Audience,
+			Algorithm:    settings.SSO.Algorithm,
+			PublicKeyPEM: settings.SSO.PublicKeyPEM,
+			HasSecret:    strings.TrimSpace(settings.SSO.SharedSecret) != "",
+		},
+		CustomCSS: settings.CustomCSS,
+		UpdatedAt: settings.UpdatedAt,
+		CreatedAt: settings.CreatedAt,
 	}
 }
 
@@ -164,6 +217,7 @@ func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
+		settingsRepo := repository.NewMongoSettingsRepository(db)
 		current, err := fetchOrCreateStatusPageSettings(ctx, db)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -329,6 +383,35 @@ func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			}
 		}
 
+		if req.SSO != nil {
+			if req.SSO.Enabled != nil {
+				set["sso.enabled"] = *req.SSO.Enabled
+			}
+			if req.SSO.Provider != nil {
+				set["sso.provider"] = strings.TrimSpace(*req.SSO.Provider)
+			}
+			if req.SSO.Issuer != nil {
+				set["sso.issuer"] = strings.TrimSpace(*req.SSO.Issuer)
+			}
+			if req.SSO.Audience != nil {
+				set["sso.audience"] = strings.TrimSpace(*req.SSO.Audience)
+			}
+			if req.SSO.Algorithm != nil {
+				algorithm := strings.ToUpper(strings.TrimSpace(*req.SSO.Algorithm))
+				if algorithm != "HS256" && algorithm != "RS256" {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "sso.algorithm must be HS256 or RS256"})
+					return
+				}
+				set["sso.algorithm"] = algorithm
+			}
+			if req.SSO.SharedSecret != nil {
+				set["sso.sharedSecret"] = strings.TrimSpace(*req.SSO.SharedSecret)
+			}
+			if req.SSO.PublicKeyPEM != nil {
+				set["sso.publicKeyPem"] = strings.TrimSpace(*req.SSO.PublicKeyPEM)
+			}
+		}
+
 		if req.CustomCSS != nil {
 			set["customCss"] = *req.CustomCSS
 		}
@@ -338,19 +421,23 @@ func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			return
 		}
 
-		var updated models.StatusPageSettings
-		err = settingsCollection(db).FindOneAndUpdate(
-			ctx,
-			bson.M{"key": models.StatusPageSettingsKey},
-			bson.M{"$set": set, "$setOnInsert": bson.M{"createdAt": current.CreatedAt, "key": models.StatusPageSettingsKey}},
-			options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
-		).Decode(&updated)
+		updatedSSO, err := settingsRepo.UpdateSSOSettings(ctx, set)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		updated := current
+		updated.UpdatedAt = set["updatedAt"].(time.Time)
+		updated.SSO = *updatedSSO
+
+		err = settingsCollection(db).FindOne(ctx, bson.M{"key": models.StatusPageSettingsKey}).Decode(&updated)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		BroadcastEvent(hub, "status_page_settings_updated", updated)
-		c.JSON(http.StatusOK, updated)
+		c.JSON(http.StatusOK, buildAdminStatusPageSettingsResponse(updated))
 	}
 }

@@ -74,6 +74,7 @@ func TestLoginHandlerReturnsExtendedContract(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "token-123", response["token"])
 	assert.Equal(t, true, response["mfaRequired"])
+	assert.NotEmpty(t, w.Result().Cookies())
 
 	userResp, ok := response["user"].(map[string]interface{})
 	assert.True(t, ok)
