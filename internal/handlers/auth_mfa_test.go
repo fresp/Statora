@@ -98,7 +98,7 @@ func (s *stubMFAHandlerService) UpdateProfile(_ context.Context, req authservice
 	return s.err
 }
 
-func (r *stubMFAHandlerUserRepo) FindByID(_ context.Context, _ string) (*models.User, error) {
+func (r *stubMFAHandlerUserRepo) GetUserByID(_ context.Context, _ string) (*models.User, error) {
 	if r.err != nil {
 		return nil, r.err
 	}

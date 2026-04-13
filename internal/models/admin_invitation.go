@@ -10,6 +10,7 @@ type UserInvitation struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	TokenHash  string             `bson:"tokenHash" json:"-"`
 	Email      string             `bson:"email" json:"email"`
+	EmailHash  string             `bson:"emailHash" json:"-"`
 	Role       string             `bson:"role" json:"role"`
 	ExpiresAt  time.Time          `bson:"expiresAt" json:"expiresAt"`
 	CreatedBy  primitive.ObjectID `bson:"createdBy" json:"createdBy"`

@@ -19,6 +19,9 @@ func RunServer() error {
 	godotenv.Load()
 
 	cfg := configs.Load()
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
 
 	// Connect to databases
 	if err := database.ConnectMongo(cfg.MongoURI, cfg.MongoDBName); err != nil {

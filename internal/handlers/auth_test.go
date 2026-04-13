@@ -34,7 +34,7 @@ func (s *stubLoginService) Login(_ context.Context, _ authservice.LoginRequest) 
 	return s.result, nil
 }
 
-func (r *stubMeUserRepo) FindByID(_ context.Context, _ string) (*models.User, error) {
+func (r *stubMeUserRepo) GetUserByID(_ context.Context, _ string) (*models.User, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -98,7 +98,7 @@ func TestGetMeReturnsMFAFlags(t *testing.T) {
 		c.Set("username", "operator-user")
 		c.Set("role", "operator")
 		c.Set("mfaVerified", false)
-		getMeWithRepo(&stubMeUserRepo{user: user})(c)
+		getMeWithService(&stubMeUserRepo{user: user})(c)
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/auth/me", nil)
@@ -127,7 +127,7 @@ func TestGetMeReturnsUnauthorizedWhenUserLookupFails(t *testing.T) {
 		c.Set("username", "operator-user")
 		c.Set("role", "operator")
 		c.Set("mfaVerified", false)
-		getMeWithRepo(&stubMeUserRepo{err: errors.New("not found")})(c)
+		getMeWithService(&stubMeUserRepo{err: errors.New("not found")})(c)
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/auth/me", nil)

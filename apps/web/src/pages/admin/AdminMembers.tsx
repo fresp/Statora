@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import type { UserInvitation, UserMember, UserRole, UserStatus } from '../../types'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
+import UserSearch from '../../components/UserSearch'
 
 const ROLE_OPTIONS: UserRole[] = ['admin', 'operator']
 const INVITE_ROLE_OPTIONS: Extract<UserRole, 'admin' | 'operator'>[] = ['admin', 'operator']
@@ -240,6 +241,7 @@ export default function AdminMembers() {
           <p className="text-sm text-gray-500 mt-1">Manage user accounts, roles, and status</p>
         </div>
         <button
+          type="button"
           onClick={() => {
             void refetch()
             void refetchInvitations()
@@ -251,6 +253,7 @@ export default function AdminMembers() {
           Refresh
         </button>
         <button
+          type="button"
           onClick={openInviteModal}
           className="ml-2 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
         >
@@ -286,6 +289,7 @@ export default function AdminMembers() {
       <div className="mb-5">
         <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
           <button
+            type="button"
             onClick={() => setActiveTab('members')}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === 'members' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -293,6 +297,7 @@ export default function AdminMembers() {
             Users
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('invitations')}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === 'invitations' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
@@ -301,6 +306,10 @@ export default function AdminMembers() {
           </button>
         </div>
       </div>
+
+      {activeTab === 'members' && (
+        <UserSearch />
+      )}
 
       {activeTab === 'members' && members.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -373,6 +382,7 @@ export default function AdminMembers() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
                           onClick={() => {
                             void updateMember(member.id, { status: nextStatus })
                           }}
@@ -386,6 +396,7 @@ export default function AdminMembers() {
                               : 'Disable'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => {
                             void deleteMember(member)
                           }}
@@ -468,6 +479,7 @@ export default function AdminMembers() {
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button
+                            type="button"
                             onClick={() => {
                               void refreshInvitationToken(invitation)
                             }}
@@ -477,6 +489,7 @@ export default function AdminMembers() {
                             Refresh Token
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               void removeInvitation(invitation.id)
                             }}
@@ -512,6 +525,7 @@ export default function AdminMembers() {
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <h2 className="text-lg font-semibold text-gray-900">Invite User</h2>
               <button
+                type="button"
                 onClick={() => setShowInviteModal(false)}
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="Close invite modal"
@@ -528,8 +542,9 @@ export default function AdminMembers() {
               )}
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                <label htmlFor="inviteEmail" className="mb-1 block text-sm font-medium text-gray-700">Email</label>
                 <input
+                  id="inviteEmail"
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
@@ -541,8 +556,9 @@ export default function AdminMembers() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                <label htmlFor="inviteRole" className="mb-1 block text-sm font-medium text-gray-700">Role</label>
                 <select
+                  id="inviteRole"
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as Extract<UserRole, 'operator'>)}
                   disabled={inviting}

@@ -9,15 +9,15 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/fresp/Statora/configs"
 	"github.com/fresp/Statora/internal/database"
 	"github.com/fresp/Statora/internal/handlers"
 	"github.com/fresp/Statora/internal/middleware"
 	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/security/pii"
+	authservice "github.com/fresp/Statora/internal/services/auth"
 )
 
 // RegisterAPIRoutes registers all API routes on the given Gin engine
@@ -45,16 +45,16 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	api.GET("/status/maintenance", handlers.GetPublicMaintenance(database.GetDB()))
 	api.POST("/subscribe", handlers.Subscribe(database.GetDB()))
 
-	api.POST("/auth/login", handlers.Login(database.GetDB(), cfg.JWTSecret))
+	api.POST("/auth/login", handlers.Login(database.GetDB(), cfg.JWTSecret, cfg.EmailEncryptionKey))
 	api.POST("/auth/logout", handlers.Logout())
-	api.POST("/users/invitations/activate", handlers.ActivateUserInvitation(database.GetDB()))
+	api.POST("/users/invitations/activate", handlers.ActivateUserInvitation(database.GetDB(), cfg))
 
 	auth := api.Group("")
 	auth.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
 	partialAuth := auth.Group("")
 
-	partialAuth.GET("/auth/me", handlers.GetMe(database.GetDB()))
+	partialAuth.GET("/auth/me", handlers.GetMe(database.GetDB(), cfg.JWTSecret, cfg.EmailEncryptionKey))
 	partialAuth.PATCH("/auth/me", handlers.ProfileUpdate(database.GetDB(), cfg))
 	partialAuth.POST("/auth/mfa/setup", handlers.MFASetup(database.GetDB(), cfg))
 	partialAuth.POST("/auth/mfa/verify", handlers.MFAVerify(database.GetDB(), cfg))
@@ -66,6 +66,9 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 
 	adminOnly := verifiedAuth.Group("")
 	adminOnly.Use(middleware.RequireRoles("admin"))
+
+	adminOnlyV1 := verifiedAuth.Group("/v1")
+	adminOnlyV1.Use(middleware.RequireRoles("admin"))
 
 	incidentAndMaintenance := verifiedAuth.Group("")
 	incidentAndMaintenance.Use(middleware.RequireRoles("admin", "operator"))
@@ -111,12 +114,13 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	adminOnly.POST("/webhook-channels", handlers.CreateWebhookChannel(database.GetDB()))
 	adminOnly.DELETE("/webhook-channels/:id", handlers.DeleteWebhookChannel(database.GetDB()))
 
-	adminOnly.GET("/users", handlers.GetUsers(database.GetDB()))
+	adminOnly.GET("/users", handlers.GetUsers(database.GetDB(), cfg))
+	adminOnlyV1.GET("/users/search", handlers.SearchUserByEmail(database.GetDB(), cfg))
 	adminOnly.PATCH("/users/:id", handlers.PatchUser(database.GetDB()))
 	adminOnly.DELETE("/users/:id", handlers.DeleteUser(database.GetDB()))
-	adminOnly.POST("/users/invitations", handlers.CreateUserInvitation(database.GetDB()))
-	adminOnly.GET("/users/invitations", handlers.GetUserInvitations(database.GetDB()))
-	adminOnly.POST("/users/invitations/:id/refresh", handlers.RefreshUserInvitation(database.GetDB()))
+	adminOnly.POST("/users/invitations", handlers.CreateUserInvitation(database.GetDB(), cfg))
+	adminOnly.GET("/users/invitations", handlers.GetUserInvitations(database.GetDB(), cfg))
+	adminOnly.POST("/users/invitations/:id/refresh", handlers.RefreshUserInvitation(database.GetDB(), cfg))
 	adminOnly.DELETE("/users/invitations/:id", handlers.RevokeUserInvitation(database.GetDB()))
 }
 
@@ -124,28 +128,22 @@ func SeedAdmin(db *mongo.Database, cfg *configs.Config) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	authSvc := authservice.NewServiceFromDB(db, cfg.JWTSecret, cfg.EmailEncryptionKey)
+	normalizedEmail := pii.Normalize(cfg.AdminEmail)
+	emailHash := pii.Hash(normalizedEmail)
+
 	var existing models.User
-	if err := db.Collection("users").FindOne(ctx, bson.M{"email": cfg.AdminEmail}).Decode(&existing); err == nil {
+	if err := db.Collection("users").FindOne(ctx, bson.M{"emailHash": emailHash}).Decode(&existing); err == nil {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(cfg.AdminPass), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("[HTTP] Failed to hash admin password: %v", err)
-		return
-	}
-
-	user := models.User{
-		ID:           primitive.NewObjectID(),
-		Username:     cfg.AdminUser,
-		Email:        cfg.AdminEmail,
-		Role:         "admin",
-		Status:       "active",
-		PasswordHash: string(hash),
-		CreatedAt:    time.Now(),
-	}
-
-	if _, err := db.Collection("users").InsertOne(ctx, user); err != nil {
+	if _, err := authSvc.CreateUser(ctx, authservice.CreateUserRequest{
+		Username: cfg.AdminUser,
+		Email:    cfg.AdminEmail,
+		Role:     "admin",
+		Status:   "active",
+		Password: cfg.AdminPass,
+	}); err != nil {
 		log.Printf("[HTTP] Failed to seed admin: %v", err)
 		return
 	}

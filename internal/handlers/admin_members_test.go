@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,9 +13,25 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/fresp/Statora/internal/models"
 )
+
+type stubUserSearchService struct {
+	user      *models.User
+	err       error
+	lastEmail string
+}
+
+func (s *stubUserSearchService) FindUserByEmail(_ context.Context, email string) (*models.User, error) {
+	s.lastEmail = email
+	if s.err != nil {
+		return nil, s.err
+	}
+
+	return s.user, nil
+}
 
 func TestMapUserDefaults(t *testing.T) {
 	user := models.User{
@@ -49,7 +67,7 @@ func TestPatchUserRejectsInvalidID(t *testing.T) {
 func TestCreateUserInvitationRejectsInvalidRoleBeforeDBAccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/users/invitations", CreateUserInvitation(nil))
+	r.POST("/api/users/invitations", CreateUserInvitation(nil, nil))
 
 	body, _ := json.Marshal(map[string]string{
 		"email": "member@example.com",
@@ -68,7 +86,7 @@ func TestCreateUserInvitationRejectsInvalidRoleBeforeDBAccess(t *testing.T) {
 func TestActivateUserInvitationRejectsInvalidPayloadBeforeDBAccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/users/invitations/activate", ActivateUserInvitation(nil))
+	r.POST("/api/users/invitations/activate", ActivateUserInvitation(nil, nil))
 
 	body, _ := json.Marshal(map[string]string{
 		"token":    "",
@@ -88,7 +106,7 @@ func TestActivateUserInvitationRejectsInvalidPayloadBeforeDBAccess(t *testing.T)
 func TestActivateUserInvitationRejectsBlankTokenAfterTrim(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/users/invitations/activate", ActivateUserInvitation(nil))
+	r.POST("/api/users/invitations/activate", ActivateUserInvitation(nil, nil))
 
 	body, _ := json.Marshal(map[string]string{
 		"token":    "   ",
@@ -173,4 +191,79 @@ func TestDeleteUserRejectsSelfDelete(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSearchUserByEmailRequiresEmailQueryParam(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/api/v1/users/search", searchUserByEmailWithService(&stubUserSearchService{}))
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/search", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSearchUserByEmailReturnsNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/api/v1/users/search", searchUserByEmailWithService(&stubUserSearchService{err: mongo.ErrNoDocuments}))
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/search?email=missing@example.com", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSearchUserByEmailReturnsInternalServerError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/api/v1/users/search", searchUserByEmailWithService(&stubUserSearchService{err: errors.New("boom")}))
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/search?email=alice@example.com", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestSearchUserByEmailReturnsMappedUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	stub := &stubUserSearchService{user: &models.User{
+		ID:       primitive.NewObjectID(),
+		Username: "alice",
+		Email:    "alice@example.com",
+		Role:     "operator",
+		Status:   "active",
+		SSO: models.UserSSO{
+			Enabled: true,
+		},
+	}}
+
+	r.GET("/api/v1/users/search", searchUserByEmailWithService(stub))
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/search?email=%20Alice@Example.com%20", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "Alice@Example.com", stub.lastEmail)
+
+	var body userResponse
+	err := json.Unmarshal(w.Body.Bytes(), &body)
+	assert.NoError(t, err)
+	assert.Equal(t, stub.user.ID.Hex(), body.ID)
+	assert.Equal(t, "alice", body.Username)
+	assert.Equal(t, "alice@example.com", body.Email)
+	assert.Equal(t, "operator", body.Role)
+	assert.Equal(t, "active", body.Status)
+	assert.True(t, body.SSOEnabled)
 }

@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/fresp/Statora/internal/models"
 	"github.com/fresp/Statora/internal/repository"
+	"github.com/fresp/Statora/internal/security/pii"
 )
 
 var (
@@ -45,22 +48,40 @@ type Service struct {
 	repo         repository.UserRepository
 	settingsRepo repository.SettingsRepository
 	jwtSecret    string
+	emailKey     []byte
 }
 
-func NewService(repo repository.UserRepository, jwtSecret string) *Service {
-	return &Service{repo: repo, jwtSecret: jwtSecret}
+type CreateUserRequest struct {
+	Username  string
+	Email     string
+	Role      string
+	Status    string
+	InvitedBy *primitive.ObjectID
+	Password  string
 }
 
-func NewServiceWithSettings(repo repository.UserRepository, settingsRepo repository.SettingsRepository, jwtSecret string) *Service {
-	return &Service{repo: repo, settingsRepo: settingsRepo, jwtSecret: jwtSecret}
+type CreateInvitationRequest struct {
+	Email     string
+	Role      string
+	CreatedBy primitive.ObjectID
+	TokenHash string
+	ExpiresAt time.Time
 }
 
-func NewServiceFromDB(db *mongo.Database, jwtSecret string) *Service {
-	return NewServiceWithSettings(repository.NewMongoUserRepository(db), repository.NewMongoSettingsRepository(db), jwtSecret)
+func NewService(repo repository.UserRepository, jwtSecret, emailEncryptionKey string) *Service {
+	return &Service{repo: repo, jwtSecret: jwtSecret, emailKey: []byte(emailEncryptionKey)}
+}
+
+func NewServiceWithSettings(repo repository.UserRepository, settingsRepo repository.SettingsRepository, jwtSecret, emailEncryptionKey string) *Service {
+	return &Service{repo: repo, settingsRepo: settingsRepo, jwtSecret: jwtSecret, emailKey: []byte(emailEncryptionKey)}
+}
+
+func NewServiceFromDB(db *mongo.Database, jwtSecret, emailEncryptionKey string) *Service {
+	return NewServiceWithSettings(repository.NewMongoUserRepository(db), repository.NewMongoSettingsRepository(db), jwtSecret, emailEncryptionKey)
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest) (*LoginResult, error) {
-	user, err := s.repo.FindByEmail(ctx, req.Email)
+	user, err := s.FindUserByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -104,12 +125,12 @@ func (s *Service) AuthenticateSSO(ctx context.Context, rawToken string) (*LoginR
 		return nil, err
 	}
 
-	email := strings.ToLower(strings.TrimSpace(claims.Email))
+	email := NormalizeEmail(claims.Email)
 	if email == "" {
 		return nil, ErrInvalidToken
 	}
 
-	user, err := s.repo.FindByEmail(ctx, email)
+	user, err := s.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
@@ -142,4 +163,115 @@ func (s *Service) buildLoginResult(user *models.User, mfaVerified bool) (*LoginR
 	result.MFARequired = mfaRequired
 
 	return &result, nil
+}
+
+func (s *Service) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	user, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.decryptUserEmail(user)
+}
+
+func (s *Service) EmailExists(ctx context.Context, email string) (bool, error) {
+	normalized := pii.Normalize(email)
+	if normalized == "" {
+		return false, nil
+	}
+
+	return s.repo.EmailExistsByHash(ctx, pii.Hash(normalized))
+}
+
+func (s *Service) CreateUser(ctx context.Context, req CreateUserRequest) (*models.User, error) {
+	processedEmail, err := pii.Process(req.Email, s.emailKey)
+	if err != nil {
+		return nil, err
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := models.User{
+		ID:           primitive.NewObjectID(),
+		Username:     req.Username,
+		Email:        processedEmail.Encrypted,
+		EmailHash:    processedEmail.Hash,
+		Role:         req.Role,
+		Status:       req.Status,
+		InvitedBy:    req.InvitedBy,
+		PasswordHash: string(passwordHash),
+		CreatedAt:    time.Now(),
+	}
+
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	user.Email = processedEmail.Normalized
+	return &user, nil
+}
+
+func (s *Service) EncryptForStorage(email string) (encrypted string, emailHash string, normalized string, err error) {
+	processed, err := pii.Process(email, s.emailKey)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	if processed.Normalized == "" {
+		return "", "", "", nil
+	}
+
+	return processed.Encrypted, processed.Hash, processed.Normalized, nil
+}
+
+func (s *Service) DecryptStoredEmail(ciphertext string) (string, error) {
+	return pii.Decrypt(ciphertext, s.emailKey)
+}
+
+func (s *Service) CreateInvitation(ctx context.Context, req CreateInvitationRequest) (*models.UserInvitation, error) {
+	encryptedEmail, emailHash, _, err := s.EncryptForStorage(req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	invitation := &models.UserInvitation{
+		ID:        primitive.NewObjectID(),
+		TokenHash: req.TokenHash,
+		Email:     encryptedEmail,
+		EmailHash: emailHash,
+		Role:      req.Role,
+		ExpiresAt: req.ExpiresAt,
+		CreatedBy: req.CreatedBy,
+		CreatedAt: time.Now(),
+	}
+
+	_ = ctx
+	return invitation, nil
+}
+
+func (s *Service) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	normalized := pii.Normalize(email)
+	if normalized == "" {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	user, err := s.repo.FindByEmailHash(ctx, pii.Hash(normalized))
+	if err != nil {
+		return nil, err
+	}
+
+	return s.decryptUserEmail(user)
+}
+
+func (s *Service) decryptUserEmail(user *models.User) (*models.User, error) {
+	decryptedEmail, err := pii.Decrypt(user.Email, s.emailKey)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Email = decryptedEmail
+	return user, nil
 }

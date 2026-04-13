@@ -15,6 +15,7 @@ type User struct {
 	ID                   primitive.ObjectID  `bson:"_id,omitempty" json:"id"`
 	Username             string              `bson:"username" json:"username"`
 	Email                string              `bson:"email" json:"email"`
+	EmailHash            string              `bson:"emailHash" json:"-"`
 	Role                 string              `bson:"role,omitempty" json:"role,omitempty"`
 	Status               string              `bson:"status,omitempty" json:"status,omitempty"`
 	MFAEnabled           bool                `bson:"mfaEnabled,omitempty" json:"mfaEnabled,omitempty"`

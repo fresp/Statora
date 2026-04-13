@@ -2,16 +2,22 @@ package repository
 
 import (
 	"context"
+	"log"
+	"sync"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/fresp/Statora/internal/models"
 )
 
 type UserRepository interface {
-	FindByEmail(ctx context.Context, email string) (*models.User, error)
+	FindByEmailHash(ctx context.Context, emailHash string) (*models.User, error)
+	EmailExistsByHash(ctx context.Context, emailHash string) (bool, error)
+	Create(ctx context.Context, user models.User) error
 	FindByID(ctx context.Context, id string) (*models.User, error)
 	UpdateProfile(ctx context.Context, id string, username string, passwordHash *string) error
 	BeginMFAEnrollment(ctx context.Context, id string, secretEnc string, recoveryHashes []string) error
@@ -24,17 +30,49 @@ type MongoUserRepository struct {
 	db *mongo.Database
 }
 
+var userEmailHashIndexOnce sync.Once
+
 func NewMongoUserRepository(db *mongo.Database) *MongoUserRepository {
+	userEmailHashIndexOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		_, err := db.Collection("users").Indexes().CreateOne(ctx, mongo.IndexModel{
+			Keys:    bson.D{{Key: "emailHash", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		})
+		if err != nil {
+			log.Printf("[USER_REPO] failed to create users.emailHash unique index: %v", err)
+		}
+	})
+
 	return &MongoUserRepository{db: db}
 }
 
-func (r *MongoUserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
+func (r *MongoUserRepository) FindByEmailHash(ctx context.Context, emailHash string) (*models.User, error) {
 	var user models.User
-	err := r.db.Collection("users").FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := r.db.Collection("users").FindOne(ctx, bson.M{"emailHash": emailHash}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *MongoUserRepository) EmailExistsByHash(ctx context.Context, emailHash string) (bool, error) {
+	err := r.db.Collection("users").FindOne(ctx, bson.M{"emailHash": emailHash}).Err()
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (r *MongoUserRepository) Create(ctx context.Context, user models.User) error {
+	_, err := r.db.Collection("users").InsertOne(ctx, user)
+	return err
 }
 
 func (r *MongoUserRepository) FindByID(ctx context.Context, id string) (*models.User, error) {

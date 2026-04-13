@@ -34,11 +34,22 @@ type mfaStubUserRepo struct {
 	enableMFAUserID       string
 }
 
-func (r *mfaStubUserRepo) FindByEmail(_ context.Context, _ string) (*models.User, error) {
+func (r *mfaStubUserRepo) FindByEmailHash(_ context.Context, _ string) (*models.User, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.user, nil
+}
+
+func (r *mfaStubUserRepo) EmailExistsByHash(_ context.Context, _ string) (bool, error) {
+	if r.err != nil {
+		return false, r.err
+	}
+	return r.user != nil, nil
+}
+
+func (r *mfaStubUserRepo) Create(_ context.Context, _ models.User) error {
+	return r.err
 }
 
 func (r *mfaStubUserRepo) FindByID(_ context.Context, _ string) (*models.User, error) {
@@ -103,7 +114,7 @@ func TestStartEnrollmentReturnsSecretAndRecoveryCodes(t *testing.T) {
 		Role:     "admin",
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 
 	result, err := svc.StartEnrollment(context.Background(), userID.Hex())
 	require.NoError(t, err)
@@ -133,7 +144,7 @@ func TestVerifyEnrollmentEnablesMFAOnValidCode(t *testing.T) {
 		MFASecretEnc: enc,
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 	code, err := generateTOTPCode(secret, svc.now())
 	require.NoError(t, err)
 
@@ -162,7 +173,7 @@ func TestVerifyChallengeReturnsVerifiedToken(t *testing.T) {
 		MFASecretEnc: enc,
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 	code, err := generateTOTPCode(secret, svc.now())
 	require.NoError(t, err)
 
@@ -205,7 +216,7 @@ func TestRecoveryCodeVerificationConsumesSingleUseCode(t *testing.T) {
 		MFARecoveryCodesHash: []string{string(hashOne), string(hashTwo)},
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 
 	_, err = svc.VerifyChallenge(context.Background(), VerifyChallengeRequest{UserID: userID.Hex(), Code: codeOne})
 	require.NoError(t, err)
@@ -234,7 +245,7 @@ func TestDisableMFARequiresPasswordAndCode(t *testing.T) {
 		MFASecretEnc: enc,
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 	code, err := generateTOTPCode(secret, svc.now())
 	require.NoError(t, err)
 
@@ -260,7 +271,7 @@ func TestUpdateProfileHashesNewPasswordOnlyWhenProvided(t *testing.T) {
 		PasswordHash: string(passHash),
 	}}
 
-	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "")
+	svc := NewMFAService(repo, "jwt-secret", "12345678901234567890123456789012", "12345678901234567890123456789012", "")
 
 	err = svc.UpdateProfile(context.Background(), UpdateProfileRequest{
 		UserID:   userID.Hex(),

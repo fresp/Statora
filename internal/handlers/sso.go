@@ -19,7 +19,7 @@ type ssoService interface {
 }
 
 func SSOCallback(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
-	authSvc := authservice.NewServiceFromDB(db, cfg.JWTSecret)
+	authSvc := authservice.NewServiceFromDB(db, cfg.JWTSecret, cfg.EmailEncryptionKey)
 	return ssoCallbackWithService(authSvc)
 }
 

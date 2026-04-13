@@ -24,31 +24,31 @@ type mfaHandlerService interface {
 
 func MFASetup(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	userRepo := repository.NewMongoUserRepository(db)
-	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, "")
+	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, cfg.EmailEncryptionKey, "")
 	return mfaSetupWithService(mfaSvc)
 }
 
 func MFAVerify(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	userRepo := repository.NewMongoUserRepository(db)
-	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, "")
-	return mfaVerifyWithService(mfaSvc, userRepo)
+	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, cfg.EmailEncryptionKey, "")
+	return mfaVerifyWithService(mfaSvc, mfaSvc)
 }
 
 func MFARecoveryVerify(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	userRepo := repository.NewMongoUserRepository(db)
-	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, "")
-	return mfaRecoveryVerifyWithService(mfaSvc, userRepo)
+	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, cfg.EmailEncryptionKey, "")
+	return mfaRecoveryVerifyWithService(mfaSvc, mfaSvc)
 }
 
 func MFADisable(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	userRepo := repository.NewMongoUserRepository(db)
-	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, "")
+	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, cfg.EmailEncryptionKey, "")
 	return mfaDisableWithService(mfaSvc)
 }
 
 func ProfileUpdate(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	userRepo := repository.NewMongoUserRepository(db)
-	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, "")
+	mfaSvc := authservice.NewMFAService(userRepo, cfg.JWTSecret, cfg.MFASecretKey, cfg.EmailEncryptionKey, "")
 	return profileUpdateWithService(mfaSvc)
 }
 
@@ -77,7 +77,7 @@ func mfaSetupWithService(mfaSvc mfaHandlerService) gin.HandlerFunc {
 	}
 }
 
-func mfaVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepository) gin.HandlerFunc {
+func mfaVerifyWithService(mfaSvc mfaHandlerService, userSvc meUserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := getUserIDFromContext(c)
 		if !ok {
@@ -96,7 +96,7 @@ func mfaVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepository) g
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		user, err := userRepo.FindByID(ctx, userID)
+		user, err := userSvc.GetUserByID(ctx, userID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 			return
@@ -128,7 +128,7 @@ func mfaVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepository) g
 	}
 }
 
-func mfaRecoveryVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepository) gin.HandlerFunc {
+func mfaRecoveryVerifyWithService(mfaSvc mfaHandlerService, userSvc meUserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := getUserIDFromContext(c)
 		if !ok {
@@ -155,7 +155,7 @@ func mfaRecoveryVerifyWithService(mfaSvc mfaHandlerService, userRepo meUserRepos
 
 		setAuthCookie(c, result.Token)
 
-		user, err := userRepo.FindByID(ctx, userID)
+		user, err := userSvc.GetUserByID(ctx, userID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 			return

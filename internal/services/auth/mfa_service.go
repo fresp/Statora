@@ -18,6 +18,7 @@ import (
 
 	"github.com/fresp/Statora/internal/models"
 	"github.com/fresp/Statora/internal/repository"
+	"github.com/fresp/Statora/internal/security/pii"
 )
 
 const (
@@ -38,6 +39,7 @@ type MFAService struct {
 	repo         repository.UserRepository
 	jwtSecret    string
 	mfaSecretKey string
+	emailKey     []byte
 	issuer       string
 	now          func() time.Time
 }
@@ -76,7 +78,7 @@ type UpdateProfileRequest struct {
 	NewPassword     string
 }
 
-func NewMFAService(repo repository.UserRepository, jwtSecret, mfaSecretKey, issuer string) *MFAService {
+func NewMFAService(repo repository.UserRepository, jwtSecret, mfaSecretKey, emailEncryptionKey, issuer string) *MFAService {
 	resolvedIssuer := strings.TrimSpace(issuer)
 	if resolvedIssuer == "" {
 		resolvedIssuer = defaultMFAIssuer
@@ -86,9 +88,25 @@ func NewMFAService(repo repository.UserRepository, jwtSecret, mfaSecretKey, issu
 		repo:         repo,
 		jwtSecret:    jwtSecret,
 		mfaSecretKey: mfaSecretKey,
+		emailKey:     []byte(emailEncryptionKey),
 		issuer:       resolvedIssuer,
 		now:          time.Now,
 	}
+}
+
+func (s *MFAService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	user, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	decryptedEmail, err := pii.Decrypt(user.Email, s.emailKey)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Email = decryptedEmail
+	return user, nil
 }
 
 func (s *MFAService) StartEnrollment(ctx context.Context, userID string) (*StartEnrollmentResult, error) {
