@@ -3,6 +3,7 @@ import { Trash2, Link as LinkIcon } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { WebhookChannel } from '../../types'
 import { formatDate } from '../../lib/utils'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
@@ -26,8 +27,8 @@ export default function AdminWebhookChannels() {
       setName('')
       setUrl('')
       await refetch()
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create webhook channel')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to create webhook channel'))
     } finally {
       setCreating(false)
     }
@@ -39,8 +40,8 @@ export default function AdminWebhookChannels() {
     try {
       await api.delete(`/webhook-channels/${channel.id}`)
       await refetch()
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete')
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, 'Failed to delete'))
     } finally {
       setDeleting(null)
     }

@@ -27,18 +27,18 @@ export default function Modal({ title, onClose, children, footer, size = 'md' }:
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-      <div className={`w-full ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10`}>
-        <div className="flex flex-none items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
-          <h2 className="font-semibold tracking-tight text-slate-900">{title}</h2>
-          <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-600">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+      <div className={`statusforge-dialog ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col`}>
+        <div className="statusforge-dialog-header">
+          <h2 className="font-semibold tracking-tight text-slate-950">{title}</h2>
+          <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 flex-1 min-h-0 overflow-y-auto">{children}</div>
 
-        {footer && <div className="flex-none border-t border-slate-100 bg-slate-50/70 px-6 py-4">{footer}</div>}
+        {footer && <div className="statusforge-dialog-footer">{footer}</div>}
       </div>
     </div>
   )

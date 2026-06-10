@@ -3,6 +3,7 @@ import { Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { Incident, IncidentUpdate, Component, IncidentStatus, IncidentImpact, SubComponent } from '../../types'
 import { INCIDENT_STATUS_LABELS, INCIDENT_IMPACT_LABELS, formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
@@ -195,8 +196,8 @@ export default function AdminIncidents() {
       await api.post('/incidents', form)
       await refetch()
       setShowModal(false)
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create incident')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to create incident'))
     } finally {
       setSaving(false)
     }

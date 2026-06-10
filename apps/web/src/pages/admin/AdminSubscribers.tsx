@@ -3,6 +3,7 @@ import { Trash2, Mail } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { Subscriber } from '../../types'
 import { formatDate } from '../../lib/utils'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
@@ -19,8 +20,8 @@ export default function AdminSubscribers() {
     try {
       await api.delete(`/subscribers/${s.id}`)
       await refetch()
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete')
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, 'Failed to delete'))
     } finally {
       setDeleting(null)
     }

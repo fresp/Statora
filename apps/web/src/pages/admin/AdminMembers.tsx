@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Shield, RefreshCw, Plus, X } from 'lucide-react'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import type { UserInvitation, UserMember, UserRole, UserStatus } from '../../types'
@@ -124,8 +125,8 @@ export default function AdminMembers() {
     try {
       await api.patch(`/users/${id}`, payload)
       await refetch()
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to update user. Please try again.')
+    } catch (err: unknown) {
+      setActionError(getApiErrorMessage(err, 'Failed to update user. Please try again.'))
     } finally {
       setSavingId(null)
     }
@@ -140,8 +141,8 @@ export default function AdminMembers() {
     try {
       await api.delete(`/users/${member.id}`)
       await refetch()
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to delete user. Please try again.')
+    } catch (err: unknown) {
+      setActionError(getApiErrorMessage(err, 'Failed to delete user. Please try again.'))
     } finally {
       setDeletingId(null)
     }
@@ -180,8 +181,8 @@ export default function AdminMembers() {
       }
 
       await refetch()
-    } catch (err: any) {
-      setInviteError(err.response?.data?.error || 'Failed to invite user. Please try again.')
+    } catch (err: unknown) {
+      setInviteError(getApiErrorMessage(err, 'Failed to invite user. Please try again.'))
     } finally {
       setInviting(false)
     }
@@ -214,8 +215,8 @@ export default function AdminMembers() {
         setInviteActionError('Token refreshed, but activation link was not returned.')
       }
       await refetchInvitations()
-    } catch (err: any) {
-      setInviteActionError(err.response?.data?.error || 'Failed to refresh token.')
+    } catch (err: unknown) {
+      setInviteActionError(getApiErrorMessage(err, 'Failed to refresh token.'))
     } finally {
       setInviteActionId(null)
     }
@@ -227,8 +228,8 @@ export default function AdminMembers() {
     try {
       await api.delete(`/users/invitations/${invitationID}`)
       await refetchInvitations()
-    } catch (err: any) {
-      setInviteActionError(err.response?.data?.error || 'Failed to remove invitation.')
+    } catch (err: unknown) {
+      setInviteActionError(getApiErrorMessage(err, 'Failed to remove invitation.'))
     } finally {
       setInviteActionId(null)
     }

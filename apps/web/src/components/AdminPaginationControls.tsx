@@ -55,7 +55,7 @@ export default function AdminPaginationControls({
   const buttons = buildPageButtons(safePage, safeTotalPages)
 
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/80 px-6 py-4 md:flex-row md:items-center md:justify-between">
       <div className="text-xs text-slate-500">
         Showing <span className="font-semibold text-slate-700">{start}</span>-
         <span className="font-semibold text-slate-700">{end}</span> of{' '}
@@ -72,7 +72,7 @@ export default function AdminPaginationControls({
           value={limit}
           disabled={loading}
           onChange={(event) => onLimitChange(Number.parseInt(event.target.value, 10))}
-          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm disabled:opacity-60"
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition-colors focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-60"
         >
           {pageSizeOptions.map((size) => (
             <option key={size} value={size}>
@@ -85,7 +85,7 @@ export default function AdminPaginationControls({
           type="button"
           onClick={() => onPageChange(safePage - 1)}
           disabled={!canGoPrev}
-          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
@@ -103,9 +103,9 @@ export default function AdminPaginationControls({
                   onClick={() => onPageChange(buttonPage)}
                   disabled={loading || buttonPage === safePage}
                   className={`rounded-full px-3 py-1.5 text-xs font-medium shadow-sm transition-colors ${buttonPage === safePage
-                      ? 'border border-blue-500/20 bg-gradient-to-b from-blue-500 to-blue-600 text-white'
+                      ? 'border border-emerald-700/20 bg-gradient-to-b from-emerald-600 to-emerald-700 text-white'
                       : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                     } disabled:cursor-not-allowed disabled:opacity-70`}
+                     } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70`}
                 >
                   {buttonPage}
                 </button>
@@ -118,7 +118,7 @@ export default function AdminPaginationControls({
           type="button"
           onClick={() => onPageChange(safePage + 1)}
           disabled={!canGoNext}
-          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Next
         </button>

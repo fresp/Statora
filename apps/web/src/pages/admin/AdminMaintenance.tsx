@@ -3,6 +3,7 @@ import { Plus, Pencil } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { Maintenance, Component, MaintenanceStatus } from '../../types'
 import { formatDate } from '../../lib/utils'
 import Modal from '../../components/Modal'
@@ -108,8 +109,8 @@ export default function AdminMaintenance() {
       }
       await refetch()
       closeModal()
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to save'))
     } finally {
       setSaving(false)
     }

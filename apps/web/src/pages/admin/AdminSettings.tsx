@@ -5,6 +5,7 @@ import type {
   StatusPageThemePresetSummary,
 } from '../../types'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
 import { CheckCircle } from 'lucide-react'
 
@@ -153,8 +154,8 @@ export default function AdminSettings() {
       }
       setSettings(normalized)
       setMetaTagsText(metaTagsToText(normalized.head.metaTags || {}))
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load settings')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to load settings'))
     } finally {
       setLoading(false)
     }
@@ -224,8 +225,8 @@ export default function AdminSettings() {
       setSettings(normalized)
       setMetaTagsText(metaTagsToText(normalized.head.metaTags || {}))
       setSuccess('Settings saved successfully')
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save settings')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to save settings'))
     } finally {
       setSaving(false)
     }

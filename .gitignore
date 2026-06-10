@@ -101,3 +101,4 @@ apps/web/node_modules/
 !/docs/example/
 !/docs/screenshots/
 !/docs/screenshots/*.png
+/apps/web-statuspage

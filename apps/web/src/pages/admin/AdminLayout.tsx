@@ -265,29 +265,29 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 ${sidebarWidthClass} bg-[#0e1526] text-slate-300 flex flex-col overflow-hidden transition-[width] duration-300 ease-in-out border-r border-slate-800/50 shadow-2xl shadow-slate-900/20`}
+        className={`fixed inset-y-0 left-0 z-30 ${sidebarWidthClass} flex flex-col overflow-hidden border-r border-slate-200 bg-white/90 text-slate-600 shadow-sm backdrop-blur-md transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-400`}
       >
-        <div className="border-b border-slate-800/50 bg-[#0b101e]/50 backdrop-blur-sm">
+        <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80">
           <div className="flex items-start justify-between gap-2 px-4 py-5 min-h-[80px]">
             <div className={`min-w-0 transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-              <h1 className="text-base font-bold text-white tracking-wide truncate">{pageTitle}</h1>
-              <p className="text-[11px] font-medium text-blue-400 mt-1 uppercase tracking-wider truncate">Operations Console</p>
+              <h1 className="truncate text-base font-bold tracking-wide text-emerald-700 dark:text-emerald-400">{pageTitle}</h1>
+              <p className="mt-1 truncate font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Operations Console</p>
             </div>
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed(prev => !prev)}
               aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all duration-200"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
               {isSidebarCollapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
             </button>
           </div>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pt-5 pb-8 [scrollbar-width:thin] [scrollbar-color:rgb(51_65_85)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/50 hover:[&::-webkit-scrollbar-thumb]:bg-slate-600/80">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pt-5 pb-8 [scrollbar-width:thin] [scrollbar-color:rgb(148_163_184)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:[scrollbar-color:rgb(51_65_85)_transparent] dark:[&::-webkit-scrollbar-thumb]:bg-slate-700/50 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600/80">
           {visibleNavSections.map(section => (
             <div key={section.label} className="mb-6 last:mb-0 space-y-1">
               {!isSidebarCollapsed && (
@@ -295,7 +295,7 @@ export default function AdminLayout() {
                   type="button"
                   onClick={() => toggleSection(sectionKey(section.label))}
                   aria-expanded={openSections[sectionKey(section.label)] ?? true}
-                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 hover:text-slate-300 transition-colors group"
+                  className="group flex w-full items-center justify-between px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 transition-colors hover:text-emerald-700 dark:text-slate-500 dark:hover:text-emerald-400"
                 >
                   <span>{section.label}</span>
                   {(openSections[sectionKey(section.label)] ?? true) ? (
@@ -317,9 +317,9 @@ export default function AdminLayout() {
                         end={end}
                         title={isSidebarCollapsed ? label : undefined}
                         className={({ isActive }) =>
-                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} py-2 rounded-lg text-[13px] leading-5 font-medium transition-all duration-200 ${isActive
-                            ? 'bg-blue-600/10 text-blue-400 shadow-[inset_2px_0_0_0_rgb(96,165,250)]'
-                            : 'text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200'
+                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} py-2 rounded-lg font-mono text-[13px] leading-5 font-semibold transition-all duration-200 ${isActive
+                            ? 'bg-emerald-100 text-emerald-800 shadow-[inset_2px_0_0_0_rgb(4,120,87)] dark:bg-emerald-950/40 dark:text-emerald-400 dark:shadow-[inset_2px_0_0_0_rgb(52,211,153)]'
+                            : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-emerald-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-emerald-400'
                           }`
                         }
                       >
@@ -328,16 +328,16 @@ export default function AdminLayout() {
                       </NavLink>
 
                       {!isSidebarCollapsed && children && children.length > 0 && (
-                        <div className="ml-[22px] pl-3 border-l border-slate-800/80 space-y-0.5 mt-0.5">
+                        <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-slate-200 pl-3 dark:border-slate-800">
                           {children.map(child => (
                             <NavLink
                               key={child.to}
                               to={child.to}
                               end={child.end}
                               className={({ isActive }) =>
-                                `block px-3 py-1.5 rounded-md text-[13px] leading-5 font-medium transition-colors ${isActive
-                                  ? 'text-blue-400 bg-blue-600/10'
-                                  : 'text-slate-500 hover:bg-slate-800/30 hover:text-slate-300'
+                                `block rounded-md px-3 py-1.5 font-mono text-[13px] font-semibold leading-5 transition-colors ${isActive
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                  : 'text-slate-500 hover:bg-slate-100 hover:text-emerald-700 dark:hover:bg-slate-800/40 dark:hover:text-emerald-400'
                                 }`
                               }
                             >
@@ -354,13 +354,13 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <footer className="p-4 bg-[#0b101e]/30 border-t border-slate-800/50 space-y-1">
+        <footer className="space-y-1 border-t border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/80">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
             title={isSidebarCollapsed ? 'View Status Page' : undefined}
-            className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-colors`}
+            className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-emerald-400`}
           >
             <ExternalLink className="w-[18px] h-[18px] opacity-80" />
             {!isSidebarCollapsed && 'Status Page'}
@@ -369,7 +369,7 @@ export default function AdminLayout() {
             type="button"
             onClick={handleLogout}
             title={isSidebarCollapsed ? 'Logout' : undefined}
-            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} py-2 rounded-lg text-[13px] font-medium text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors`}
+            className={`flex w-full items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400`}
           >
             <LogOut className="w-[18px] h-[18px] opacity-80" />
             {!isSidebarCollapsed && 'Logout'}
@@ -379,7 +379,7 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className={`${sidebarOffsetClass} h-screen overflow-auto transition-[margin] duration-300 ease-in-out`}>
-        <div className="max-w-7xl mx-auto p-8 md:p-10 lg:p-12">
+        <div className="max-w-7xl mx-auto p-6 md:p-10 lg:p-12">
           <Outlet />
         </div>
       </main>

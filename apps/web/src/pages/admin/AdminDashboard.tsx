@@ -27,12 +27,12 @@ function StatCard({
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconClassName}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 transition-colors">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 group-hover:text-emerald-600 group-hover:bg-emerald-50 transition-colors">
           <TrendingUp className="w-4 h-4 opacity-0 -translate-x-1 translate-y-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all" />
         </div>
       </div>
       <div>
-        <p className="text-3xl font-bold text-slate-800 tracking-tight">{value}</p>
+        <p className="text-3xl font-bold text-slate-950 tracking-tight">{value}</p>
         <p className="text-[13px] font-medium text-slate-500 mt-1">{title}</p>
       </div>
     </Link>
@@ -52,10 +52,11 @@ export default function AdminDashboard() {
     : []
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl statusforge-page py-0">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">System overview and active status</p>
+        <p className="statusforge-kicker mb-2">Operations Console</p>
+        <h1 className="statusforge-title">Dashboard</h1>
+        <p className="statusforge-muted mt-2">System overview and active status</p>
       </div>
 
       {/* Stats grid */}
@@ -64,7 +65,7 @@ export default function AdminDashboard() {
           title="Components"
           value={totalComponents}
           icon={Layers}
-          iconClassName="bg-blue-50 text-blue-600"
+          iconClassName="bg-emerald-50 text-emerald-600"
           to="/admin/components"
         />
         <StatCard
@@ -78,14 +79,14 @@ export default function AdminDashboard() {
           title="Monitors"
           value={totalMonitors}
           icon={Activity}
-          iconClassName="bg-indigo-50 text-indigo-600"
+          iconClassName="bg-sky-50 text-sky-600"
           to="/admin/monitors"
         />
         <StatCard
           title="Subscribers"
           value={totalSubscribers}
           icon={Users}
-          iconClassName="bg-violet-50 text-violet-600"
+          iconClassName="bg-purple-50 text-purple-600"
           to="/admin/subscribers"
         />
         <StatCard
@@ -108,8 +109,8 @@ export default function AdminDashboard() {
         {/* Component Status */}
         <div className="admin-surface flex flex-col">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">Component Status</h2>
-            <Link to="/admin/components" className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</Link>
+            <h2 className="font-semibold text-slate-950">Component Status</h2>
+            <Link to="/admin/components" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">View all</Link>
           </div>
           <div className="p-2 flex-1">
             {(components || []).length === 0 ? (
@@ -118,7 +119,7 @@ export default function AdminDashboard() {
               <div className="space-y-1">
                 {(components || []).slice(0, 8).map(c => (
                   <Link key={c.id} to={`/admin/components`} className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors group">
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600 transition-colors">{c.name}</span>
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700 transition-colors">{c.name}</span>
                     <span className={`flex items-center gap-2 text-xs font-medium`}>
                       <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[c.status]} shadow-sm`} />
                       <span className="text-slate-600">{STATUS_LABELS[c.status]}</span>
@@ -133,8 +134,8 @@ export default function AdminDashboard() {
         {/* Recent Incidents */}
         <div className="admin-surface flex flex-col">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800">Recent Incidents</h2>
-            <Link to="/admin/incidents" className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</Link>
+            <h2 className="font-semibold text-slate-950">Recent Incidents</h2>
+            <Link to="/admin/incidents" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">View all</Link>
           </div>
           <div className="p-2 flex-1">
             {(incidents || []).length === 0 ? (
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
                 {(incidents || []).slice(0, 5).map(inc => (
                   <Link key={inc.id} to={`/admin/incidents`} className="block px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors group">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-1">{inc.title}</p>
+                      <p className="text-sm font-medium text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{inc.title}</p>
                       <span className={`badge ${inc.status === 'resolved' ? 'badge-success' : 'badge-error'} flex-shrink-0`}>
                         {INCIDENT_STATUS_LABELS[inc.status]}
                       </span>
