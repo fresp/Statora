@@ -130,7 +130,7 @@ export default function HistoryPage() {
           <p className="text-lg text-slate-600 dark:text-slate-400">A detailed record of service interruptions and maintenance events.</p>
         </div>
 
-        <div className="mb-10 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 md:flex-row">
+        {/* <div className="mb-10 flex flex-col items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 md:flex-row">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -148,7 +148,7 @@ export default function HistoryPage() {
               <CalendarIcon className="h-4 w-4" /> {formatQuarterLabel(selectedQuarter)}
             </button>
           </div>
-        </div>
+        </div> */}
 
         <section className="mb-10 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between gap-4">
