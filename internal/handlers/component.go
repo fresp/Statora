@@ -112,9 +112,7 @@ func UpdateComponent(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		if req.Name != "" {
 			update["$set"].(bson.M)["name"] = req.Name
 		}
-		if req.Description != "" {
-			update["$set"].(bson.M)["description"] = req.Description
-		}
+
 		if req.Status != "" {
 			update["$set"].(bson.M)["status"] = req.Status
 		}
