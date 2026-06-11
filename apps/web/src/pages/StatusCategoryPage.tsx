@@ -101,10 +101,21 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
           </div>
         )}
       </div>
-      <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
-        <span className="text-slate-500 dark:text-slate-400">Uptime</span>
-        <span className="font-bold">{hasMonitoringData ? service.uptime90d.toFixed(2) : '—'}%</span>
-      </div>
+      {hasMonitoringData ? (
+        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
+          <span className="text-slate-500 dark:text-slate-400">Uptime</span>
+          <span className="font-bold">{service.uptime90d.toFixed(2)}%</span>
+        </div>
+      ) : (
+        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
+          <span className="text-slate-500 dark:text-slate-400">
+            {activeIncidents.length > 0 ? 'Active incidents' : 'Status'}
+          </span>
+          <span className="font-bold">
+            {activeIncidents.length > 0 ? `${activeIncidents.length} issue(s)` : 'No known issues'}
+          </span>
+        </div>
+      )}
       {activeIncidents.length > 0 && (
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
           <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active incident context</p>
