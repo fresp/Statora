@@ -222,7 +222,7 @@ export default function HistoryPage() {
                               onClick={() => setExpandedId((prev) => prev === incident.id ? null : incident.id)}
                               className="flex items-center gap-1 font-mono text-sm font-semibold text-cyan-700 hover:underline focus:outline-none dark:text-cyan-400"
                             >
-                              {isExpanded ? 'Hide' : 'View'} Post-Mortem Details
+                              {isExpanded ? 'Hide' : 'View'} Updates
                               <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                             </button>
                             {isExpanded && <div className="mt-6"><IncidentTimeline updates={incident.updates || []} /></div>}

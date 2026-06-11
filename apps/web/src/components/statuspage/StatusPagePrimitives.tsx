@@ -101,11 +101,10 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
                 <Link
                   key={link.name}
                   to={link.path}
-                  className={`font-mono text-sm tracking-wide transition-colors ${
-                    isActive
+                  className={`font-mono text-sm tracking-wide transition-colors ${isActive
                       ? 'border-b-2 border-emerald-700 pb-1 font-bold text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
                       : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400'
-                  }`}
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -113,13 +112,14 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
             })}
           </nav>
         </div>
-        <Link
+        {/* temporary hidden */}
+        {/* <Link
           to="/history"
           className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-mono text-sm font-medium text-white transition-all hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 sm:px-5"
         >
           <Bell className="h-4 w-4" />
           <span className="hidden sm:inline">Subscribe</span>
-        </Link>
+        </Link> */}
       </div>
     </header>
   )

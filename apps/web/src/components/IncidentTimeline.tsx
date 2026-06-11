@@ -63,7 +63,7 @@ const TimelineItem = ({ update }: { update: IncidentUpdate }) => {
 
 export function IncidentTimeline({ updates }: IncidentTimelineProps) {
   return (
-    <div className="pl-4 mt-2 border-l space-y-2" style={{ borderColor: 'var(--border)' }}>
+    <div>
       {updates.length === 0 ? (
         <p className="text-sm" style={{ color: 'var(--text-subtle)' }}>No updates yet.</p>
       ) : (
