@@ -17,10 +17,7 @@ export default function Footer({ centerText, showPoweredBy }: FooterProps) {
         <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           {showPoweredBy && (
             <div className="font-medium" style={{ color: 'var(--text-muted)' }}>
-              Powered by{" "}
-              <a href="https://github.com/fresp/StatusForge">
-                StatusForge
-              </a>
+              Powered by StatusPage
             </div>
           )}
 
