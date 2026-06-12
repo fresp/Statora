@@ -1,330 +1,314 @@
 # Statora Architecture
 
-This document describes the current architecture of Statora based on the present repository implementation.
+This document describes the current repository implementation of Statora after the incident and maintenance workflow upgrade.
 
-## High-Level Architecture
+## 1. High-Level Architecture
+
+Statora is implemented as a unified Go application that serves three roles in one runtime:
+
+- JSON API for public and admin workflows
+- embedded React single-page application for public and admin interfaces
+- in-process monitoring worker and WebSocket hub
 
 ```mermaid
 flowchart TD
-    Browser[Web Browser<br/>Public + Admin SPA] -->|HTTP JSON| API[Go Gin API]
+    Browser[Browser] -->|HTTP| SPA[React SPA]
+    Browser -->|HTTP /api| API[Gin API]
     Browser -->|WebSocket /ws| Hub[WebSocket Hub]
 
-    API --> Routes[Route Registration<br/>internal/server/api_routes.go]
-    Routes --> MW[Middleware<br/>JWT + MFA + RBAC]
-    MW --> Handlers[Handlers]
+    API --> Handlers[Handlers]
     Handlers --> Services[Services]
-    Services --> Repos[Repositories]
+    Services --> Repositories[Repositories]
+    Repositories --> Mongo[(MongoDB)]
 
-    Repos --> Mongo[(MongoDB)]
-    Services --> Redis[(Redis)]
+    API --> Static[Static asset server]
+    Static --> Embed[Embedded frontend dist]
 
-    API --> Static[Static SPA Fallback<br/>internal/server/static.go]
-    Static --> Embedded[Embedded assets<br/>internal/embed/dist]
-
-    Worker[Monitoring Worker<br/>internal/server/worker.go] --> Utils[Monitor Checks Utils]
+    Server[Unified server runtime] --> Hub
+    Server --> Worker[Monitoring worker]
+    Worker --> Checks[Monitor check utilities]
     Worker --> Mongo
     Worker --> Hub
+    Server --> Redis[(Redis)]
 ```
 
-## Layered Architecture
-
-Statora is organized as a layered backend with an embedded frontend distribution:
-
-### 1. Entry and Runtime Bootstrap
-- `cmd/server/main.go` starts `server.RunServer()`
-- `internal/server/server.go` loads environment values, connects databases, initializes Gin, registers routes, starts hub and optionally worker
-
-### 2. Transport and Routing Layer
-- `internal/server/api_routes.go` configures CORS and all API route groups
-- Health route at `/health`
-- WebSocket endpoint at `/ws`
-- SSO callback at `/sso/callback`
-
-### 3. Security Middleware Layer
-- `internal/middleware/auth.go` provides:
-  - `AuthMiddleware` for JWT verification (supports header or cookie)
-  - `RequireMFAVerified` for MFA-gated routes
-  - `RequireRoles` for role-based access control
+The main entry point is `cmd/server/main.go`, which delegates to `internal/server/server.go`.
 
-### 4. Handler and Application Layer
-- `internal/handlers/*` contains endpoint handlers and WebSocket hub logic
-- `internal/services/*` encapsulates use-case/business flows
+## 2. Layers
 
-### 5. Data Access Layer
-- `internal/repository/*` mediates MongoDB persistence operations
-- `internal/database/mongo.go` and `internal/database/redis.go` create and expose clients
+### 2.1 Runtime bootstrap
 
-### 6. Frontend Delivery Layer
-- React app source under `apps/web/`
-- Built assets copied to `internal/embed/dist` during Docker build
-- `internal/server/static.go` serves static assets and falls back to `index.html` for SPA routes
+`internal/server/server.go` is the composition root. It:
 
-## Data Flow
+- loads environment values through `godotenv`
+- validates configuration from `configs/config.go`
+- connects MongoDB and Redis
+- creates and runs the WebSocket hub
+- registers API routes and `/health`
+- starts the monitoring worker when `ENABLE_WORKER=true`
+- seeds the bootstrap admin user
+- serves the embedded frontend bundle through the Gin `NoRoute` fallback
 
-### HTTP Request Path
+### 2.2 Transport layer
 
-1. Request enters Gin engine
-2. CORS middleware applies (configured in `api_routes.go`)
-3. Route selection under `/api` or static fallback
-4. For protected routes: JWT auth middleware executes (extracts from header or `statora_auth` cookie)
-5. For privileged route groups: MFA and role middleware execute
-6. Handler invokes service/repository logic
-7. Data is read and written in MongoDB; Redis is connected as a supporting runtime dependency and health-checked during startup/runtime
-8. JSON response returns to browser
+`internal/server/api_routes.go` defines the HTTP and WebSocket surface.
 
-### Frontend Flow
+Public routes include:
 
-- Main frontend route map is in `apps/web/src/App.tsx`
-- Axios client in `apps/web/src/lib/api.ts` attaches bearer tokens from local storage
-- Admin UI route protection mirrors backend constraints for navigation
-- Token storage uses `localStorage` with `user_token` and `user_profile`, with compatibility cleanup for legacy `admin_token` and `admin_profile` keys
+- `/api/status/summary`
+- `/api/status/components`
+- `/api/status/incidents`
+- `/api/status/category/:prefix`
+- `/api/status/settings`
+- `/api/status/maintenance`
+- `/api/subscribe`
+- `/ws`
+- `/sso/callback`
 
-## Realtime and Event Flow
+Authenticated routes are layered as:
 
-Realtime updates are delivered using a WebSocket hub:
+1. JWT-authenticated routes
+2. MFA-verified routes
+3. role-restricted groups for `admin` or `admin` + `operator`
 
-- **Endpoint:** `GET /ws`
-- **Hub implementation:** `internal/handlers/websocket.go`
-- **Client hook:** `apps/web/src/hooks/useWebSocket.ts`
+The transport implementation lives in `internal/handlers/*`.
 
-Current frontend behavior on incoming events (from `StatusPage.tsx`):
+### 2.3 Middleware and security layer
 
-- Component events trigger summary/component refresh
-- Incident events trigger incident and summary refresh
-- Status page settings updates are parsed, cached, and applied dynamically
+`internal/middleware/auth.go` enforces:
 
-Hub internals:
+- JWT authentication
+- MFA verification gates
+- role-based access control
 
-- Tracks clients in memory with register/unregister channels
-- Broadcast channel fan-outs event payloads to all connected clients
-- Ping/pong (54s ticker, 60s read deadline) and reconnect behavior handled at transport/client level
-- WebSocket upgrader buffer sizes are configured to 1024 bytes for both reads and writes
+The current implementation accepts JWTs from the `Authorization` header or the `statora_auth` cookie. The frontend primarily uses bearer tokens stored in browser storage.
 
-## Worker and Monitoring Flow
+### 2.4 Service layer
 
-The monitoring worker runs in-process when enabled (`ENABLE_WORKER=true`):
+`internal/services/*` contains application logic for domains such as:
 
-- **Ticker interval:** 10 seconds, with overlapping cycles skipped if a previous cycle is still running
-- **Due-check scheduling:** Based on monitor interval (default: 60s, configurable per monitor)
-- **Monitor types:**
-  - HTTP (with optional SSL cert and domain expiry checks)
-  - TCP
-  - DNS
-  - Ping (requires `NET_RAW` capability)
-  - SSL (dedicated SSL expiry monitoring)
-- **Warning logic:**
-  - SSL expiry warning thresholds (default: 30, 14, 7 days)
-  - Domain expiry warning thresholds
-- **Side effects:**
-  - Writes monitor logs to `monitor_logs` collection
-  - Updates current monitor status fields
-  - Updates daily uptime tracking
-  - Detects outages (after 3 consecutive failures)
-  - Auto-creates incidents for detected outages when there is no existing active incident for the affected components
-  - Updates maintenance status (scheduled, in-progress, completed)
-  - Broadcasts events via WebSocket hub
+- auth
+- status aggregation
+- incidents
+- maintenance
+- monitors
+- subscribers
+- webhook dispatch
 
-## Authentication and Authorization Model
+This layer contains the workflow rules that should remain independent from HTTP transport concerns.
 
-Most administrative/profile API routes use bearer JWT tokens.
+### 2.5 Repository layer
 
-JWT claims include:
+`internal/repository/*` encapsulates MongoDB persistence. The repositories back:
 
-- `userId` - User identifier
-- `username` - User's username
-- `role` - User role (`admin` or `operator`)
-- `mfaVerified` - Whether MFA verification is complete
+- status read models
+- monitors, monitor logs, uptime, and outages
+- incidents and incident updates
+- maintenance windows
+- audit logs
+- users, invitations, and admin state
+- webhook channels and subscriber records
 
-Token sources (in order of priority):
+### 2.6 Frontend layer
 
-1. `Authorization: Bearer <token>` header
-2. `statora_auth` cookie
+The frontend source lives in `apps/web/` and is built with Vite. The built assets are copied into `internal/embed/dist` during the Docker build, then served by the Go server.
 
-Cookie handling notes:
+The route tree is defined in `apps/web/src/App.tsx`.
 
-- The backend sets `statora_auth` as an `HttpOnly`, `Secure`, `SameSite=Lax` cookie
-- The frontend primarily stores auth state in `localStorage` and sends bearer tokens through the Axios client
+Public routes:
 
-Authorization structure:
+- `/`
+- `/status/:categoryPrefix`
+- `/history`
 
-1. **Authenticated group:** Requires valid JWT (`AuthMiddleware`)
-2. **Verified group:** Requires `mfaVerified=true` (`RequireMFAVerified`)
-3. **Role groups:**
-   - `admin` only: Components, subcomponents, monitors, subscribers, settings, webhook channels, users
-   - `admin` or `operator`: Incidents, maintenance, component reads
+Admin routes:
 
-Frontend route protection mirrors these constraints for admin navigation:
+- `/admin/login`
+- `/admin/activate`
+- `/admin/profile`
+- `/admin/components`
+- `/admin/subcomponents`
+- `/admin/incidents`
+- `/admin/maintenance`
+- `/admin/monitors`
+- `/admin/monitors/:id/logs`
+- `/admin/subscribers`
+- `/admin/webhook-channels`
+- `/admin/users`
+- `/admin/settings`
 
-- `/admin/incidents` and `/admin/maintenance` - accessible to both roles
-- All other `/admin/*` routes - admin only
-- MFA verification required before accessing protected routes (redirects to `/admin/profile`)
+## 3. Data Flow
 
-### Route Group Exceptions
+### 3.1 Standard HTTP flow
 
-- `GET /api/v1/monitors/:id/metrics` is registered directly under the base `/api` group, not behind JWT/MFA/role middleware
-- Public status endpoints (`/api/status/*`, `/api/subscribe`) are unauthenticated
-
-## SSO Integration
+The normal backend request path is:
 
-SSO callback flow:
+1. Request enters Gin
+2. CORS middleware runs
+3. Route selection occurs in `api_routes.go`
+4. Auth, MFA, and role middleware run when required
+5. Handler validates input and constructs service calls
+6. Service executes workflow logic
+7. Repository reads or writes MongoDB documents
+8. JSON response is returned to the client
 
-1. External identity provider redirects to `/sso/callback?token=<jwt>`
-2. Handler validates token via auth service
-3. On success: sets `statora_auth` cookie and redirects to `/admin`
-4. On failure: redirects to `/login?error=<code>` with error code
-
-Error codes:
-- `sso_not_configured` - SSO not set up
-- `sso_disabled` - SSO disabled
-- `user_not_found` - User does not exist
-- `sso_not_allowed` - User not allowed for SSO
-- `invalid_token` - Token validation failed
-
-## Deployment Topology
-
-Primary deployment artifacts:
-
-- `Dockerfile`: Multi-stage build (frontend then backend)
-  - Stage 1: Node 20 Alpine for frontend build
-  - Stage 2: Go 1.26 Alpine for backend build
-  - Stage 3: Alpine latest for runtime (non-root user)
-- `docker-compose.yml`: Server + MongoDB + Redis services
-
-Notable runtime details:
-
-- Server container runs as non-root user (`appuser`, UID 1001)
-- Health check probes `/health` every 30s
-- Compose grants `NET_RAW` capability for ping monitor support
-- Graceful shutdown support (configurable via `GRACEFUL_SHUTDOWN`)
-- Worker can be disabled via `ENABLE_WORKER=false`
-
-## Key Design Decisions
-
-1. **Single unified server process**
-   - API, static file serving, WebSocket hub, and optional worker are hosted in one process for operational simplicity
-   - Simplifies deployment and reduces infrastructure complexity
-
-2. **MongoDB as primary data store**
-   - Flexible document schema aligns with component/incident/monitor domain objects
-   - Native support for nested documents and arrays
-
-3. **Redis as supporting runtime dependency**
-   - Connected during startup and included in health checks
-   - Present in the current runtime topology, but its application-level usage is minimal in the current implementation
-
-4. **SPA embedding into backend binary/image**
-   - Frontend built and copied to `internal/embed/dist` during Docker build
-   - Simplifies deployment by shipping frontend assets with backend server image
-   - Gin's `NoRoute` handler serves `index.html` for SPA routes
-
-5. **Layered access control (JWT + MFA + RBAC)**
-   - Administrative actions are gated progressively with explicit middleware boundaries
-   - MFA verification is a separate gate from authentication
-   - Role-based access allows operator-only users for incident management
-
-6. **In-process worker**
-   - Monitoring worker runs as goroutine within main server process
-   - Eliminates need for separate worker deployment
-   - Graceful shutdown coordination via context cancellation
-
-## Frontend Architecture
-
-### Tech Stack
-- React 18 with TypeScript 5
-- Vite 5 for build tooling
-- React Router 6 for client-side routing
-- Tailwind CSS 3 for styling
-- Axios for API communication
-- Lucide React for icons
-
-### Route Structure
-
-**Public routes:**
-- `/` - Main status page
-- `/status/:categoryPrefix` - Category-specific status
-- `/history` - Incident history
-
-**Admin routes (under `/admin`):**
-- `/admin/login` - Login page
-- `/admin/activate` - User activation
-- `/admin/profile` - User profile and MFA setup
-- `/admin` (index) - Dashboard (admin) or Incidents (operator)
-- `/admin/components` - Component management (admin only)
-- `/admin/subcomponents` - Subcomponent management (admin only)
-- `/admin/incidents` - Incident management (admin/operator)
-- `/admin/maintenance` - Maintenance management (admin/operator)
-- `/admin/monitors` - Monitor management (admin only)
-- `/admin/monitors/:id/logs` - Monitor logs (admin only)
-- `/admin/subscribers` - Subscriber management (admin only)
-- `/admin/webhook-channels` - Webhook configuration (admin only)
-- `/admin/users` - User management (admin only)
-- `/admin/settings` - Platform settings (admin only)
-
-### State Management
-- Authentication state stored in `localStorage`
-- Profile data cached after `/auth/me` response
-- WebSocket connection managed via React hook with automatic reconnection
-
-## Project Structure
-
-```
-Statora/
-├── cmd/
-│   └── server/
-│       └── main.go              # Entry point
-├── internal/
-│   ├── server/
-│   │   ├── server.go            # Server bootstrap
-│   │   ├── api_routes.go        # Route registration
-│   │   ├── worker.go            # Monitoring worker
-│   │   └── static.go            # Static file serving
-│   ├── handlers/                # HTTP handlers
-│   ├── middleware/              # Gin middleware
-│   ├── services/                # Business logic
-│   ├── repository/              # Data access
-│   ├── database/                # DB connections
-│   ├── models/                  # Data models
-│   ├── utils/                   # Monitor check utilities
-│   └── embed/dist/              # Embedded frontend assets
-├── apps/
-│   └── web/                     # React frontend
-├── configs/                     # Configuration
-├── docs/
-│   ├── architecture.md          # This file
-│   └── screenshots/             # Documentation images
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-└── .env.example
-```
-
-## Environment Configuration
-
-Key environment variables:
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017` |
-| `MONGODB_DB` | Database name | `statusplatform` |
-| `REDIS_URI` | Redis connection string | `localhost:6379` |
-| `JWT_SECRET` | JWT signing key | `super-secret-jwt-key-change-in-production` |
-| `APP_ENCRYPTION_KEY` | Email encryption key (must be exactly 32 bytes) | Required |
-| `MFA_SECRET_KEY` | MFA encryption key | Empty by default |
-| `PORT` | Server port | `8080` |
-| `GRACEFUL_SHUTDOWN` | Enable graceful shutdown | `true` |
-| `ENABLE_WORKER` | Start monitoring worker | `true` |
-| `ADMIN_EMAIL` | Bootstrap admin email | `admin@statusplatform.com` |
-| `ADMIN_USERNAME` | Bootstrap admin username | `admin` |
-| `ADMIN_PASSWORD` | Bootstrap admin password | `admin123` |
-
-## Security Considerations
-
-- JWT tokens support both header and cookie-based delivery
-- Auth cookies are set `HttpOnly`, `Secure`, and `SameSite=Lax`
-- MFA required for sensitive operations after initial authentication
-- Role-based access separates admin and operator capabilities
-- Password hashing using bcrypt
-- Email normalization and hashing for privacy
-- CORS configured for wide compatibility (restrict in production)
-- Non-root container execution
-- Health endpoint for load balancer integration
+### 3.2 Frontend data flow
+
+The React application uses Axios from `apps/web/src/lib/api.ts`.
+
+- bearer tokens are attached automatically when present
+- unauthenticated responses redirect back to admin login
+- MFA-related authorization failures redirect to the profile page
+
+Protected admin routing mirrors backend access expectations by requiring a stored session and completed MFA verification before most admin routes can render.
+
+## 4. Realtime and Event Flow
+
+Realtime behavior is implemented with Gorilla WebSocket.
+
+- backend endpoint: `GET /ws`
+- backend hub: `internal/handlers/websocket.go`
+- frontend client hook: `apps/web/src/hooks/useWebSocket.ts`
+
+The hub tracks connected clients in memory and broadcasts domain events. The public status pages use those events to trigger refreshes for changing operational data.
+
+Verified event usage includes broadcasts for:
+
+- component changes
+- incident creation, updates, update additions, deletion, and resolution
+- status-page settings changes
+
+## 5. Monitoring and Worker Flow
+
+When `ENABLE_WORKER=true`, Statora starts an in-process monitoring worker from `internal/server/worker.go`.
+
+The worker is responsible for:
+
+- scheduling due monitor checks
+- running HTTP, TCP, DNS, Ping, and SSL checks
+- recording monitor logs
+- updating current monitor state
+- updating uptime tracking
+- detecting outages after repeated failures
+- creating incidents automatically when an uncovered outage is detected
+- transitioning maintenance status based on time windows
+- broadcasting operational changes through the WebSocket hub
+
+This design keeps monitoring close to the application model, but it also means the worker currently scales together with the main server process.
+
+## 6. Incident and Maintenance Content Model
+
+The incident and maintenance workflow upgrade introduced a backward-compatible rich-content model.
+
+### 6.1 Dual-format content storage
+
+Incident and maintenance records now keep:
+
+- legacy plain-text fields such as `description` and `message`
+- optional rich-text JSON companions such as `descriptionJson` and `messageJson`
+
+This allows newer clients to use structured content while older clients can continue reading plain-text fields.
+
+### 6.2 Frontend authoring and rendering
+
+The admin interface uses a TipTap-based editor in `apps/web/src/components/editor/RichTextEditor.tsx`.
+
+Public and admin read paths render stored content through `apps/web/src/components/content/ContentRenderer.tsx` and helper functions in `apps/web/src/lib/contentModel.ts`.
+
+Those helpers also derive plain-text fallbacks from rich-text documents so the application can preserve compatibility across older and newer payload shapes.
+
+### 6.3 Workflow semantics
+
+Incidents now include publication semantics through `visibilityState`, while maintenance keeps operational status in `status`.
+
+For maintenance records, the codebase supports both:
+
+- legacy `in_progress`
+- current `active`
+
+Frontend normalization and backend status aggregation both treat those states compatibly.
+
+## 7. Audit and History Model
+
+The current implementation adds a dedicated audit log model in `internal/models/audit_log.go`.
+
+Audit entries store:
+
+- resource type
+- resource identifier
+- action
+- actor metadata
+- timestamp
+- summary and structured changes
+
+History endpoints exist for both incidents and maintenance:
+
+- `GET /api/incidents/:id/history`
+- `GET /api/maintenance/:id/history`
+
+These endpoints currently return `AuditLog[]`, which is important for keeping admin UI expectations aligned with the backend contract.
+
+## 8. Authentication and Authorization Model
+
+Statora uses layered access control.
+
+### 8.1 Authentication
+
+- login handled by `/api/auth/login`
+- logout handled by `/api/auth/logout`
+- current-user bootstrap handled by `/api/auth/me`
+
+### 8.2 MFA
+
+Protected admin flows require MFA verification. Setup, verification, recovery verification, and disable endpoints are exposed through authenticated routes.
+
+### 8.3 Roles
+
+- `admin` has access to all administrative sections
+- `operator` has access to incident and maintenance operations plus shared reads
+
+This split is enforced on both the backend route groups and the frontend route tree.
+
+## 9. Deployment Topology
+
+### 9.1 Container build
+
+The `Dockerfile` uses a multi-stage build:
+
+1. Node 20 Alpine builds the frontend bundle
+2. Go 1.26 Alpine builds the server binary
+3. Alpine runtime image runs the compiled binary as a non-root user
+
+The final image exposes port `8080` and includes a `/health` healthcheck.
+
+### 9.2 Local runtime
+
+`docker-compose.yml` defines three services:
+
+- `server`
+- `mongo`
+- `redis`
+
+The `server` container receives MongoDB, Redis, port, and worker settings from the environment. It also adds `NET_RAW` capability to support Ping monitoring.
+
+## 10. Key Design Decisions
+
+### 10.1 Unified server process
+
+Statora keeps API serving, static asset serving, WebSocket coordination, and the optional worker in one deployable server. This simplifies local deployment and operational setup.
+
+### 10.2 Layered handler/service/repository structure
+
+The backend is intentionally organized around transport, workflow, and persistence boundaries. This keeps domain logic out of HTTP handlers and makes workflows easier to evolve.
+
+### 10.3 Backward-compatible data evolution
+
+The current incident and maintenance upgrade avoids forced migrations by preserving legacy plain-text fields and supporting legacy maintenance states while adding new richer behavior.
+
+### 10.4 Dedicated audit collection
+
+Audit history is stored in a separate model instead of inflating incident or maintenance documents directly. This makes historical workflows easier to extend and query consistently.
+
+### 10.5 Embedded frontend delivery
+
+The React build is embedded into the backend image and served by Gin. This reduces deployment surface area because one application artifact serves both UI and API concerns.
