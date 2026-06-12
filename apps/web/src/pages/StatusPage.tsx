@@ -204,7 +204,7 @@ export default function StatusPage() {
                           {service.description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{service.description}</p>}
                         </div>
                         <div className="self-start md:self-center">
-                          <StatusPageBadge status={componentStatusToSeverity(serviceStatus)} />
+                          {serviceStatus !== 'operational' ? <StatusPageBadge status={componentStatusToSeverity(serviceStatus)} /> : "No known issues"}
                         </div>
                       </div>
                       {component.uptimeHistory.length > 0 && (
