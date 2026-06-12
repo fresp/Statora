@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Calendar, CheckCircle } from 'lucide-react'
+import { ArrowRight, Calendar } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { ComponentStatus, ComponentWithSubs, Incident, Maintenance, StatusPageSettings, StatusSummary } from '../types'
-import { formatDate, getOverallStatusLabel } from '../lib/utils'
+import { formatDate } from '../lib/utils'
 import { getIncidentContent, getMaintenanceContent } from '../lib/contentModel'
 import ContentRenderer from '../components/content/ContentRenderer'
 import {
@@ -24,6 +24,7 @@ import {
   componentStatusToSeverity,
   incidentImpactToSeverity,
 } from '../components/statuspage/StatusPagePrimitives'
+import StatusHero from '../components/statuspage/StatusHero'
 
 function toCategoryPrefix(name: string): string {
   return name
@@ -99,40 +100,13 @@ export default function StatusPage() {
   return (
     <StatusPageFrame settings={settings}>
       <main className="mx-auto flex max-w-[1024px] flex-col gap-8 px-4 py-8 md:gap-10 md:px-8 md:py-12">
-        <section className={`flex flex-col items-start justify-between gap-6 rounded-xl p-6 shadow-sm transition-colors md:flex-row md:items-center md:p-8 ${hasActiveIncidents
-          ? 'border border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-100'
-          : 'bg-emerald-600 text-white'
-          }`}>
-          <div className="flex items-start gap-4 md:items-center">
-            {hasActiveIncidents ? (
-              <AlertTriangle className="mt-1 h-8 w-8 shrink-0 md:mt-0 md:h-10 md:w-10" />
-            ) : (
-              <CheckCircle className="mt-1 h-8 w-8 shrink-0 md:mt-0 md:h-10 md:w-10" />
-            )}
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{getOverallStatusLabel(overallStatus)}</h1>
-              <p className="mt-1 max-w-2xl text-base opacity-90">
-                {hasActiveIncidents
-                  ? `${activeIncidents.length || summary?.activeIncidents || 1} active incident${(activeIncidents.length || summary?.activeIncidents || 1) === 1 ? '' : 's'} currently being tracked.`
-                  : `${settings.branding.siteName || 'Statora'} is operating normally. No active incidents detected.`}
-              </p>
-            </div>
-          </div>
-          <div className="grid w-full grid-cols-3 gap-3 text-left font-mono text-xs uppercase tracking-wider opacity-90 md:w-auto md:min-w-72 md:text-right">
-            <div>
-              <div className="text-2xl font-bold normal-case tracking-tight">{components?.length ?? 0}</div>
-              <div>Groups</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold normal-case tracking-tight">{totalServices}</div>
-              <div>Services</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold normal-case tracking-tight">{summary?.scheduledMaintenance ?? upcomingMaintenance.length}</div>
-              <div>Maint.</div>
-            </div>
-          </div>
-        </section>
+        <StatusHero
+          overallStatus={overallStatus}
+          activeIncidentCount={hasActiveIncidents ? (activeIncidents.length || summary?.activeIncidents || 1) : 0}
+          groupCount={components?.length ?? 0}
+          serviceCount={totalServices}
+          maintenanceCount={summary?.scheduledMaintenance ?? upcomingMaintenance.length}
+        />
 
         {upcomingMaintenance.map((maintenance) => (
           <section key={maintenance.id} className="flex flex-col items-start gap-5 rounded-xl border border-slate-200 bg-slate-100 p-6 transition-colors dark:border-slate-800 dark:bg-slate-800/50 md:flex-row">
