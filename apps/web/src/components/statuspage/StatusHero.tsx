@@ -106,7 +106,7 @@ export default function StatusHero({
   const StatusIcon = getStatusIcon(overallStatus)
 
   return (
-    <section className={`overflow-hidden rounded-[20px] border p-8 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 ${accent.card}`}>
+    <section className={`overflow-hidden rounded-[20px] border p-4 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 ${accent.card}`}>
       <div className="grid items-center gap-8 md:grid-cols-[55%_45%]">
         <div className="order-1 flex flex-col md:justify-between">
           <div>
@@ -129,7 +129,7 @@ export default function StatusHero({
             <img
               src={getStatusIllustration(overallStatus)}
               alt="System status illustration"
-              className="h-auto w-full object-contain"
+              className="h-auto w-full scale-150 object-contain"
             />
           </div>
         </div>
