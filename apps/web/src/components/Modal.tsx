@@ -28,8 +28,8 @@ export default function Modal({ title, onClose, children, footer, size = 'md' }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-      <div className={`statusforge-dialog ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col`}>
-        <div className="statusforge-dialog-header">
+      <div className={`statora-dialog ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col`}>
+        <div className="statora-dialog-header">
           <h2 className="font-semibold tracking-tight text-slate-950">{title}</h2>
           <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2" aria-label="Close modal">
             <X className="w-5 h-5" />
@@ -38,7 +38,7 @@ export default function Modal({ title, onClose, children, footer, size = 'md' }:
 
         <div className="p-6 flex-1 min-h-0 overflow-y-auto">{children}</div>
 
-        {footer && <div className="statusforge-dialog-footer">{footer}</div>}
+        {footer && <div className="statora-dialog-footer">{footer}</div>}
       </div>
     </div>
   )

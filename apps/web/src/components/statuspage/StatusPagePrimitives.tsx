@@ -92,7 +92,7 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
             ) : (
               <CheckCircle className="h-7 w-7 shrink-0" />
             )}
-            <span className="truncate">{settings.branding.siteName || 'StatusForge'}</span>
+            <span className="truncate">{settings.branding.siteName || 'Statuspage'}</span>
           </Link>
           <nav className="hidden gap-6 md:flex">
             {navLinks.map((link) => {
@@ -102,8 +102,8 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
                   key={link.name}
                   to={link.path}
                   className={`font-mono text-sm tracking-wide transition-colors ${isActive
-                      ? 'border-b-2 border-emerald-700 pb-1 font-bold text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
-                      : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400'
+                    ? 'border-b-2 border-emerald-700 pb-1 font-bold text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
+                    : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400'
                     }`}
                 >
                   {link.name}
@@ -132,7 +132,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
     <footer className="mt-12 border-t border-slate-200 bg-slate-50 py-8 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-[1024px] flex-col items-center justify-between gap-6 px-4 md:flex-row md:px-8">
         <div className="text-center md:text-left">
-          <p className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">StatusForge</p>
+          <p className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">Statora</p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {trimmedCenterText || (showPoweredBy ? 'Powered by Statora Infrastructure' : 'Reliable infrastructure status')}
           </p>

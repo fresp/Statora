@@ -52,11 +52,11 @@ export default function AdminDashboard() {
     : []
 
   return (
-    <div className="max-w-6xl statusforge-page py-0">
+    <div className="max-w-6xl statora-page py-0">
       <div className="mb-8">
-        <p className="statusforge-kicker mb-2">Operations Console</p>
-        <h1 className="statusforge-title">Dashboard</h1>
-        <p className="statusforge-muted mt-2">System overview and active status</p>
+        <p className="statora-kicker mb-2">Operations Console</p>
+        <h1 className="statora-title">Dashboard</h1>
+        <p className="statora-muted mt-2">System overview and active status</p>
       </div>
 
       {/* Stats grid */}

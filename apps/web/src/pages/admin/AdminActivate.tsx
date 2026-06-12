@@ -54,14 +54,14 @@ export default function AdminActivate() {
   }
 
   return (
-    <div className="statusforge-shell flex items-center justify-center p-4">
-      <div className="statusforge-card w-full max-w-md p-6">
-        <p className="statusforge-kicker mb-2">Invitation setup</p>
+    <div className="statora-shell flex items-center justify-center p-4">
+      <div className="statora-card w-full max-w-md p-6">
+        <p className="statora-kicker mb-2">Invitation setup</p>
         <h1 className="text-xl font-semibold tracking-tight text-slate-950 mb-1">Activate User Account</h1>
-        <p className="statusforge-muted mb-6">Create your username and password to complete activation.</p>
+        <p className="statora-muted mb-6">Create your username and password to complete activation.</p>
 
         {error && (
-          <div className="statusforge-alert-error mb-4">
+          <div className="statora-alert-error mb-4">
             {error}
           </div>
         )}
@@ -75,7 +75,7 @@ export default function AdminActivate() {
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={submitting}
-              className="statusforge-input"
+              className="statora-input"
             />
           </div>
 
@@ -88,7 +88,7 @@ export default function AdminActivate() {
               minLength={8}
               required
               disabled={submitting}
-              className="statusforge-input"
+              className="statora-input"
             />
           </div>
 
@@ -101,14 +101,14 @@ export default function AdminActivate() {
               minLength={8}
               required
               disabled={submitting}
-              className="statusforge-input"
+              className="statora-input"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="statusforge-btn-primary w-full"
+            className="statora-btn-primary w-full"
           >
             {submitting ? 'Activating...' : 'Activate Account'}
           </button>

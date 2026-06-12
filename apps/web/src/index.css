@@ -8,14 +8,14 @@
     --bg-surface: #ffffff;
     --bg-surface-elevated: #ffffff;
     --bg-surface-muted: #f1f5f9;
-    
+
     --border-subtle: #e2e8f0;
     --border-strong: #cbd5e1;
-    
+
     --text-strong: #0f172a;
     --text-base: #334155;
     --text-muted: #64748b;
-    
+
     --color-brand: #059669;
     --color-brand-strong: #047857;
     --color-brand-soft: #ecfdf5;
@@ -27,179 +27,179 @@
 
     --primary-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
     --primary-subtle: #ecfdf5;
-    
+
     --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-    --shadow-statusforge: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.04);
+    --shadow-statora: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.04);
   }
 
   * {
     box-sizing: border-box;
   }
-  
+
   body {
     @apply bg-[var(--bg-base)] text-[var(--text-base)] font-sans antialiased selection:bg-emerald-100 selection:text-emerald-950;
   }
 }
 
 @layer components {
-  .statusforge-shell {
+  .statora-shell {
     @apply min-h-screen bg-slate-50 text-slate-700 antialiased;
   }
 
-  .statusforge-container {
+  .statora-container {
     @apply mx-auto w-full max-w-[1024px] px-4 md:px-8;
   }
 
-  .statusforge-page {
+  .statora-page {
     @apply space-y-8 py-8 md:py-12;
   }
 
-  .statusforge-card {
+  .statora-card {
     @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors;
-    box-shadow: var(--shadow-statusforge);
+    box-shadow: var(--shadow-statora);
   }
 
-  .statusforge-card-muted {
+  .statora-card-muted {
     @apply rounded-xl border border-slate-200 bg-slate-50/80 shadow-sm transition-colors;
   }
 
-  .statusforge-card-header {
+  .statora-card-header {
     @apply border-b border-slate-200 bg-slate-50/80 px-6 py-4;
   }
 
-  .statusforge-toolbar {
+  .statora-toolbar {
     @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex md:items-center md:justify-between md:gap-4;
-    box-shadow: var(--shadow-statusforge);
+    box-shadow: var(--shadow-statora);
   }
 
-  .statusforge-kicker {
+  .statora-kicker {
     @apply font-mono text-xs font-semibold uppercase tracking-wider text-slate-500;
   }
 
-  .statusforge-title {
+  .statora-title {
     @apply text-2xl font-bold tracking-tight text-slate-950 md:text-3xl;
   }
 
-  .statusforge-section-title {
+  .statora-section-title {
     @apply text-xl font-semibold tracking-tight text-slate-950;
   }
 
-  .statusforge-muted {
+  .statora-muted {
     @apply text-sm leading-6 text-slate-500;
   }
 
-  .statusforge-focus {
+  .statora-focus {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 
-  .statusforge-input {
+  .statora-input {
     @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10;
   }
 
-  .statusforge-input-icon {
+  .statora-input-icon {
     @apply w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10;
   }
 
-  .statusforge-btn {
+  .statora-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border text-sm font-medium shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  .statusforge-btn-primary {
-    @apply statusforge-btn border-emerald-700/20 bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-2 text-white hover:from-emerald-700 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+  .statora-btn-primary {
+    @apply statora-btn border-emerald-700/20 bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-2 text-white hover:from-emerald-700 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
   }
 
-  .statusforge-btn-secondary {
-    @apply statusforge-btn border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+  .statora-btn-secondary {
+    @apply statora-btn border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
   }
 
-  .statusforge-btn-danger {
-    @apply statusforge-btn border-red-200 bg-white px-4 py-2 text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  .statora-btn-danger {
+    @apply statora-btn border-red-200 bg-white px-4 py-2 text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
   }
 
-  .statusforge-table-wrap {
+  .statora-table-wrap {
     @apply overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm;
-    box-shadow: var(--shadow-statusforge);
+    box-shadow: var(--shadow-statora);
   }
 
-  .statusforge-table {
+  .statora-table {
     @apply w-full text-sm;
   }
 
-  .statusforge-table-head {
+  .statora-table-head {
     @apply border-b border-slate-200 bg-slate-50/90 text-left text-xs font-semibold uppercase tracking-wider text-slate-500;
   }
 
-  .statusforge-table-cell {
+  .statora-table-cell {
     @apply px-6 py-4 text-slate-700;
   }
 
-  .statusforge-empty {
+  .statora-empty {
     @apply rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500;
   }
 
-  .statusforge-alert-error {
+  .statora-alert-error {
     @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
   }
 
-  .statusforge-dialog {
+  .statora-dialog {
     @apply w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10;
   }
 
-  .statusforge-dialog-header {
+  .statora-dialog-header {
     @apply flex flex-none items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4;
   }
 
-  .statusforge-dialog-footer {
+  .statora-dialog-footer {
     @apply flex-none border-t border-slate-100 bg-slate-50/80 px-6 py-4;
   }
 
   /* Beacon-inspired Admin Components */
   .admin-surface {
-    @apply statusforge-card;
+    @apply statora-card;
   }
-  
+
   .admin-surface-hover {
     @apply transition-all duration-300 hover:border-slate-300 hover:shadow-md;
   }
 
   .admin-input {
-    @apply statusforge-input;
+    @apply statora-input;
   }
-  
+
   .admin-btn-primary {
-    @apply statusforge-btn-primary;
+    @apply statora-btn-primary;
   }
-  
+
   .admin-btn-secondary {
-    @apply statusforge-btn-secondary;
+    @apply statora-btn-secondary;
   }
-  
+
   .admin-btn-danger {
-    @apply statusforge-btn-danger;
+    @apply statora-btn-danger;
   }
 
   /* Refined Badges */
   .badge {
     @apply inline-flex items-center rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wider shadow-sm;
   }
-  
+
   .badge-success {
     @apply bg-emerald-50 text-emerald-700 border-emerald-200/60;
   }
-  
+
   .badge-warning {
     @apply bg-amber-50 text-amber-700 border-amber-200/60;
   }
-  
+
   .badge-error {
     @apply bg-red-50 text-red-700 border-red-200/60;
   }
-  
+
   .badge-info {
     @apply bg-blue-50 text-blue-700 border-blue-200/60;
   }
-  
+
   .badge-neutral {
     @apply bg-slate-50 text-slate-700 border-slate-200/80;
   }

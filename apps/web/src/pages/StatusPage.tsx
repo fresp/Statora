@@ -97,11 +97,10 @@ export default function StatusPage() {
   return (
     <StatusPageFrame settings={settings}>
       <main className="mx-auto flex max-w-[1024px] flex-col gap-8 px-4 py-8 md:gap-10 md:px-8 md:py-12">
-        <section className={`flex flex-col items-start justify-between gap-6 rounded-xl p-6 shadow-sm transition-colors md:flex-row md:items-center md:p-8 ${
-          hasActiveIncidents
-            ? 'border border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-100'
-            : 'bg-emerald-600 text-white'
-        }`}>
+        <section className={`flex flex-col items-start justify-between gap-6 rounded-xl p-6 shadow-sm transition-colors md:flex-row md:items-center md:p-8 ${hasActiveIncidents
+          ? 'border border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-100'
+          : 'bg-emerald-600 text-white'
+          }`}>
           <div className="flex items-start gap-4 md:items-center">
             {hasActiveIncidents ? (
               <AlertTriangle className="mt-1 h-8 w-8 shrink-0 md:mt-0 md:h-10 md:w-10" />
@@ -113,7 +112,7 @@ export default function StatusPage() {
               <p className="mt-1 max-w-2xl text-base opacity-90">
                 {hasActiveIncidents
                   ? `${activeIncidents.length || summary?.activeIncidents || 1} active incident${(activeIncidents.length || summary?.activeIncidents || 1) === 1 ? '' : 's'} currently being tracked.`
-                  : `${settings.branding.siteName || 'StatusForge'} is operating normally. No active incidents detected.`}
+                  : `${settings.branding.siteName || 'Statora'} is operating normally. No active incidents detected.`}
               </p>
             </div>
           </div>
