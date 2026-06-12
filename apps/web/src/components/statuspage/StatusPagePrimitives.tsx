@@ -132,7 +132,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
     <footer className="mt-12 border-t border-slate-200 bg-slate-50 py-8 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-[1024px] flex-col items-center justify-between gap-6 px-4 md:flex-row md:px-8">
         <div className="text-center md:text-left">
-          <p className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">Statora</p>
+          {/* <p className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">Statora</p> */}
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {trimmedCenterText || (showPoweredBy ? 'Powered by Statora Infrastructure' : 'Reliable infrastructure status')}
           </p>
@@ -141,7 +141,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
           <Link to="/history" className="flex items-center gap-2 font-mono text-sm text-slate-600 transition-colors hover:text-cyan-700 dark:text-slate-400 dark:hover:text-cyan-400">
             <FileText className="h-4 w-4" /> History
           </Link>
-          <a href="#" className="flex items-center gap-2 font-mono text-sm text-slate-600 transition-colors hover:text-cyan-700 dark:text-slate-400 dark:hover:text-cyan-400">
+          {/* <a href="#" className="flex items-center gap-2 font-mono text-sm text-slate-600 transition-colors hover:text-cyan-700 dark:text-slate-400 dark:hover:text-cyan-400">
             <Lock className="h-4 w-4" /> Privacy Policy
           </a>
           <a href="#" className="flex items-center gap-2 font-mono text-sm text-slate-600 transition-colors hover:text-cyan-700 dark:text-slate-400 dark:hover:text-cyan-400">
@@ -149,7 +149,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
           </a>
           <a href="mailto:support@example.com" className="flex items-center gap-2 font-mono text-sm text-slate-600 transition-colors hover:text-cyan-700 dark:text-slate-400 dark:hover:text-cyan-400">
             <Mail className="h-4 w-4" /> Contact Support
-          </a>
+          </a> */}
         </div>
       </div>
     </footer>
