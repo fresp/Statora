@@ -7,6 +7,8 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import { UptimeTimeline } from '../components/status/UptimeTimeline'
 import { IncidentTimeline } from '../components/IncidentTimeline'
 import { DEFAULT_STATUS_PAGE_SETTINGS, normalizeStatusPageSettings } from '../lib/statusPageSettings'
+import { getIncidentContent } from '../lib/contentModel'
+import ContentRenderer from '../components/content/ContentRenderer'
 import {
   StatusPageBadge,
   StatusPageFrame,
@@ -126,7 +128,9 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
                   <span className="text-sm font-semibold">{incident.title}</span>
                   <StatusPageBadge status={incidentImpactToSeverity(incident.impact)} />
                 </div>
-                <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">{incident.description}</p>
+                <div className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+                  <ContentRenderer text={getIncidentContent(incident).text} json={getIncidentContent(incident).json} />
+                </div>
                 <IncidentTimeline updates={incident.updates || []} />
               </div>
             ))}

@@ -14,16 +14,24 @@ import (
 type MaintenanceRepository interface {
 	List(ctx context.Context, page, limit int) ([]models.Maintenance, int64, error)
 	ListPublic(ctx context.Context, page, limit int) ([]models.Maintenance, int64, error)
+	FindByID(ctx context.Context, id primitive.ObjectID) (models.Maintenance, error)
 	Insert(ctx context.Context, maintenance models.Maintenance) error
 	UpdateByID(ctx context.Context, id primitive.ObjectID, setFields bson.M) (models.Maintenance, error)
+	DeleteByID(ctx context.Context, id primitive.ObjectID) error
+	InsertAuditLog(ctx context.Context, audit models.AuditLog) error
+	ListHistory(ctx context.Context, maintenanceID primitive.ObjectID) ([]models.AuditLog, error)
 }
 
 type MongoMaintenanceRepository struct {
 	collection *mongo.Collection
+	auditLogs  *mongo.Collection
 }
 
 func NewMongoMaintenanceRepository(db *mongo.Database) *MongoMaintenanceRepository {
-	return &MongoMaintenanceRepository{collection: db.Collection("maintenance")}
+	return &MongoMaintenanceRepository{
+		collection: db.Collection("maintenance"),
+		auditLogs:  db.Collection("audit_logs"),
+	}
 }
 
 func (r *MongoMaintenanceRepository) List(ctx context.Context, page, limit int) ([]models.Maintenance, int64, error) {
@@ -31,7 +39,23 @@ func (r *MongoMaintenanceRepository) List(ctx context.Context, page, limit int) 
 }
 
 func (r *MongoMaintenanceRepository) ListPublic(ctx context.Context, page, limit int) ([]models.Maintenance, int64, error) {
-	return r.listByFilter(ctx, bson.M{"status": bson.M{"$ne": models.MaintenanceCompleted}}, page, limit)
+	return r.listByFilter(ctx, bson.M{
+		"status": bson.M{"$in": []models.MaintenanceStatus{
+			models.MaintenanceScheduled,
+			models.MaintenanceInProgress,
+			models.MaintenanceActive,
+		}},
+	}, page, limit)
+}
+
+func (r *MongoMaintenanceRepository) FindByID(ctx context.Context, id primitive.ObjectID) (models.Maintenance, error) {
+	var maintenance models.Maintenance
+	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&maintenance)
+	if err != nil {
+		return models.Maintenance{}, err
+	}
+
+	return maintenance, nil
 }
 
 func (r *MongoMaintenanceRepository) listByFilter(ctx context.Context, filter bson.M, page, limit int) ([]models.Maintenance, int64, error) {
@@ -77,4 +101,42 @@ func (r *MongoMaintenanceRepository) UpdateByID(ctx context.Context, id primitiv
 	}
 
 	return result, nil
+}
+
+func (r *MongoMaintenanceRepository) DeleteByID(ctx context.Context, id primitive.ObjectID) error {
+	result, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	return nil
+}
+
+func (r *MongoMaintenanceRepository) InsertAuditLog(ctx context.Context, audit models.AuditLog) error {
+	_, err := r.auditLogs.InsertOne(ctx, audit)
+	return err
+}
+
+func (r *MongoMaintenanceRepository) ListHistory(ctx context.Context, maintenanceID primitive.ObjectID) ([]models.AuditLog, error) {
+	cursor, err := r.auditLogs.Find(ctx,
+		bson.M{"resourceId": maintenanceID},
+		options.Find().SetSort(bson.D{{Key: "at", Value: -1}}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var history []models.AuditLog
+	if err := cursor.All(ctx, &history); err != nil {
+		return nil, err
+	}
+	if history == nil {
+		history = []models.AuditLog{}
+	}
+
+	return history, nil
 }

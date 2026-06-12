@@ -5,6 +5,8 @@ import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { ComponentStatus, ComponentWithSubs, Incident, Maintenance, StatusPageSettings, StatusSummary } from '../types'
 import { formatDate, getOverallStatusLabel } from '../lib/utils'
+import { getIncidentContent, getMaintenanceContent } from '../lib/contentModel'
+import ContentRenderer from '../components/content/ContentRenderer'
 import {
   DEFAULT_STATUS_PAGE_SETTINGS,
   applyStatusPageHeadSettings,
@@ -139,7 +141,9 @@ export default function StatusPage() {
             </div>
             <div className="flex-1">
               <h2 className="mb-2 text-xl font-semibold">Scheduled Maintenance: {maintenance.title}</h2>
-              <p className="mb-4 text-base text-slate-600 dark:text-slate-400">{maintenance.description}</p>
+              <div className="mb-4 text-base text-slate-600 dark:text-slate-400">
+                <ContentRenderer text={getMaintenanceContent(maintenance).text} json={getMaintenanceContent(maintenance).json} />
+              </div>
               <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
                 <span className="rounded-md border border-slate-200 bg-white px-3 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">{formatDate(maintenance.startTime)}</span>
                 <ArrowRight className="h-4 w-4 text-slate-400" />
@@ -164,7 +168,9 @@ export default function StatusPage() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">{incident.title}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">{incident.description}</p>
+                      <div className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                        <ContentRenderer text={getIncidentContent(incident).text} json={getIncidentContent(incident).json} />
+                      </div>
                       <p className="mt-2 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Started: {formatDate(incident.createdAt)}</p>
                     </div>
                     <StatusPageBadge status={incidentImpactToSeverity(incident.impact)} />

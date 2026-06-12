@@ -14,9 +14,15 @@ export type ComponentStatus =
   | 'major_outage'
   | 'maintenance'
 
+export interface RichTextDocument {
+  type: 'doc'
+  content?: Array<Record<string, unknown>>
+}
+
 export type IncidentStatus = 'investigating' | 'identified' | 'monitoring' | 'resolved'
 export type IncidentImpact = 'none' | 'minor' | 'major' | 'critical'
-export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed'
+export type IncidentVisibilityState = 'draft' | 'published'
+export type MaintenanceStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'in_progress'
 export type MonitorType = 'http' | 'tcp' | 'dns' | 'ping' | 'ssl'
 export type MonitorLogStatus = 'up' | 'down'
 
@@ -71,6 +77,10 @@ export interface Incident {
   id: string
   title: string
   description: string
+  descriptionJson?: RichTextDocument
+  visibilityState?: IncidentVisibilityState
+  postmortemEnabled?: boolean
+  postmortemContentJson?: RichTextDocument
   status: IncidentStatus
   impact: IncidentImpact
   creatorId?: string
@@ -92,6 +102,7 @@ export interface IncidentUpdate {
   id: string
   incidentId: string
   message: string
+  messageJson?: RichTextDocument
   status: IncidentStatus
   createdAt: string
 }
@@ -100,12 +111,37 @@ export interface Maintenance {
   id: string
   title: string
   description: string
+  descriptionJson?: RichTextDocument
   creatorId?: string
   creatorUsername?: string
   components: string[]
   startTime: string
   endTime: string
   status: MaintenanceStatus
+  visibilityState?: IncidentVisibilityState
+}
+
+export type AuditResourceType = 'incident' | 'incident_update' | 'maintenance'
+export type AuditAction =
+  | 'created'
+  | 'edited'
+  | 'status_changed'
+  | 'update_added'
+  | 'resolved'
+  | 'deleted'
+  | 'published'
+  | 'draft_saved'
+
+export interface AuditLog {
+  id: string
+  resourceType: AuditResourceType
+  resourceId: string
+  action: AuditAction
+  actorId?: string
+  actorUsername?: string
+  at: string
+  summary?: string
+  changes?: Record<string, unknown>
 }
 
 export interface Monitor {

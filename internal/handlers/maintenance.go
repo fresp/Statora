@@ -70,11 +70,13 @@ func GetPublicMaintenance(db *mongo.Database) gin.HandlerFunc {
 func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			Title       string   `json:"title" binding:"required"`
-			Description string   `json:"description"`
-			Components  []string `json:"components"`
-			StartTime   string   `json:"startTime" binding:"required"`
-			EndTime     string   `json:"endTime" binding:"required"`
+			Title           string                         `json:"title" binding:"required"`
+			Description     string                         `json:"description"`
+			DescriptionJSON models.RichTextDocument        `json:"descriptionJson"`
+			VisibilityState models.IncidentVisibilityState `json:"visibilityState"`
+			Components      []string                       `json:"components"`
+			StartTime       string                         `json:"startTime" binding:"required"`
+			EndTime         string                         `json:"endTime" binding:"required"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -103,6 +105,8 @@ func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		m, err := service.Create(ctx, maintenanceservice.CreateInput{
 			Title:           req.Title,
 			Description:     req.Description,
+			DescriptionJSON: req.DescriptionJSON,
+			VisibilityState: req.VisibilityState,
 			Components:      req.Components,
 			StartTime:       req.StartTime,
 			EndTime:         req.EndTime,
@@ -128,11 +132,13 @@ func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Title       string                   `json:"title"`
-			Description string                   `json:"description"`
-			Status      models.MaintenanceStatus `json:"status"`
-			StartTime   string                   `json:"startTime"`
-			EndTime     string                   `json:"endTime"`
+			Title           string                         `json:"title"`
+			Description     string                         `json:"description"`
+			DescriptionJSON models.RichTextDocument        `json:"descriptionJson"`
+			VisibilityState models.IncidentVisibilityState `json:"visibilityState"`
+			Status          models.MaintenanceStatus       `json:"status"`
+			StartTime       string                         `json:"startTime"`
+			EndTime         string                         `json:"endTime"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -144,11 +150,13 @@ func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
 
 		service := maintenanceservice.NewService(repository.NewMongoMaintenanceRepository(db))
 		m, err := service.Update(ctx, id, maintenanceservice.UpdateInput{
-			Title:       req.Title,
-			Description: req.Description,
-			Status:      req.Status,
-			StartTime:   req.StartTime,
-			EndTime:     req.EndTime,
+			Title:           req.Title,
+			Description:     req.Description,
+			DescriptionJSON: req.DescriptionJSON,
+			VisibilityState: req.VisibilityState,
+			Status:          req.Status,
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
 		})
 		if err != nil {
 			writeDomainError(c, err)
@@ -157,5 +165,70 @@ func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
 
 		DispatchWebhookEvent(db, "maintenance_updated", m)
 		c.JSON(http.StatusOK, m)
+	}
+}
+
+func GetMaintenanceByID(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := maintenanceservice.NewService(repository.NewMongoMaintenanceRepository(db))
+		maintenance, err := service.GetByID(ctx, id)
+		if err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, maintenance)
+	}
+}
+
+func DeleteMaintenance(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := maintenanceservice.NewService(repository.NewMongoMaintenanceRepository(db))
+		if err := service.Delete(ctx, id); err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func GetMaintenanceHistory(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := maintenanceservice.NewService(repository.NewMongoMaintenanceRepository(db))
+		history, err := service.ListHistory(ctx, id)
+		if err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, history)
 	}
 }

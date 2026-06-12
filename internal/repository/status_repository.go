@@ -317,7 +317,10 @@ func (r *MongoStatusRepository) ListActiveMaintenanceAt(ctx context.Context, at 
 	cursor, err := r.db.Collection("maintenance").Find(
 		ctx,
 		bson.M{
-			"status":    models.MaintenanceInProgress,
+			"status": bson.M{"$in": []models.MaintenanceStatus{
+				models.MaintenanceInProgress,
+				models.MaintenanceActive,
+			}},
 			"startTime": bson.M{"$lte": at},
 			"endTime":   bson.M{"$gte": at},
 		},
@@ -346,7 +349,10 @@ func (r *MongoStatusRepository) CountActiveMaintenanceAt(ctx context.Context, at
 	return r.db.Collection("maintenance").CountDocuments(
 		ctx,
 		bson.M{
-			"status":    models.MaintenanceInProgress,
+			"status": bson.M{"$in": []models.MaintenanceStatus{
+				models.MaintenanceInProgress,
+				models.MaintenanceActive,
+			}},
 			"startTime": bson.M{"$lte": at},
 			"endTime":   bson.M{"$gte": at},
 		},

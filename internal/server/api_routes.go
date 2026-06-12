@@ -75,13 +75,20 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 
 	incidentAndMaintenance.GET("/incidents", handlers.GetIncidents(database.GetDB()))
 	incidentAndMaintenance.POST("/incidents", handlers.CreateIncident(database.GetDB(), hub))
+	incidentAndMaintenance.GET("/incidents/:id", handlers.GetIncidentByID(database.GetDB()))
 	incidentAndMaintenance.PATCH("/incidents/:id", handlers.UpdateIncident(database.GetDB(), hub))
+	incidentAndMaintenance.DELETE("/incidents/:id", handlers.DeleteIncident(database.GetDB(), hub))
+	incidentAndMaintenance.POST("/incidents/:id/resolve", handlers.ResolveIncident(database.GetDB(), hub))
 	incidentAndMaintenance.POST("/incidents/:id/update", handlers.AddIncidentUpdate(database.GetDB(), hub))
 	incidentAndMaintenance.GET("/incidents/:id/updates", handlers.GetIncidentUpdates(database.GetDB()))
+	incidentAndMaintenance.GET("/incidents/:id/history", handlers.GetIncidentHistory(database.GetDB()))
 
 	incidentAndMaintenance.GET("/maintenance", handlers.GetMaintenance(database.GetDB()))
 	incidentAndMaintenance.POST("/maintenance", handlers.CreateMaintenance(database.GetDB()))
+	incidentAndMaintenance.GET("/maintenance/:id", handlers.GetMaintenanceByID(database.GetDB()))
 	incidentAndMaintenance.PATCH("/maintenance/:id", handlers.UpdateMaintenance(database.GetDB()))
+	incidentAndMaintenance.DELETE("/maintenance/:id", handlers.DeleteMaintenance(database.GetDB()))
+	incidentAndMaintenance.GET("/maintenance/:id/history", handlers.GetMaintenanceHistory(database.GetDB()))
 
 	incidentAndMaintenance.GET("/components", handlers.GetComponents(database.GetDB()))
 	incidentAndMaintenance.GET("/components/:id/subcomponents", handlers.GetSubComponents(database.GetDB()))

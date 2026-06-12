@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Filter, Search } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { IncidentTimeline } from '../components/IncidentTimeline'
+import ContentRenderer from '../components/content/ContentRenderer'
 import type { Incident, StatusPageSettings } from '../types'
 import { INCIDENT_STATUS_LABELS, formatDate } from '../lib/utils'
+import { getIncidentContent } from '../lib/contentModel'
 import { DEFAULT_STATUS_PAGE_SETTINGS, normalizeStatusPageSettings } from '../lib/statusPageSettings'
 import { DEFAULT_THEME_PRESET, getThemePresets, loadThemePresetStylesheet } from '../lib/themePresetLoader'
 import { StatusPageBadge, StatusPageFrame, incidentImpactToSeverity } from '../components/statuspage/StatusPagePrimitives'
@@ -204,7 +206,9 @@ export default function HistoryPage() {
                           </div>
 
                           <div className="mb-4">
-                            <p className="mb-4 text-base leading-relaxed text-slate-700 dark:text-slate-300">{incident.description}</p>
+                            <div className="mb-4 text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                              <ContentRenderer text={getIncidentContent(incident).text} json={getIncidentContent(incident).json} />
+                            </div>
                             <div className="flex flex-wrap gap-2">
                               {(incident.affectedComponentTargets && incident.affectedComponentTargets.length > 0
                                 ? incident.affectedComponentTargets.map((target) => target.component.name)

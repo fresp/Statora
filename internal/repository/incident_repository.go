@@ -13,11 +13,15 @@ import (
 
 type IncidentRepository interface {
 	List(ctx context.Context, filter bson.M, page, limit int) ([]models.Incident, int64, error)
+	FindByID(ctx context.Context, id primitive.ObjectID) (models.Incident, error)
 	InsertIncident(ctx context.Context, incident models.Incident) error
 	UpdateIncidentByID(ctx context.Context, id primitive.ObjectID, setFields bson.M) (models.Incident, error)
+	DeleteIncidentByID(ctx context.Context, id primitive.ObjectID) error
 	InsertUpdate(ctx context.Context, update models.IncidentUpdate) error
 	ApplyIncidentStatus(ctx context.Context, incidentID primitive.ObjectID, status models.IncidentStatus) error
 	ListUpdates(ctx context.Context, incidentID primitive.ObjectID) ([]models.IncidentUpdate, error)
+	InsertAuditLog(ctx context.Context, audit models.AuditLog) error
+	ListHistory(ctx context.Context, incidentID primitive.ObjectID) ([]models.AuditLog, error)
 	CountComponents(ctx context.Context, ids []primitive.ObjectID) (int64, error)
 	CountSubComponentsByComponent(ctx context.Context, componentID primitive.ObjectID, ids []primitive.ObjectID) (int64, error)
 }
@@ -25,6 +29,7 @@ type IncidentRepository interface {
 type MongoIncidentRepository struct {
 	incidents       *mongo.Collection
 	incidentUpdates *mongo.Collection
+	auditLogs       *mongo.Collection
 	components      *mongo.Collection
 	subcomponents   *mongo.Collection
 }
@@ -33,6 +38,7 @@ func NewMongoIncidentRepository(db *mongo.Database) *MongoIncidentRepository {
 	return &MongoIncidentRepository{
 		incidents:       db.Collection("incidents"),
 		incidentUpdates: db.Collection("incident_updates"),
+		auditLogs:       db.Collection("audit_logs"),
 		components:      db.Collection("components"),
 		subcomponents:   db.Collection("subcomponents"),
 	}
@@ -71,6 +77,16 @@ func (r *MongoIncidentRepository) InsertIncident(ctx context.Context, incident m
 	return err
 }
 
+func (r *MongoIncidentRepository) FindByID(ctx context.Context, id primitive.ObjectID) (models.Incident, error) {
+	var incident models.Incident
+	err := r.incidents.FindOne(ctx, bson.M{"_id": id}).Decode(&incident)
+	if err != nil {
+		return models.Incident{}, err
+	}
+
+	return incident, nil
+}
+
 func (r *MongoIncidentRepository) UpdateIncidentByID(ctx context.Context, id primitive.ObjectID, setFields bson.M) (models.Incident, error) {
 	var incident models.Incident
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
@@ -79,6 +95,19 @@ func (r *MongoIncidentRepository) UpdateIncidentByID(ctx context.Context, id pri
 		return models.Incident{}, err
 	}
 	return incident, nil
+}
+
+func (r *MongoIncidentRepository) DeleteIncidentByID(ctx context.Context, id primitive.ObjectID) error {
+	result, err := r.incidents.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+
+	_, err = r.incidentUpdates.DeleteMany(ctx, bson.M{"incidentId": id})
+	return err
 }
 
 func (r *MongoIncidentRepository) InsertUpdate(ctx context.Context, update models.IncidentUpdate) error {
@@ -117,6 +146,32 @@ func (r *MongoIncidentRepository) ListUpdates(ctx context.Context, incidentID pr
 	}
 
 	return updates, nil
+}
+
+func (r *MongoIncidentRepository) InsertAuditLog(ctx context.Context, audit models.AuditLog) error {
+	_, err := r.auditLogs.InsertOne(ctx, audit)
+	return err
+}
+
+func (r *MongoIncidentRepository) ListHistory(ctx context.Context, incidentID primitive.ObjectID) ([]models.AuditLog, error) {
+	cursor, err := r.auditLogs.Find(ctx,
+		bson.M{"resourceId": incidentID},
+		options.Find().SetSort(bson.D{{Key: "at", Value: -1}}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var history []models.AuditLog
+	if err := cursor.All(ctx, &history); err != nil {
+		return nil, err
+	}
+	if history == nil {
+		history = []models.AuditLog{}
+	}
+
+	return history, nil
 }
 
 func (r *MongoIncidentRepository) CountComponents(ctx context.Context, ids []primitive.ObjectID) (int64, error) {
