@@ -199,7 +199,7 @@ export default function HistoryPage() {
                                 <StatusPageBadge status={incidentImpactToSeverity(incident.impact)} />
                               </div>
                               <p className="font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                {incident.id} &bull; Started: {formatDate(incident.createdAt)}
+                                Started: {formatDate(incident.createdAt)}
                               </p>
                             </div>
                             <StatusPageBadge status={incident.status === 'resolved' ? 'operational' : incidentImpactToSeverity(incident.impact)} solid={incident.status === 'resolved'} label={INCIDENT_STATUS_LABELS[incident.status]} />
