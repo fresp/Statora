@@ -241,7 +241,7 @@ export default function StatusCategoryPage() {
           )}
         </section>
 
-        <section className="mb-10">
+        {/* <section className="mb-10">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
               <div>
@@ -261,7 +261,7 @@ export default function StatusCategoryPage() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
       </main>
     </StatusPageFrame>
   )
