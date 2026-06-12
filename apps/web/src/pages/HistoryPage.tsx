@@ -121,7 +121,7 @@ export default function HistoryPage() {
 
   return (
     <StatusPageFrame settings={settings}>
-      <main className="mx-auto max-w-[1024px] px-4 py-8 md:px-8 md:py-12">
+      <main className="mx-auto max-w-[768px] px-4 py-8 md:px-8 md:py-12">
         <div className="mb-10">
           <nav className="mb-4">
             <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">

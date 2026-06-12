@@ -84,7 +84,7 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900/80">
-      <div className="mx-auto flex max-w-[1024px] items-center justify-between px-4 py-4 md:px-8">
+      <div className="mx-auto flex max-w-[768px] items-center justify-center px-4 py-4 md:px-8">
         <div className="flex min-w-0 items-center gap-8">
           <Link to="/" className="flex min-w-0 items-center gap-3 text-xl font-bold text-emerald-700 dark:text-emerald-400">
             {settings.branding.logoUrl ? (
@@ -94,23 +94,6 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
             )}
             <span className="truncate">{settings.branding.siteName || 'Statuspage'}</span>
           </Link>
-          <nav className="hidden gap-6 md:flex">
-            {navLinks.map((link) => {
-              const isActive = location.pathname === link.path
-              return (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  className={`font-mono text-sm tracking-wide transition-colors ${isActive
-                    ? 'border-b-2 border-emerald-700 pb-1 font-bold text-emerald-700 dark:border-emerald-400 dark:text-emerald-400'
-                    : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400'
-                    }`}
-                >
-                  {link.name}
-                </Link>
-              )
-            })}
-          </nav>
         </div>
         {/* temporary hidden */}
         {/* <Link
@@ -130,7 +113,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
 
   return (
     <footer className="mt-12 border-t border-slate-200 bg-slate-50 py-8 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900">
-      <div className="mx-auto flex max-w-[1024px] flex-col items-center justify-between gap-6 px-4 md:flex-row md:px-8">
+      <div className="mx-auto flex max-w-[768px] flex-col items-center justify-between gap-6 px-4 md:flex-row md:px-8">
         <div className="text-center md:text-left">
           {/* <p className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">Statora</p> */}
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">

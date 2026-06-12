@@ -99,7 +99,7 @@ export default function StatusPage() {
 
   return (
     <StatusPageFrame settings={settings}>
-      <main className="mx-auto flex max-w-[1024px] flex-col gap-8 px-4 py-8 md:gap-10 md:px-8 md:py-12">
+      <main className="mx-auto flex max-w-[768px] flex-col gap-8 px-4 py-8 md:gap-10 md:px-8 md:py-12">
         <StatusHero
           overallStatus={overallStatus}
           activeIncidentCount={hasActiveIncidents ? (activeIncidents.length || summary?.activeIncidents || 1) : 0}

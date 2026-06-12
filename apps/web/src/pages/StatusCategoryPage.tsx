@@ -88,7 +88,7 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
   const hasMonitoringData = service.uptimeHistory.length > 0
 
   return (
-    <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+    <div className="min-w-0 overflow-hidden flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
       <div>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -98,7 +98,7 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
           <StatusPageBadge status={componentStatusToSeverity(displayStatus)} />
         </div>
         {hasMonitoringData && (
-          <div className="mb-6">
+          <div className="mb-6 min-w-0 overflow-hidden">
             <UptimeTimeline history={service.uptimeHistory} showLabels={false} />
           </div>
         )}
@@ -170,7 +170,7 @@ export default function StatusCategoryPage() {
   if (loading) {
     return (
       <StatusPageFrame settings={settings}>
-        <main className="mx-auto max-w-[1024px] px-4 py-10 md:px-8">
+        <main className="mx-auto max-w-[768px] px-4 py-10 md:px-8">
           <div className="rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Loading service health...</div>
         </main>
       </StatusPageFrame>
@@ -180,7 +180,7 @@ export default function StatusCategoryPage() {
   if (error || !data) {
     return (
       <StatusPageFrame settings={settings}>
-        <main className="mx-auto max-w-[1024px] space-y-6 px-4 py-10 md:px-8">
+        <main className="mx-auto max-w-[768px] space-y-6 px-4 py-10 md:px-8">
           <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">
             <ArrowLeft className="h-4 w-4" /> Global Status
           </Link>
@@ -195,7 +195,7 @@ export default function StatusCategoryPage() {
 
   return (
     <StatusPageFrame settings={settings}>
-      <main className="mx-auto max-w-[1024px] px-4 py-8 md:px-8 md:py-12">
+      <main className="mx-auto max-w-[768px] px-4 py-8 md:px-8 md:py-12">
         <div className="mb-6">
           <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">
             <ArrowLeft className="h-4 w-4" /> Global Status
