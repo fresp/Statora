@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import api from '../lib/api'
 import { fetchCategorySummary } from '../lib/api'
 import type { CategorySummary, PaginatedResponse } from '../types'
@@ -36,12 +36,12 @@ export function useApi<T>(url: string, deps: unknown[] = [], params?: QueryParam
 
   const serializedParams = JSON.stringify(normalizedParams)
 
-  const fetch = async () => {
+  const fetch = React.useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       const res = await api.get<PaginatedResponse<unknown> | T>(url, {
-        params: normalizedParams,
+        params: JSON.parse(serializedParams),
       })
 
       if (isPaginatedEnvelope(res.data)) {
@@ -61,12 +61,12 @@ export function useApi<T>(url: string, deps: unknown[] = [], params?: QueryParam
     } finally {
       setLoading(false)
     }
-  }
+  }, [url, serializedParams])
 
   useEffect(() => {
     fetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, serializedParams, ...deps])
+  }, [fetch, ...deps])
 
   return { data, total, page, totalPages, loading, error, refetch: fetch }
 }
@@ -76,7 +76,7 @@ export function useCategorySummary(categoryPrefix: string | undefined) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetch = async () => {
+  const fetch = React.useCallback(async () => {
     if (!categoryPrefix) {
       setData(null)
       setError('Missing category prefix')
@@ -96,12 +96,12 @@ export function useCategorySummary(categoryPrefix: string | undefined) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [categoryPrefix])
 
   useEffect(() => {
     fetch()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryPrefix])
+  }, [fetch])
 
   return { data, loading, error, refetch: fetch }
 }

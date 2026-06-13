@@ -9,6 +9,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAuthMiddlewareAcceptsCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	token, err := GenerateTokenWithClaims(TokenClaimsInput{
+		UserID:      "user-1",
+		Username:    "cookie-user",
+		Role:        "admin",
+		MFAVerified: true,
+		Secret:      "cookie-secret",
+	})
+	assert.NoError(t, err)
+
+	router := gin.New()
+	router.Use(AuthMiddleware("cookie-secret"))
+	router.GET("/protected", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req, reqErr := http.NewRequest(http.MethodGet, "/protected", nil)
+	assert.NoError(t, reqErr)
+	req.AddCookie(&http.Cookie{Name: AuthCookieName, Value: token})
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
 func TestRequireMFAMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

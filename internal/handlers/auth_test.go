@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"github.com/fresp/StatusForge/internal/models"
-	authservice "github.com/fresp/StatusForge/internal/services/auth"
+	"github.com/fresp/Statora/internal/models"
+	authservice "github.com/fresp/Statora/internal/services/auth"
 )
 
 type stubLoginService struct {
@@ -34,7 +34,7 @@ func (s *stubLoginService) Login(_ context.Context, _ authservice.LoginRequest) 
 	return s.result, nil
 }
 
-func (r *stubMeUserRepo) FindByID(_ context.Context, _ string) (*models.User, error) {
+func (r *stubMeUserRepo) GetUserByID(_ context.Context, _ string) (*models.User, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -74,6 +74,7 @@ func TestLoginHandlerReturnsExtendedContract(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "token-123", response["token"])
 	assert.Equal(t, true, response["mfaRequired"])
+	assert.NotEmpty(t, w.Result().Cookies())
 
 	userResp, ok := response["user"].(map[string]interface{})
 	assert.True(t, ok)
@@ -97,7 +98,7 @@ func TestGetMeReturnsMFAFlags(t *testing.T) {
 		c.Set("username", "operator-user")
 		c.Set("role", "operator")
 		c.Set("mfaVerified", false)
-		getMeWithRepo(&stubMeUserRepo{user: user})(c)
+		getMeWithService(&stubMeUserRepo{user: user})(c)
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/auth/me", nil)
@@ -126,7 +127,7 @@ func TestGetMeReturnsUnauthorizedWhenUserLookupFails(t *testing.T) {
 		c.Set("username", "operator-user")
 		c.Set("role", "operator")
 		c.Set("mfaVerified", false)
-		getMeWithRepo(&stubMeUserRepo{err: errors.New("not found")})(c)
+		getMeWithService(&stubMeUserRepo{err: errors.New("not found")})(c)
 	})
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/auth/me", nil)

@@ -8,21 +8,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/fresp/StatusForge/internal/models"
-	"github.com/fresp/StatusForge/internal/repository"
-	authservice "github.com/fresp/StatusForge/internal/services/auth"
+	"github.com/fresp/Statora/internal/models"
+	authservice "github.com/fresp/Statora/internal/services/auth"
 )
 
 type loginService interface {
 	Login(ctx context.Context, req authservice.LoginRequest) (*authservice.LoginResult, error)
 }
 
-type meUserRepository interface {
-	FindByID(ctx context.Context, id string) (*models.User, error)
+type meUserService interface {
+	GetUserByID(ctx context.Context, id string) (*models.User, error)
 }
 
-func Login(db *mongo.Database, jwtSecret string) gin.HandlerFunc {
-	authSvc := authservice.NewServiceFromDB(db, jwtSecret)
+func Login(db *mongo.Database, jwtSecret, emailEncryptionKey string) gin.HandlerFunc {
+	authSvc := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
 	return loginWithService(authSvc)
 }
 
@@ -49,6 +48,8 @@ func loginWithService(authSvc loginService) gin.HandlerFunc {
 			return
 		}
 
+		setAuthCookie(c, result.Token)
+
 		c.JSON(http.StatusOK, gin.H{
 			"token":       result.Token,
 			"mfaRequired": result.MFARequired,
@@ -62,11 +63,19 @@ func loginWithService(authSvc loginService) gin.HandlerFunc {
 	}
 }
 
-func GetMe(db *mongo.Database) gin.HandlerFunc {
-	return getMeWithRepo(repository.NewMongoUserRepository(db))
+func Logout() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clearAuthCookie(c)
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}
 }
 
-func getMeWithRepo(userRepo meUserRepository) gin.HandlerFunc {
+func GetMe(db *mongo.Database, jwtSecret, emailEncryptionKey string) gin.HandlerFunc {
+	authSvc := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
+	return getMeWithService(authSvc)
+}
+
+func getMeWithService(userSvc meUserService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, _ := c.Get("userId")
 		username, _ := c.Get("username")
@@ -82,7 +91,7 @@ func getMeWithRepo(userRepo meUserRepository) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		user, err := userRepo.FindByID(ctx, userIDStr)
+		user, err := userSvc.GetUserByID(ctx, userIDStr)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 			return

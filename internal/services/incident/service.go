@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
-	idsdomain "github.com/fresp/StatusForge/internal/domain/ids"
-	shared "github.com/fresp/StatusForge/internal/domain/shared"
-	"github.com/fresp/StatusForge/internal/models"
-	"github.com/fresp/StatusForge/internal/repository"
+	idsdomain "github.com/fresp/Statora/internal/domain/ids"
+	shared "github.com/fresp/Statora/internal/domain/shared"
+	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/repository"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,6 +32,8 @@ type AffectedComponentInput struct {
 type RequestBody struct {
 	Title                    string
 	Description              string
+	DescriptionJSON          models.RichTextDocument
+	VisibilityState          models.IncidentVisibilityState
 	Status                   models.IncidentStatus
 	Impact                   models.IncidentImpact
 	AffectedComponents       []string
@@ -117,10 +120,21 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Inciden
 	}
 
 	now := time.Now()
+	plainDescription := input.Description
+	if derived := derivePlainText(input.DescriptionJSON); derived != "" {
+		plainDescription = derived
+	}
+	visibility := input.VisibilityState
+	if visibility == "" {
+		visibility = models.IncidentVisibilityPublished
+	}
+
 	incident := models.Incident{
 		ID:                       primitive.NewObjectID(),
 		Title:                    input.Title,
-		Description:              input.Description,
+		Description:              plainDescription,
+		DescriptionJSON:          input.DescriptionJSON,
+		VisibilityState:          visibility,
 		Status:                   status,
 		Impact:                   impact,
 		CreatorID:                &userID,
@@ -135,6 +149,19 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Inciden
 		return models.Incident{}, err
 	}
 
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:            primitive.NewObjectID(),
+		ResourceType:  models.AuditResourceIncident,
+		ResourceID:    incident.ID,
+		Action:        auditActionForVisibility(visibility, models.AuditActionCreated),
+		ActorID:       &userID,
+		ActorUsername: input.CreatorUsername,
+		At:            now,
+		Summary:       "Incident created",
+	}); err != nil {
+		return models.Incident{}, err
+	}
+
 	return incident, nil
 }
 
@@ -145,6 +172,15 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Reque
 	}
 	if input.Description != "" {
 		setFields["description"] = input.Description
+	}
+	if input.DescriptionJSON != nil {
+		setFields["descriptionJson"] = input.DescriptionJSON
+		if derived := derivePlainText(input.DescriptionJSON); derived != "" {
+			setFields["description"] = derived
+		}
+	}
+	if input.VisibilityState != "" {
+		setFields["visibilityState"] = input.VisibilityState
 	}
 	if input.Status != "" {
 		setFields["status"] = input.Status
@@ -188,10 +224,28 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Reque
 		return models.Incident{}, err
 	}
 
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceIncident,
+		ResourceID:   id,
+		Action:       auditActionForVisibility(input.VisibilityState, models.AuditActionEdited),
+		At:           time.Now(),
+		Summary:      "Incident updated",
+	}); err != nil {
+		return models.Incident{}, err
+	}
+
 	return incident, nil
 }
 
 func (s *Service) AddUpdate(ctx context.Context, incidentID primitive.ObjectID, message string, status models.IncidentStatus) (models.IncidentUpdate, error) {
+	if _, err := s.repo.FindByID(ctx, incidentID); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return models.IncidentUpdate{}, fmt.Errorf("%w: incident not found", shared.ErrNotFound)
+		}
+		return models.IncidentUpdate{}, err
+	}
+
 	update := models.IncidentUpdate{
 		ID:         primitive.NewObjectID(),
 		IncidentID: incidentID,
@@ -208,11 +262,131 @@ func (s *Service) AddUpdate(ctx context.Context, incidentID primitive.ObjectID, 
 		return models.IncidentUpdate{}, err
 	}
 
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceIncidentUpdate,
+		ResourceID:   incidentID,
+		Action:       models.AuditActionUpdateAdded,
+		At:           time.Now(),
+		Summary:      "Incident update added",
+	}); err != nil {
+		return models.IncidentUpdate{}, err
+	}
+
 	return update, nil
 }
 
 func (s *Service) ListUpdates(ctx context.Context, incidentID primitive.ObjectID) ([]models.IncidentUpdate, error) {
 	return s.repo.ListUpdates(ctx, incidentID)
+}
+
+func (s *Service) GetByID(ctx context.Context, incidentID primitive.ObjectID) (models.Incident, error) {
+	incident, err := s.repo.FindByID(ctx, incidentID)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return models.Incident{}, fmt.Errorf("%w: incident not found", shared.ErrNotFound)
+		}
+		return models.Incident{}, err
+	}
+
+	return incident, nil
+}
+
+func (s *Service) Delete(ctx context.Context, incidentID primitive.ObjectID) error {
+	if err := s.repo.DeleteIncidentByID(ctx, incidentID); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return fmt.Errorf("%w: incident not found", shared.ErrNotFound)
+		}
+		return err
+	}
+
+	return s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceIncident,
+		ResourceID:   incidentID,
+		Action:       models.AuditActionDeleted,
+		At:           time.Now(),
+		Summary:      "Incident deleted",
+	})
+}
+
+func (s *Service) Resolve(ctx context.Context, incidentID primitive.ObjectID) (models.Incident, error) {
+	incident, err := s.Update(ctx, incidentID, RequestBody{Status: models.IncidentResolved})
+	if err != nil {
+		return models.Incident{}, err
+	}
+
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceIncident,
+		ResourceID:   incidentID,
+		Action:       models.AuditActionResolved,
+		At:           time.Now(),
+		Summary:      "Incident resolved",
+	}); err != nil {
+		return models.Incident{}, err
+	}
+
+	return incident, nil
+}
+
+func (s *Service) ListHistory(ctx context.Context, incidentID primitive.ObjectID) ([]models.AuditLog, error) {
+	if _, err := s.repo.FindByID(ctx, incidentID); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("%w: incident not found", shared.ErrNotFound)
+		}
+		return nil, err
+	}
+
+	return s.repo.ListHistory(ctx, incidentID)
+}
+
+func derivePlainText(document models.RichTextDocument) string {
+	content, ok := document["content"].([]any)
+	if !ok {
+		return ""
+	}
+
+	parts := make([]string, 0)
+	for _, node := range content {
+		parts = append(parts, flattenRichTextNode(node)...)
+	}
+
+	return strings.TrimSpace(strings.Join(parts, "\n"))
+}
+
+func flattenRichTextNode(node any) []string {
+	asMap, ok := node.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	parts := make([]string, 0)
+	if text, ok := asMap["text"].(string); ok {
+		parts = append(parts, text)
+	}
+
+	children, ok := asMap["content"].([]any)
+	if !ok {
+		return parts
+	}
+
+	for _, child := range children {
+		parts = append(parts, flattenRichTextNode(child)...)
+	}
+
+	return parts
+}
+
+func auditActionForVisibility(visibility models.IncidentVisibilityState, fallback models.AuditAction) models.AuditAction {
+	if visibility == models.IncidentVisibilityDraft {
+		return models.AuditActionDraftSaved
+	}
+	if visibility == models.IncidentVisibilityPublished {
+		return models.AuditActionPublished
+	}
+
+	return fallback
 }
 
 func (s *Service) validateIncidentTargets(ctx context.Context, targets []models.IncidentAffectedComponent) error {

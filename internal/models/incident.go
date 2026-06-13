@@ -6,6 +6,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type RichTextDocument = map[string]any
+
+type IncidentVisibilityState string
+
+const (
+	IncidentVisibilityDraft     IncidentVisibilityState = "draft"
+	IncidentVisibilityPublished IncidentVisibilityState = "published"
+)
+
 type IncidentWithUpdates struct {
 	Incident
 	Updates                  []IncidentUpdate                    `json:"updates"`
@@ -45,6 +54,10 @@ type Incident struct {
 	ID                       primitive.ObjectID          `bson:"_id,omitempty" json:"id"`
 	Title                    string                      `bson:"title" json:"title"`
 	Description              string                      `bson:"description" json:"description"`
+	DescriptionJSON          RichTextDocument            `bson:"descriptionJson,omitempty" json:"descriptionJson,omitempty"`
+	VisibilityState          IncidentVisibilityState     `bson:"visibilityState,omitempty" json:"visibilityState,omitempty"`
+	PostmortemEnabled        bool                        `bson:"postmortemEnabled,omitempty" json:"postmortemEnabled,omitempty"`
+	PostmortemContentJSON    RichTextDocument            `bson:"postmortemContentJson,omitempty" json:"postmortemContentJson,omitempty"`
 	Status                   IncidentStatus              `bson:"status" json:"status"`
 	Impact                   IncidentImpact              `bson:"impact" json:"impact"`
 	CreatorID                *primitive.ObjectID         `bson:"creatorId,omitempty" json:"creatorId,omitempty"`
@@ -57,9 +70,10 @@ type Incident struct {
 }
 
 type IncidentUpdate struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	IncidentID primitive.ObjectID `bson:"incidentId" json:"incidentId"`
-	Message    string             `bson:"message" json:"message"`
-	Status     IncidentStatus     `bson:"status" json:"status"`
-	CreatedAt  time.Time          `bson:"createdAt" json:"createdAt"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	IncidentID  primitive.ObjectID `bson:"incidentId" json:"incidentId"`
+	Message     string             `bson:"message" json:"message"`
+	MessageJSON RichTextDocument   `bson:"messageJson,omitempty" json:"messageJson,omitempty"`
+	Status      IncidentStatus     `bson:"status" json:"status"`
+	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 }

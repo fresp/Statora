@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fresp/StatusForge/internal/models"
+	"github.com/fresp/Statora/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -263,6 +263,28 @@ func TestBuildSummaryDerivesOverallStatusAndCounts(t *testing.T) {
 	assert.Equal(t, 1, summary.ComponentCounts["major_outage"])
 	assert.Equal(t, 1, summary.ComponentCounts["maintenance"])
 	assert.Equal(t, 3, summary.ActiveIncidents)
+	assert.Equal(t, 2, summary.ScheduledMaintenance)
+}
+
+func TestBuildSummaryTreatsActiveMaintenanceAndLegacyInProgressAsMaintenance(t *testing.T) {
+	componentA := primitive.NewObjectID()
+	now := time.Date(2026, 3, 30, 12, 0, 0, 0, time.UTC)
+
+	repo := &stubStatusRepo{
+		components: []models.Component{{ID: componentA, Name: "API", Status: models.StatusOperational}},
+		activeMaintenance: []models.Maintenance{
+			{Components: []primitive.ObjectID{componentA}, Status: models.MaintenanceActive},
+			{Components: []primitive.ObjectID{componentA}, Status: models.MaintenanceInProgress},
+		},
+		activeMaintenanceCount: 2,
+	}
+
+	svc := NewService(repo)
+	summary, err := svc.BuildSummary(context.Background(), now)
+	require.NoError(t, err)
+
+	assert.Equal(t, "maintenance", summary.OverallStatus)
+	assert.Equal(t, 1, summary.ComponentCounts["maintenance"])
 	assert.Equal(t, 2, summary.ScheduledMaintenance)
 }
 

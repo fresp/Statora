@@ -1,191 +1,314 @@
-# StatusForge Architecture
+# Statora Architecture
 
-This document describes the current architecture of StatusForge based on the present repository implementation.
+This document describes the current repository implementation of Statora after the incident and maintenance workflow upgrade.
 
-## High-Level Diagram
+## 1. High-Level Architecture
+
+Statora is implemented as a unified Go application that serves three roles in one runtime:
+
+- JSON API for public and admin workflows
+- embedded React single-page application for public and admin interfaces
+- in-process monitoring worker and WebSocket hub
 
 ```mermaid
 flowchart TD
-  Browser[Web Browser\nPublic + Admin SPA] -->|HTTP JSON| API[Go Gin API]
-  Browser -->|WebSocket /ws| Hub[WebSocket Hub]
+    Browser[Browser] -->|HTTP| SPA[React SPA]
+    Browser -->|HTTP /api| API[Gin API]
+    Browser -->|WebSocket /ws| Hub[WebSocket Hub]
 
-  API --> Routes[Route Registration\ninternal/server/api_routes.go]
-  Routes --> MW[Middleware\nJWT + MFA + RBAC]
-  MW --> Handlers[Handlers]
-  Handlers --> Services[Services]
-  Services --> Repos[Repositories]
+    API --> Handlers[Handlers]
+    Handlers --> Services[Services]
+    Services --> Repositories[Repositories]
+    Repositories --> Mongo[(MongoDB)]
 
-  Repos --> Mongo[(MongoDB)]
-  Services --> Redis[(Redis)]
+    API --> Static[Static asset server]
+    Static --> Embed[Embedded frontend dist]
 
-  API --> Static[Static SPA Fallback\ninternal/server/static.go]
-  Static --> Embedded[Embedded assets\ninternal/embed/dist]
-
-  Worker[Monitoring Worker\ninternal/server/worker.go] --> Utils[Monitor Checks Utils]
-  Worker --> Mongo
-  Worker --> Hub
+    Server[Unified server runtime] --> Hub
+    Server --> Worker[Monitoring worker]
+    Worker --> Checks[Monitor check utilities]
+    Worker --> Mongo
+    Worker --> Hub
+    Server --> Redis[(Redis)]
 ```
 
-## Layered Architecture
+The main entry point is `cmd/server/main.go`, which delegates to `internal/server/server.go`.
 
-StatusForge is organized as a layered backend with an embedded frontend distribution:
+## 2. Layers
 
-1. **Entry and runtime bootstrap**
-   - `cmd/server/main.go` starts `server.RunServer()`.
-   - `internal/server/server.go` loads environment values, connects databases, initializes Gin, registers routes, starts hub and optionally worker.
+### 2.1 Runtime bootstrap
 
-2. **Transport and routing layer**
-   - `internal/server/api_routes.go` configures CORS and all API route groups.
-   - Health route at `/health`.
-   - WebSocket endpoint at `/ws`.
+`internal/server/server.go` is the composition root. It:
 
-3. **Security middleware layer**
-   - `internal/middleware/auth.go` provides:
-     - `AuthMiddleware` for JWT verification
-     - `RequireMFAVerified`
-     - `RequireRoles`
+- loads environment values through `godotenv`
+- validates configuration from `configs/config.go`
+- connects MongoDB and Redis
+- creates and runs the WebSocket hub
+- registers API routes and `/health`
+- starts the monitoring worker when `ENABLE_WORKER=true`
+- seeds the bootstrap admin user
+- serves the embedded frontend bundle through the Gin `NoRoute` fallback
 
-4. **Handler and application layer**
-   - `internal/handlers/*` contains endpoint handlers and websocket hub logic.
-   - `internal/services/*` encapsulates use-case/business flows.
+### 2.2 Transport layer
 
-5. **Data access layer**
-   - `internal/repository/*` mediates MongoDB persistence operations.
-   - `internal/database/mongo.go` and `internal/database/redis.go` create and expose clients.
+`internal/server/api_routes.go` defines the HTTP and WebSocket surface.
 
-6. **Frontend delivery layer**
-   - React app source under `apps/web/`.
-   - Built assets copied to `internal/embed/dist` during Docker build.
-   - `internal/server/static.go` serves static assets and falls back to `index.html` for SPA routes.
+Public routes include:
 
-## Runtime Data Flow
+- `/api/status/summary`
+- `/api/status/components`
+- `/api/status/incidents`
+- `/api/status/category/:prefix`
+- `/api/status/settings`
+- `/api/status/maintenance`
+- `/api/subscribe`
+- `/ws`
+- `/sso/callback`
 
-### Request path (HTTP)
+Authenticated routes are layered as:
 
-1. Request enters Gin engine.
-2. CORS middleware applies.
-3. Route selection under `/api` or static fallback.
-4. For protected routes: JWT auth middleware executes.
-5. For privileged route groups: MFA and role middleware execute.
-6. Handler invokes service/repository logic.
-7. Data is read/written in MongoDB and, where needed, Redis.
-8. JSON response returns to browser.
+1. JWT-authenticated routes
+2. MFA-verified routes
+3. role-restricted groups for `admin` or `admin` + `operator`
 
-### Frontend flow
+The transport implementation lives in `internal/handlers/*`.
 
-- Main frontend route map is in `apps/web/src/App.tsx`.
-- Axios client in `apps/web/src/lib/api.ts` attaches bearer tokens from local storage.
-- Admin UI route protection applies both token presence and MFA/role constraints.
+### 2.3 Middleware and security layer
 
-## Realtime and Event Flow
+`internal/middleware/auth.go` enforces:
 
-Realtime updates are delivered using a WebSocket hub:
+- JWT authentication
+- MFA verification gates
+- role-based access control
 
-- Endpoint: `GET /ws`
-- Hub implementation: `internal/handlers/websocket.go`
-- Client hook: `apps/web/src/hooks/useWebSocket.ts`
+The current implementation accepts JWTs from the `Authorization` header or the `statora_auth` cookie. The frontend primarily uses bearer tokens stored in browser storage.
 
-Current frontend behavior on incoming events (from `StatusPage.tsx`):
+### 2.4 Service layer
 
-- Component events trigger summary/component refresh.
-- Incident events trigger incident and summary refresh.
-- Status page settings updates are parsed, cached, and applied dynamically.
+`internal/services/*` contains application logic for domains such as:
 
-Hub internals:
+- auth
+- status aggregation
+- incidents
+- maintenance
+- monitors
+- subscribers
+- webhook dispatch
 
-- Tracks clients in memory.
-- Broadcast channel fan-outs event payloads.
-- Ping/pong and reconnect behavior are handled at transport/client level.
+This layer contains the workflow rules that should remain independent from HTTP transport concerns.
 
-## Worker and Monitoring Flow
+### 2.5 Repository layer
 
-The monitoring worker runs in-process when enabled (`ENABLE_WORKER=true`).
+`internal/repository/*` encapsulates MongoDB persistence. The repositories back:
 
-- Ticker interval: 10s
-- Due-check scheduling based on monitor interval (`default: 60s`)
-- Monitor types currently checked in worker:
-  - HTTP
-  - TCP
-  - DNS
-  - Ping
-  - SSL
-- Additional warning logic:
-  - SSL expiry warning thresholds
-  - Domain expiry warning thresholds
-- Side effects:
-  - writes monitor logs
-  - updates current monitor status fields
-  - updates uptime/outage tracking
-  - updates maintenance status
+- status read models
+- monitors, monitor logs, uptime, and outages
+- incidents and incident updates
+- maintenance windows
+- audit logs
+- users, invitations, and admin state
+- webhook channels and subscriber records
 
-## Authentication and Authorization Model
+### 2.6 Frontend layer
 
-Most administrative/profile API routes use bearer JWT tokens.
+The frontend source lives in `apps/web/` and is built with Vite. The built assets are copied into `internal/embed/dist` during the Docker build, then served by the Go server.
 
-Claims include:
+The route tree is defined in `apps/web/src/App.tsx`.
 
-- `userId`
-- `username`
-- `role`
-- `mfaVerified`
+Public routes:
 
-Authorization structure:
+- `/`
+- `/status/:categoryPrefix`
+- `/history`
 
-1. Authenticated group: requires valid JWT.
-2. Verified group: requires `mfaVerified=true`.
-3. Role groups:
-   - `admin` only
-   - `admin` or `operator`
+Admin routes:
 
-Frontend route protection mirrors these constraints for admin navigation.
+- `/admin/login`
+- `/admin/activate`
+- `/admin/profile`
+- `/admin/components`
+- `/admin/subcomponents`
+- `/admin/incidents`
+- `/admin/maintenance`
+- `/admin/monitors`
+- `/admin/monitors/:id/logs`
+- `/admin/subscribers`
+- `/admin/webhook-channels`
+- `/admin/users`
+- `/admin/settings`
 
-Route-group exception in current implementation:
+## 3. Data Flow
 
-- `GET /api/v1/monitors/:id/metrics` is registered directly under the base `/api` group in `internal/server/api_routes.go`, and is therefore not currently behind JWT, MFA, or role middleware.
+### 3.1 Standard HTTP flow
 
-## Deployment Topology (Current)
+The normal backend request path is:
 
-Primary deployment artifacts:
+1. Request enters Gin
+2. CORS middleware runs
+3. Route selection occurs in `api_routes.go`
+4. Auth, MFA, and role middleware run when required
+5. Handler validates input and constructs service calls
+6. Service executes workflow logic
+7. Repository reads or writes MongoDB documents
+8. JSON response is returned to the client
 
-- `Dockerfile`: multi-stage build (frontend then backend)
-- `docker-compose.yml`: server + MongoDB + Redis services
+### 3.2 Frontend data flow
 
-Notable runtime details:
+The React application uses Axios from `apps/web/src/lib/api.ts`.
 
-- Server container runs as non-root user.
-- Health check probes `/health`.
-- Compose grants `NET_RAW` for ping monitor support.
+- bearer tokens are attached automatically when present
+- unauthenticated responses redirect back to admin login
+- MFA-related authorization failures redirect to the profile page
 
-## Architecture Decisions (Observed)
+Protected admin routing mirrors backend access expectations by requiring a stored session and completed MFA verification before most admin routes can render.
 
-1. **Single unified server process**
-   - API, static file serving, websocket hub, and optional worker are hosted in one process for operational simplicity.
+## 4. Realtime and Event Flow
 
-2. **MongoDB as primary data store**
-   - Flexible document schema aligns with component/incident/monitor domain objects.
+Realtime behavior is implemented with Gorilla WebSocket.
 
-3. **Redis included as supporting runtime dependency**
-   - Connected during startup and available to runtime components.
+- backend endpoint: `GET /ws`
+- backend hub: `internal/handlers/websocket.go`
+- frontend client hook: `apps/web/src/hooks/useWebSocket.ts`
 
-4. **SPA embedding into backend binary/image**
-   - Simplifies deployment by shipping frontend assets with backend server image.
+The hub tracks connected clients in memory and broadcasts domain events. The public status pages use those events to trigger refreshes for changing operational data.
 
-5. **Layered access control (JWT + MFA + RBAC)**
-   - Administrative actions are gated progressively with explicit middleware boundaries.
+Verified event usage includes broadcasts for:
 
-## Docs Tree
+- component changes
+- incident creation, updates, update additions, deletion, and resolution
+- status-page settings changes
 
-```text
-docs/
-├── architecture.md
-├── images/
-│   ├── README.md
-│   ├── admin-component.png
-│   ├── admin-dashboard.png
-│   ├── admin-incident.png
-│   ├── admin-maintenance.png
-│   ├── admin-monitoring.png
-│   └── public-statuspage.jpeg
-├── plans/
-└── screenshots/
-```
+## 5. Monitoring and Worker Flow
+
+When `ENABLE_WORKER=true`, Statora starts an in-process monitoring worker from `internal/server/worker.go`.
+
+The worker is responsible for:
+
+- scheduling due monitor checks
+- running HTTP, TCP, DNS, Ping, and SSL checks
+- recording monitor logs
+- updating current monitor state
+- updating uptime tracking
+- detecting outages after repeated failures
+- creating incidents automatically when an uncovered outage is detected
+- transitioning maintenance status based on time windows
+- broadcasting operational changes through the WebSocket hub
+
+This design keeps monitoring close to the application model, but it also means the worker currently scales together with the main server process.
+
+## 6. Incident and Maintenance Content Model
+
+The incident and maintenance workflow upgrade introduced a backward-compatible rich-content model.
+
+### 6.1 Dual-format content storage
+
+Incident and maintenance records now keep:
+
+- legacy plain-text fields such as `description` and `message`
+- optional rich-text JSON companions such as `descriptionJson` and `messageJson`
+
+This allows newer clients to use structured content while older clients can continue reading plain-text fields.
+
+### 6.2 Frontend authoring and rendering
+
+The admin interface uses a TipTap-based editor in `apps/web/src/components/editor/RichTextEditor.tsx`.
+
+Public and admin read paths render stored content through `apps/web/src/components/content/ContentRenderer.tsx` and helper functions in `apps/web/src/lib/contentModel.ts`.
+
+Those helpers also derive plain-text fallbacks from rich-text documents so the application can preserve compatibility across older and newer payload shapes.
+
+### 6.3 Workflow semantics
+
+Incidents now include publication semantics through `visibilityState`, while maintenance keeps operational status in `status`.
+
+For maintenance records, the codebase supports both:
+
+- legacy `in_progress`
+- current `active`
+
+Frontend normalization and backend status aggregation both treat those states compatibly.
+
+## 7. Audit and History Model
+
+The current implementation adds a dedicated audit log model in `internal/models/audit_log.go`.
+
+Audit entries store:
+
+- resource type
+- resource identifier
+- action
+- actor metadata
+- timestamp
+- summary and structured changes
+
+History endpoints exist for both incidents and maintenance:
+
+- `GET /api/incidents/:id/history`
+- `GET /api/maintenance/:id/history`
+
+These endpoints currently return `AuditLog[]`, which is important for keeping admin UI expectations aligned with the backend contract.
+
+## 8. Authentication and Authorization Model
+
+Statora uses layered access control.
+
+### 8.1 Authentication
+
+- login handled by `/api/auth/login`
+- logout handled by `/api/auth/logout`
+- current-user bootstrap handled by `/api/auth/me`
+
+### 8.2 MFA
+
+Protected admin flows require MFA verification. Setup, verification, recovery verification, and disable endpoints are exposed through authenticated routes.
+
+### 8.3 Roles
+
+- `admin` has access to all administrative sections
+- `operator` has access to incident and maintenance operations plus shared reads
+
+This split is enforced on both the backend route groups and the frontend route tree.
+
+## 9. Deployment Topology
+
+### 9.1 Container build
+
+The `Dockerfile` uses a multi-stage build:
+
+1. Node 20 Alpine builds the frontend bundle
+2. Go 1.26 Alpine builds the server binary
+3. Alpine runtime image runs the compiled binary as a non-root user
+
+The final image exposes port `8080` and includes a `/health` healthcheck.
+
+### 9.2 Local runtime
+
+`docker-compose.yml` defines three services:
+
+- `server`
+- `mongo`
+- `redis`
+
+The `server` container receives MongoDB, Redis, port, and worker settings from the environment. It also adds `NET_RAW` capability to support Ping monitoring.
+
+## 10. Key Design Decisions
+
+### 10.1 Unified server process
+
+Statora keeps API serving, static asset serving, WebSocket coordination, and the optional worker in one deployable server. This simplifies local deployment and operational setup.
+
+### 10.2 Layered handler/service/repository structure
+
+The backend is intentionally organized around transport, workflow, and persistence boundaries. This keeps domain logic out of HTTP handlers and makes workflows easier to evolve.
+
+### 10.3 Backward-compatible data evolution
+
+The current incident and maintenance upgrade avoids forced migrations by preserving legacy plain-text fields and supporting legacy maintenance states while adding new richer behavior.
+
+### 10.4 Dedicated audit collection
+
+Audit history is stored in a separate model instead of inflating incident or maintenance documents directly. This makes historical workflows easier to extend and query consistently.
+
+### 10.5 Embedded frontend delivery
+
+The React build is embedded into the backend image and served by Gin. This reduces deployment surface area because one application artifact serves both UI and API concerns.
