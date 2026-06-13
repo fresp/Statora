@@ -110,13 +110,9 @@ export default function StatusHero({
       <div className="grid items-center gap-8 md:grid-cols-[55%_45%]">
         <div className="order-1 flex flex-col md:justify-between">
           <div>
-
-            <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950 dark:text-slate-50 md:text-[48px] md:leading-[1.02]">
-              {getOverallStatusLabel(overallStatus)}
-            </h1>
-            <p className="mt-3 max-w-xl text-base leading-7 text-slate-700 dark:text-slate-300">
+            <h4 className="text-lg font-semibold mt-3 max-w-xl text-base leading-7 text-slate-700 dark:text-slate-300">
               {getStatusDescription(overallStatus)}
-            </p>
+            </h4>
             <p className={`mt-4 flex items-center gap-2 text-sm font-semibold ${getStatusMetricClasses(overallStatus)}`}>
               <span className={`h-2.5 w-2.5 rounded-full ${accent.dot}`} aria-hidden="true" />
               <span>{activeIncidentCount} active incident{activeIncidentCount === 1 ? '' : 's'}</span>
