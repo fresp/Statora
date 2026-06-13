@@ -1,259 +1,220 @@
-# StatusForge
+# Statora
 
-StatusForge is a self-hosted status page and infrastructure monitoring platform. It combines a Go (Gin) API server, an embedded React frontend, a worker loop for active checks, and a public status page with real-time updates.
+![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)
+![License](https://img.shields.io/github/license/fresp/Statora)
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Architecture Diagram](#architecture-diagram)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Setup](#setup)
-- [Configuration](#configuration)
-- [Monitoring and Worker Model](#monitoring-and-worker-model)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
+Statora is a self-hosted status page and uptime monitoring platform that combines public status communication, incident and maintenance workflows, active monitoring, and an admin console in one deployable application.
 
 ## Overview
 
-StatusForge is designed for teams that want to run their own status platform and keep control of runtime, data, and integrations. The server exposes API routes and WebSocket events, serves an embedded SPA build, seeds an initial admin user from environment variables, and can run a background monitor worker in-process.
+Statora is designed for teams that want to run their own status workflow instead of depending on a hosted third-party service. The current implementation pairs a Go-based API and monitoring runtime with an embedded React single-page application, so the public status site and admin interface ship together.
+
+The platform covers three connected jobs:
+
+- publish a public-facing status page for services and components
+- manage incidents and maintenance from an authenticated admin area
+- monitor services continuously and turn failures into operational signals
 
 ## Features
 
-- Public status page with component and subcomponent health
-- Incident lifecycle management with incident updates
-- Scheduled and active maintenance publishing
-- Active monitor checks (HTTP, TCP, DNS, Ping, SSL)
-- SSL certificate and domain expiry warning support in monitor flow
-- Role-aware admin area (`admin`, `operator`) with MFA-gated routes
-- JWT-authenticated API for protected operations
-- WebSocket push events for near real-time UI refresh
-- Subscriber management and webhook channel management
-- Status page branding and settings management
+Only features verified in the current repository implementation are listed here.
+
+### Public status experience
+
+- Public status homepage with overall summary, incidents, maintenance, and component health
+- Category-specific status pages under `/status/:categoryPrefix`
+- Incident history page under `/history`
+- Real-time status refresh through WebSocket updates
+- Public status settings endpoint used for branding, theme, and footer content
+
+### Incident and maintenance workflows
+
+- Create, edit, view, delete, and resolve incidents from the admin UI
+- Add incident updates and retrieve incident audit history
+- Create, edit, view, and delete maintenance windows
+- Retrieve maintenance audit history
+- Rich-text authoring and rendering for incident and maintenance descriptions
+- Backward-compatible dual-format content model that keeps plain-text fields alongside optional rich-text JSON payloads
+- Maintenance workflow compatibility for both legacy `in_progress` and current `active` states
+
+### Monitoring and reliability
+
+- Active monitoring for HTTP, TCP, DNS, Ping, and SSL checks
+- Configurable intervals, timeouts, SSL warning thresholds, and domain expiry checks
+- Worker-driven monitor execution with monitor logs, uptime tracking, and outage tracking
+- Automatic outage detection after repeated failures
+- Automatic incident creation when a detected outage is not already covered by an active incident
+- Automatic maintenance status transitions based on scheduled start and end times
+- Health endpoint for runtime readiness checks
+
+### Administration and access control
+
+- Admin login/logout flow with JWT-backed authentication
+- MFA setup, verification, recovery verification, and disable flows
+- Role-aware access control for `admin` and `operator`
+- User invitation activation flow
+- Member management for listing, updating, inviting, refreshing, revoking, and deleting users
+- Admin management screens for components, subcomponents, monitors, incidents, maintenance, subscribers, webhook channels, and settings
+
+### Realtime and integrations
+
+- WebSocket endpoint for live status updates
+- Webhook channel management from the admin UI
+- Public subscribe endpoint and admin subscriber management
+- SSO callback endpoint for external authentication flows
 
 ## Screenshots
 
-StatusForge includes documentation images under `docs/screenshots/`.
+### Public experience
 
-## 🌐 Public Pages
-
-| Public Status Page | Incident History | Service Info |
+| Status Page | Incident History | Service Details |
 |---|---|---|
 | ![Public Status Page](docs/screenshots/public-statuspage.png) | ![Incident History](docs/screenshots/incident-history.png) | ![Service Info](docs/screenshots/public-service-info.png) |
 
-**Description:**
-- **Public Status Page** → Overview of service status
-- **Incident History** → Historical incidents and outages
-- **Service Info** → Detailed service information (uptime, latency, etc.)
+### Admin experience
 
----
-
-## 🔐 Admin Pages
-
-| Admin Dashboard | Admin Settings | Admin Monitoring | Admin Maintenance |
+| Dashboard | Monitoring | Maintenance | Settings |
 |---|---|---|---|
-| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Setting](docs/screenshots/admin-settings.png) | ![Monitoring](docs/screenshots/admin-monitoring.png) | ![Maintenance](docs/screenshots/admin-maintenance.png) |
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Admin Monitoring](docs/screenshots/admin-monitoring.png) | ![Admin Maintenance](docs/screenshots/admin-maintenance.png) | ![Admin Settings](docs/screenshots/admin-settings.png) |
 
-**Description:**
-- **Admin Dashboard** → System overview and summary
-- **Admin Settings** → Global configuration
-- **Admin Monitoring** → Monitoring setup and control
-- **Admin Maintenance** → Maintenance scheduling and management
+## Architecture
 
-## Architecture Diagram
+Statora currently follows a unified application pattern:
 
-```mermaid
-flowchart LR
-  Browser[Browser\nPublic + Admin SPA] -->|HTTP/JSON| Gin[Go Gin Server]
-  Browser -->|WebSocket /ws| WS[WebSocket Hub]
+```text
+Browser
+  -> React SPA
+  -> HTTP /api + WebSocket /ws
+  -> Gin handlers
+  -> services
+  -> repositories
+  -> MongoDB
 
-  Gin --> Routes[API Routes\ninternal/server/api_routes.go]
-  Routes --> Handlers[Handlers]
-  Handlers --> Services[Services]
-  Services --> Repos[Repositories]
-
-  Repos --> Mongo[(MongoDB)]
-  Services --> Redis[(Redis)]
-
-  Gin --> Static[Embedded static files\ninternal/embed/dist]
-
-  Worker[In-process Worker\ninternal/server/worker.go] --> Mongo
-  Worker --> Utils[Monitor check utils]
-  Worker --> WS
+Monitoring worker
+  -> monitor checks
+  -> MongoDB updates
+  -> WebSocket broadcasts
 ```
 
-Detailed architecture documentation is available at [`docs/architecture.md`](docs/architecture.md).
+At runtime, one Go server process:
+
+- loads configuration from environment variables
+- connects MongoDB and Redis
+- serves API routes and `/health`
+- serves the embedded frontend bundle
+- runs the WebSocket hub
+- optionally runs the in-process monitoring worker
+
+For the full system layout, see [docs/architecture.md](docs/architecture.md).
 
 ## Tech Stack
 
-- **Backend language/runtime**: Go 1.26
-- **HTTP framework**: Gin
-- **Auth tokens**: JWT (`github.com/golang-jwt/jwt/v5`)
-- **Realtime**: Gorilla WebSocket
-- **Primary database**: MongoDB
-- **Cache / auxiliary store**: Redis
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS
-- **Containerization**: Docker multi-stage build + Docker Compose
+- **Backend:** Go 1.26, Gin, MongoDB driver, Gorilla WebSocket
+- **Frontend:** React 18, TypeScript 5, Vite 5, Tailwind CSS 3
+- **Rich text editing:** TipTap 2
+- **Data stores:** MongoDB 7, Redis 7
+- **Authentication:** JWT, MFA with TOTP
+- **Deployment:** Docker multi-stage build, Docker Compose
 
-## Project Structure
+## Getting Started
 
-```text
-.
-├── cmd/server/main.go                 # Process entrypoint
-├── internal/server/                   # Server bootstrap, routes, worker, static serving
-├── internal/handlers/                 # HTTP + websocket handlers
-├── internal/services/                 # Application service layer
-├── internal/repository/               # Data access layer
-├── internal/database/                 # MongoDB/Redis connection setup
-├── internal/middleware/               # JWT, MFA, role middleware
-├── internal/models/                   # Domain and persistence models
-├── internal/embed/                    # Embedded frontend assets (dist)
-├── apps/web/                          # React SPA source
-├── configs/config.go                  # Environment-driven config loader
-├── Dockerfile                         # Multi-stage frontend+backend build
-├── docker-compose.yml                 # Server + Mongo + Redis stack
-└── docs/                              # Architecture and image docs
-```
-
-## Setup
-
-### Prerequisites
-
-- Docker + Docker Compose (recommended path)
-- Or for local non-container execution:
-  - Go 1.26+
-  - Node.js 20+
-  - MongoDB
-  - Redis
-
-### Quick Start (Docker Compose)
+### Run with Docker Compose
 
 ```bash
-git clone https://github.com/fresp/StatusForge.git
-cd StatusForge
+git clone https://github.com/fresp/Statora.git
+cd Statora
 cp .env.example .env
 docker compose up --build
 ```
 
-Application endpoints:
+### Default local endpoints
 
 - Public status page: `http://localhost:8080/`
-- Admin app: `http://localhost:8080/admin`
-- Health check: `http://localhost:8080/health`
+- Admin area: `http://localhost:8080/admin`
+- Health endpoint: `http://localhost:8080/health`
 - WebSocket endpoint: `ws://localhost:8080/ws`
 
-Default bootstrap admin values come from `.env.example`:
+### Default bootstrap admin
+
+The repository includes bootstrap values in `.env.example`:
 
 - `ADMIN_EMAIL=admin@statusplatform.com`
 - `ADMIN_USERNAME=admin`
 - `ADMIN_PASSWORD=admin123`
 
-Change these immediately in any persistent/shared environment.
+Change these before using any shared or persistent environment.
 
-### Local Development (without Docker)
+### Important environment variables
 
-Backend:
+- `MONGODB_URI` - MongoDB connection string
+- `MONGODB_DB` - MongoDB database name
+- `REDIS_URI` - Redis connection string
+- `JWT_SECRET` - JWT signing secret
+- `APP_ENCRYPTION_KEY` - 32-byte application encryption key
+- `MFA_SECRET_KEY` - MFA secret protection key
+- `ENABLE_WORKER` - enables the monitoring worker
+- `GRACEFUL_SHUTDOWN` - toggles graceful shutdown behavior
 
-```bash
-cp .env.example .env
-go mod download
-go run cmd/server/main.go
-```
+## API Overview
 
-Frontend (optional separate dev server):
+Statora exposes a public status surface and a protected admin API.
 
-```bash
-cd apps/web
-npm install
-npm run dev
-```
+### Public routes
 
-The production-like server path serves embedded frontend assets via `NoRoute` static fallback; the separate Vite server is mainly for frontend iteration.
+- `GET /api/status/summary`
+- `GET /api/status/components`
+- `GET /api/status/incidents`
+- `GET /api/status/category/:prefix`
+- `GET /api/status/settings`
+- `GET /api/status/maintenance`
+- `POST /api/subscribe`
+- `GET /ws`
 
-### Build Commands
+### Authenticated admin routes
 
-Frontend build:
+The admin API includes routes for:
 
-```bash
-cd apps/web
-npm run build
-```
+- profile and MFA flows
+- incidents and incident updates
+- maintenance
+- components and subcomponents
+- monitors, logs, uptime, history, outages, and metrics
+- subscribers
+- webhook channels
+- users and invitations
+- status-page settings
 
-Backend build:
+## Authentication
 
-```bash
-go build -o server cmd/server/main.go
-```
+Statora uses JWT-based authentication with MFA-aware access control.
 
-### Makefile Shortcuts
-
-```bash
-make up
-make up-build
-make down
-make logs
-make logs-server
-make ps
-```
-
-## Configuration
-
-Environment variables are loaded via `configs.Load()`.
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGODB_DB` | `statusplatform` | MongoDB database name |
-| `REDIS_URI` | `localhost:6379` | Redis address |
-| `JWT_SECRET` | `super-secret-jwt-key-change-in-production` | JWT HMAC secret |
-| `MFA_SECRET_KEY` | empty | MFA secret material |
-| `PORT` | `8080` | HTTP listen port |
-| `ADMIN_EMAIL` | `admin@statusplatform.com` | Bootstrap admin email |
-| `ADMIN_PASSWORD` | `admin123` | Bootstrap admin password |
-| `ADMIN_USERNAME` | `admin` | Bootstrap admin username |
-| `ENABLE_WORKER` | `true` | Enable in-process monitor worker |
-| `GRACEFUL_SHUTDOWN` | `true` | Enable signal-based shutdown flow |
-| `SHUTDOWN_TIMEOUT` | `30` | Shutdown timeout in seconds |
-
-## Monitoring and Worker Model
-
-When `ENABLE_WORKER=true`, the server starts an internal monitor worker loop.
-
-- Worker ticker fires every 10 seconds.
-- Effective monitor interval defaults to 60 seconds if not set.
-- Monitor checks supported in current worker code:
-  - HTTP
-  - TCP
-  - DNS
-  - Ping
-  - SSL
-- Check output is written to:
-  - `monitor_logs`
-  - monitor status fields (`lastStatus`, warning fields, `lastCheckedAt`)
-- Worker also triggers:
-  - daily uptime updates
-  - outage detection logic
-  - maintenance status updates
+- Users authenticate through `/api/auth/login`
+- Protected routes require valid JWT authentication
+- MFA verification is enforced before access to the protected admin experience
+- Role checks separate `admin`-only routes from routes shared with `operator`
+- SSO callback support is available through `/sso/callback`
 
 ## Roadmap
 
-- Harden production WebSocket and CORS policy defaults
-- Expand API reference with OpenAPI/Swagger artifacts
-- Add dedicated worker deployment mode for horizontal scaling
-- Extend observability surface (structured metrics and tracing)
+Based on the current codebase state, the most realistic next improvements are:
+
+- production hardening of permissive default CORS configuration
+- deeper operational documentation for API and deployment workflows
+- clearer separation of worker/runtime scaling concerns
+- broader automated UI verification coverage
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are welcome. Keep changes aligned with the current layered structure:
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Run project checks.
-4. Open a pull request with clear scope and validation notes.
+- handlers for HTTP transport concerns
+- services for business logic
+- repositories for persistence
+- focused frontend pages and shared components for UI behavior
+
+When updating the platform, prefer backward-compatible data evolution over breaking schema assumptions.
 
 ## License
 

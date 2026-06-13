@@ -5,19 +5,21 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"math"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/fresp/Statora/configs"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/crypto/bcrypt"
 
-	"github.com/fresp/StatusForge/internal/models"
+	"github.com/fresp/Statora/internal/models"
+	authservice "github.com/fresp/Statora/internal/services/auth"
 )
 
 var allowedUserRoles = map[string]struct{}{
@@ -32,11 +34,12 @@ var allowedUserStatuses = map[string]struct{}{
 }
 
 type userResponse struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	Status   string `json:"status"`
+	ID         string `json:"id"`
+	Username   string `json:"username"`
+	Email      string `json:"email"`
+	Role       string `json:"role"`
+	Status     string `json:"status"`
+	SSOEnabled bool   `json:"ssoEnabled"`
 }
 
 type userInvitationResponse struct {
@@ -46,6 +49,10 @@ type userInvitationResponse struct {
 	ExpiresAt time.Time `json:"expiresAt"`
 	CreatedAt time.Time `json:"createdAt"`
 	IsExpired bool      `json:"isExpired"`
+}
+
+type userSearchService interface {
+	FindUserByEmail(ctx context.Context, email string) (*models.User, error)
 }
 
 func mapUser(user models.User) userResponse {
@@ -60,11 +67,12 @@ func mapUser(user models.User) userResponse {
 	}
 
 	return userResponse{
-		ID:       user.ID.Hex(),
-		Username: user.Username,
-		Email:    user.Email,
-		Role:     role,
-		Status:   status,
+		ID:         user.ID.Hex(),
+		Username:   user.Username,
+		Email:      user.Email,
+		Role:       role,
+		Status:     status,
+		SSOEnabled: user.SSO.Enabled,
 	}
 }
 
@@ -89,8 +97,15 @@ func clampPageToTotalPages(page, limit, total int) int {
 	return page
 }
 
-func GetUsers(db *mongo.Database) gin.HandlerFunc {
+func GetUsers(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		jwtSecret := ""
+		emailEncryptionKey := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+			emailEncryptionKey = cfg.EmailEncryptionKey
+		}
+		userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
 		page, limit, err := parsePaginationParams(c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -130,6 +145,12 @@ func GetUsers(db *mongo.Database) gin.HandlerFunc {
 
 		items := make([]userResponse, 0, len(users))
 		for _, user := range users {
+			decryptedEmail, err := userService.DecryptStoredEmail(user.Email)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			user.Email = decryptedEmail
 			items = append(items, mapUser(user))
 		}
 
@@ -138,6 +159,44 @@ func GetUsers(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		writePaginatedResponse(c, items, total, page, limit)
+	}
+}
+
+func SearchUserByEmail(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
+	jwtSecret := ""
+	emailEncryptionKey := ""
+	if cfg != nil {
+		jwtSecret = cfg.JWTSecret
+		emailEncryptionKey = cfg.EmailEncryptionKey
+	}
+
+	userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
+	return searchUserByEmailWithService(userService)
+}
+
+func searchUserByEmailWithService(userService userSearchService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		email := strings.TrimSpace(c.Query("email"))
+		if email == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "email query parameter is required"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		user, err := userService.FindUserByEmail(ctx, email)
+		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, mapUser(*user))
 	}
 }
 
@@ -150,8 +209,9 @@ func PatchUser(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		var req struct {
-			Role   string `json:"role"`
-			Status string `json:"status"`
+			Role       string `json:"role"`
+			Status     string `json:"status"`
+			SSOEnabled *bool  `json:"ssoEnabled"`
 		}
 
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -175,6 +235,10 @@ func PatchUser(db *mongo.Database) gin.HandlerFunc {
 				return
 			}
 			set["status"] = req.Status
+		}
+
+		if req.SSOEnabled != nil {
+			set["sso.enabled"] = *req.SSOEnabled
 		}
 
 		if len(set) == 1 {
@@ -255,7 +319,7 @@ func DeleteUser(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func CreateUserInvitation(db *mongo.Database) gin.HandlerFunc {
+func CreateUserInvitation(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			Email string `json:"email" binding:"required,email"`
@@ -267,17 +331,31 @@ func CreateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		email := strings.ToLower(strings.TrimSpace(req.Email))
+		email := authservice.NormalizeEmail(req.Email)
 		role := strings.ToLower(strings.TrimSpace(req.Role))
 		if _, ok := allowedUserRoles[role]; !ok {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role"})
 			return
 		}
 
+		jwtSecret := ""
+		emailEncryptionKey := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+			emailEncryptionKey = cfg.EmailEncryptionKey
+		}
+		userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		if err := db.Collection("users").FindOne(ctx, bson.M{"email": email}).Err(); err == nil {
+		exists, err := userService.EmailExists(ctx, email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if exists {
 			c.JSON(http.StatusConflict, gin.H{"error": "user with this email already exists"})
 			return
 		}
@@ -301,26 +379,34 @@ func CreateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		now := time.Now()
-		invitation := models.UserInvitation{
-			ID:        primitive.NewObjectID(),
-			TokenHash: tokenHash,
+		invitation, err := userService.CreateInvitation(ctx, authservice.CreateInvitationRequest{
 			Email:     email,
 			Role:      role,
-			ExpiresAt: now.Add(48 * time.Hour),
 			CreatedBy: createdBy,
-			CreatedAt: now,
+			TokenHash: tokenHash,
+			ExpiresAt: now.Add(48 * time.Hour),
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
-		if _, err := db.Collection("user_invitations").InsertOne(ctx, invitation); err != nil {
+		persistedInvitation := *invitation
+		if _, err := db.Collection("user_invitations").InsertOne(ctx, persistedInvitation); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		activationLink := buildActivationLink(c, rawToken)
+		decryptedEmail, err := userService.DecryptStoredEmail(persistedInvitation.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
 		c.JSON(http.StatusCreated, gin.H{
-			"id":             invitation.ID.Hex(),
-			"email":          invitation.Email,
+			"id":             persistedInvitation.ID.Hex(),
+			"email":          decryptedEmail,
 			"role":           invitation.Role,
 			"expiresAt":      invitation.ExpiresAt,
 			"activationLink": activationLink,
@@ -329,8 +415,15 @@ func CreateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func GetUserInvitations(db *mongo.Database) gin.HandlerFunc {
+func GetUserInvitations(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		jwtSecret := ""
+		emailEncryptionKey := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+			emailEncryptionKey = cfg.EmailEncryptionKey
+		}
+		userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
 		page, limit, err := parsePaginationParams(c)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -375,9 +468,14 @@ func GetUserInvitations(db *mongo.Database) gin.HandlerFunc {
 		now := time.Now()
 		items := make([]userInvitationResponse, 0, len(invitations))
 		for _, invitation := range invitations {
+			decryptedEmail, err := userService.DecryptStoredEmail(invitation.Email)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 			items = append(items, userInvitationResponse{
 				ID:        invitation.ID.Hex(),
-				Email:     invitation.Email,
+				Email:     decryptedEmail,
 				Role:      invitation.Role,
 				ExpiresAt: invitation.ExpiresAt,
 				CreatedAt: invitation.CreatedAt,
@@ -393,8 +491,15 @@ func GetUserInvitations(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func RefreshUserInvitation(db *mongo.Database) gin.HandlerFunc {
+func RefreshUserInvitation(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		jwtSecret := ""
+		emailEncryptionKey := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+			emailEncryptionKey = cfg.EmailEncryptionKey
+		}
+		userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
 		invitationID, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid invitation id"})
@@ -440,9 +545,14 @@ func RefreshUserInvitation(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		activationLink := buildActivationLink(c, rawToken)
+		decryptedEmail, err := userService.DecryptStoredEmail(invitation.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"id":             invitationID.Hex(),
-			"email":          invitation.Email,
+			"email":          decryptedEmail,
 			"role":           invitation.Role,
 			"expiresAt":      expiresAt,
 			"activationLink": activationLink,
@@ -481,7 +591,7 @@ func RevokeUserInvitation(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func ActivateUserInvitation(db *mongo.Database) gin.HandlerFunc {
+func ActivateUserInvitation(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			Token    string `json:"token" binding:"required"`
@@ -500,6 +610,14 @@ func ActivateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "token, username and password are required"})
 			return
 		}
+
+		jwtSecret := ""
+		emailEncryptionKey := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+			emailEncryptionKey = cfg.EmailEncryptionKey
+		}
+		userService := authservice.NewServiceFromDB(db, jwtSecret, emailEncryptionKey)
 
 		hash := sha256.Sum256([]byte(token))
 		tokenHash := hex.EncodeToString(hash[:])
@@ -523,30 +641,33 @@ func ActivateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		if err := db.Collection("users").FindOne(ctx, bson.M{"email": invitation.Email}).Err(); err == nil {
+		invitationEmail, err := userService.DecryptStoredEmail(invitation.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		exists, err := userService.EmailExists(ctx, invitationEmail)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if exists {
 			c.JSON(http.StatusConflict, gin.H{"error": "user with this email already exists"})
 			return
 		}
 
-		passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to process password"})
-			return
-		}
-
 		now := time.Now()
-		user := models.User{
-			ID:           primitive.NewObjectID(),
-			Username:     username,
-			Email:        invitation.Email,
-			Role:         invitation.Role,
-			Status:       "active",
-			InvitedBy:    &invitation.CreatedBy,
-			PasswordHash: string(passwordHash),
-			CreatedAt:    now,
-		}
-
-		if _, err := db.Collection("users").InsertOne(ctx, user); err != nil {
+		user, err := userService.CreateUser(ctx, authservice.CreateUserRequest{
+			Username:  username,
+			Email:     invitationEmail,
+			Role:      invitation.Role,
+			Status:    "active",
+			InvitedBy: &invitation.CreatedBy,
+			Password:  req.Password,
+		})
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -556,12 +677,7 @@ func ActivateUserInvitation(db *mongo.Database) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{
-			"id":       user.ID.Hex(),
-			"email":    user.Email,
-			"username": user.Username,
-			"role":     user.Role,
-		})
+		c.JSON(http.StatusCreated, gin.H{"id": user.ID.Hex(), "email": user.Email, "username": user.Username, "role": user.Role})
 	}
 }
 

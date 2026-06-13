@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
-	shared "github.com/fresp/StatusForge/internal/domain/shared"
-	"github.com/fresp/StatusForge/internal/models"
-	"github.com/fresp/StatusForge/internal/repository"
+	shared "github.com/fresp/Statora/internal/domain/shared"
+	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/repository"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,6 +26,8 @@ func NewService(repo repository.MaintenanceRepository) *Service {
 type CreateInput struct {
 	Title           string
 	Description     string
+	DescriptionJSON models.RichTextDocument
+	VisibilityState models.IncidentVisibilityState
 	Components      []string
 	StartTime       string
 	EndTime         string
@@ -35,6 +38,8 @@ type CreateInput struct {
 type UpdateInput struct {
 	Title       string
 	Description string
+	DescriptionJSON models.RichTextDocument
+	VisibilityState models.IncidentVisibilityState
 	Status      models.MaintenanceStatus
 	StartTime   string
 	EndTime     string
@@ -73,22 +78,45 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Mainten
 
 	status := models.MaintenanceScheduled
 	if time.Now().After(startTime) {
-		status = models.MaintenanceInProgress
+		status = models.MaintenanceActive
+	}
+	if input.VisibilityState == models.IncidentVisibilityDraft {
+		status = models.MaintenanceDraft
+	}
+
+	plainDescription := input.Description
+	if derived := derivePlainText(input.DescriptionJSON); derived != "" {
+		plainDescription = derived
 	}
 
 	maintenance := models.Maintenance{
 		ID:              primitive.NewObjectID(),
 		Title:           input.Title,
-		Description:     input.Description,
+		Description:     plainDescription,
+		DescriptionJSON: input.DescriptionJSON,
 		CreatorID:       &creatorID,
 		CreatorUsername: input.CreatorUsername,
 		Components:      componentIDs,
 		StartTime:       startTime,
 		EndTime:         endTime,
 		Status:          status,
+		UpdatedAt:       time.Now(),
 	}
 
 	if err := s.repo.Insert(ctx, maintenance); err != nil {
+		return models.Maintenance{}, err
+	}
+
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:            primitive.NewObjectID(),
+		ResourceType:  models.AuditResourceMaintenance,
+		ResourceID:    maintenance.ID,
+		Action:        auditActionForMaintenance(status),
+		ActorID:       &creatorID,
+		ActorUsername: input.CreatorUsername,
+		At:            time.Now(),
+		Summary:       "Maintenance created",
+	}); err != nil {
 		return models.Maintenance{}, err
 	}
 
@@ -103,8 +131,22 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Updat
 	if input.Description != "" {
 		setFields["description"] = input.Description
 	}
+	if input.DescriptionJSON != nil {
+		setFields["descriptionJson"] = input.DescriptionJSON
+		if derived := derivePlainText(input.DescriptionJSON); derived != "" {
+			setFields["description"] = derived
+		}
+	}
 	if input.Status != "" {
 		setFields["status"] = input.Status
+	}
+	if input.VisibilityState == models.IncidentVisibilityDraft {
+		setFields["status"] = models.MaintenanceDraft
+	}
+	if input.VisibilityState == models.IncidentVisibilityPublished {
+		if status, ok := setFields["status"].(models.MaintenanceStatus); !ok || status == models.MaintenanceDraft {
+			setFields["status"] = models.MaintenanceScheduled
+		}
 	}
 	if input.StartTime != "" {
 		t, err := time.Parse(time.RFC3339, input.StartTime)
@@ -129,5 +171,105 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Updat
 		return models.Maintenance{}, err
 	}
 
+	if err := s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceMaintenance,
+		ResourceID:   id,
+		Action:       auditActionForMaintenance(updated.Status),
+		At:           time.Now(),
+		Summary:      "Maintenance updated",
+	}); err != nil {
+		return models.Maintenance{}, err
+	}
+
 	return updated, nil
+}
+
+func (s *Service) GetByID(ctx context.Context, id primitive.ObjectID) (models.Maintenance, error) {
+	maintenance, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return models.Maintenance{}, fmt.Errorf("%w: maintenance not found", shared.ErrNotFound)
+		}
+		return models.Maintenance{}, err
+	}
+
+	return maintenance, nil
+}
+
+func (s *Service) Delete(ctx context.Context, id primitive.ObjectID) error {
+	if err := s.repo.DeleteByID(ctx, id); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return fmt.Errorf("%w: maintenance not found", shared.ErrNotFound)
+		}
+		return err
+	}
+
+	return s.repo.InsertAuditLog(ctx, models.AuditLog{
+		ID:           primitive.NewObjectID(),
+		ResourceType: models.AuditResourceMaintenance,
+		ResourceID:   id,
+		Action:       models.AuditActionDeleted,
+		At:           time.Now(),
+		Summary:      "Maintenance deleted",
+	})
+}
+
+func (s *Service) ListHistory(ctx context.Context, id primitive.ObjectID) ([]models.AuditLog, error) {
+	if _, err := s.repo.FindByID(ctx, id); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, fmt.Errorf("%w: maintenance not found", shared.ErrNotFound)
+		}
+		return nil, err
+	}
+
+	return s.repo.ListHistory(ctx, id)
+}
+
+func auditActionForMaintenance(status models.MaintenanceStatus) models.AuditAction {
+	if status == models.MaintenanceDraft {
+		return models.AuditActionDraftSaved
+	}
+	if status == models.MaintenanceScheduled || status == models.MaintenanceActive || status == models.MaintenanceInProgress {
+		return models.AuditActionPublished
+	}
+
+	return models.AuditActionEdited
+}
+
+func derivePlainText(document models.RichTextDocument) string {
+	content, ok := document["content"].([]any)
+	if !ok {
+		return ""
+	}
+
+	parts := make([]string, 0)
+	for _, node := range content {
+		parts = append(parts, flattenRichTextNode(node)...)
+	}
+
+	return strings.TrimSpace(strings.Join(parts, "\n"))
+}
+
+func flattenRichTextNode(node any) []string {
+	asMap, ok := node.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	parts := make([]string, 0)
+	if text, ok := asMap["text"].(string); ok {
+		parts = append(parts, text)
+	}
+
+	children, ok := asMap["content"].([]any)
+	if !ok {
+		return parts
+	}
+
+	for _, child := range children {
+		parts = append(parts, flattenRichTextNode(child)...)
+	}
+
+	return parts
 }

@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { SubComponent, Component, ComponentStatus } from '../../types'
 import { STATUS_LABELS, STATUS_COLORS } from '../../lib/utils'
 import Modal from '../../components/Modal'
@@ -87,8 +88,8 @@ export default function AdminSubComponents() {
       }
       await refetch()
       closeModal()
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to save'))
     } finally {
       setSaving(false)
     }
@@ -100,8 +101,8 @@ export default function AdminSubComponents() {
     try {
       await api.delete(`/subcomponents/${s.id}`)
       await refetch()
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete')
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, 'Failed to delete'))
     }
   }
 

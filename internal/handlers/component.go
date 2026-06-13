@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fresp/StatusForge/internal/models"
+	"github.com/fresp/Statora/internal/models"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -112,9 +112,11 @@ func UpdateComponent(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		if req.Name != "" {
 			update["$set"].(bson.M)["name"] = req.Name
 		}
+
 		if req.Description != "" {
 			update["$set"].(bson.M)["description"] = req.Description
 		}
+
 		if req.Status != "" {
 			update["$set"].(bson.M)["status"] = req.Status
 		}

@@ -1,4 +1,4 @@
-module github.com/fresp/StatusForge
+module github.com/fresp/Statora
 
 go 1.26.0
 

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	incidentservice "github.com/fresp/StatusForge/internal/services/incident"
+	incidentservice "github.com/fresp/Statora/internal/services/incident"
 
-	"github.com/fresp/StatusForge/internal/models"
-	"github.com/fresp/StatusForge/internal/repository"
+	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/repository"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -23,6 +23,8 @@ type incidentAffectedComponentInput struct {
 type incidentRequestBody struct {
 	Title                    string                           `json:"title" binding:"required"`
 	Description              string                           `json:"description"`
+	DescriptionJSON          models.RichTextDocument          `json:"descriptionJson"`
+	VisibilityState          models.IncidentVisibilityState   `json:"visibilityState"`
 	Status                   models.IncidentStatus            `json:"status"`
 	Impact                   models.IncidentImpact            `json:"impact"`
 	AffectedComponents       []string                         `json:"affectedComponents"`
@@ -106,6 +108,8 @@ func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			RequestBody: incidentservice.RequestBody{
 				Title:                    req.Title,
 				Description:              req.Description,
+				DescriptionJSON:          req.DescriptionJSON,
+				VisibilityState:          req.VisibilityState,
 				Status:                   req.Status,
 				Impact:                   req.Impact,
 				AffectedComponents:       req.AffectedComponents,
@@ -156,6 +160,8 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		incident, err := service.Update(ctx, id, incidentservice.RequestBody{
 			Title:                    req.Title,
 			Description:              req.Description,
+			DescriptionJSON:          req.DescriptionJSON,
+			VisibilityState:          req.VisibilityState,
 			Status:                   req.Status,
 			Impact:                   req.Impact,
 			AffectedComponents:       req.AffectedComponents,
@@ -183,6 +189,96 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		DispatchWebhookEvent(db, eventType, incident)
 		BroadcastEvent(hub, eventType, incident)
 		c.JSON(http.StatusOK, incident)
+	}
+}
+
+func GetIncidentByID(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := incidentservice.NewService(repository.NewMongoIncidentRepository(db))
+		incident, err := service.GetByID(ctx, id)
+		if err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, incident)
+	}
+}
+
+func DeleteIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := incidentservice.NewService(repository.NewMongoIncidentRepository(db))
+		if err := service.Delete(ctx, id); err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		BroadcastEvent(hub, "incident_deleted", gin.H{"id": id.Hex()})
+		c.Status(http.StatusNoContent)
+	}
+}
+
+func ResolveIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := incidentservice.NewService(repository.NewMongoIncidentRepository(db))
+		incident, err := service.Resolve(ctx, id)
+		if err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		DispatchWebhookEvent(db, "incident_resolved", incident)
+		BroadcastEvent(hub, "incident_resolved", incident)
+		c.JSON(http.StatusOK, incident)
+	}
+}
+
+func GetIncidentHistory(db *mongo.Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, err := primitive.ObjectIDFromHex(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		service := incidentservice.NewService(repository.NewMongoIncidentRepository(db))
+		history, err := service.ListHistory(ctx, id)
+		if err != nil {
+			writeDomainError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, history)
 	}
 }
 

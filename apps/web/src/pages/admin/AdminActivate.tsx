@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import { useApi } from '../../hooks/useApi'
 import type { StatusPageSettings } from '../../types'
 
-const DEFAULT_PAGE_TITLE = 'StatusForge'
+const DEFAULT_PAGE_TITLE = 'Statora'
 
 export default function AdminActivate() {
   const [searchParams] = useSearchParams()
@@ -45,40 +46,41 @@ export default function AdminActivate() {
         password,
       })
       navigate('/admin/login', { replace: true })
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Activation failed. Please try again.')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Activation failed. Please try again.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Activate User Account</h1>
-        <p className="text-sm text-gray-500 mb-6">Create your username and password to complete activation.</p>
+    <div className="statora-shell flex items-center justify-center p-4">
+      <div className="statora-card w-full max-w-md p-6">
+        <p className="statora-kicker mb-2">Invitation setup</p>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-950 mb-1">Activate User Account</h1>
+        <p className="statora-muted mb-6">Create your username and password to complete activation.</p>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="statora-alert-error mb-4">
             {error}
           </div>
         )}
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Username</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={submitting}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="statora-input"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
             <input
               type="password"
               value={password}
@@ -86,12 +88,12 @@ export default function AdminActivate() {
               minLength={8}
               required
               disabled={submitting}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="statora-input"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Confirm Password</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}
@@ -99,14 +101,14 @@ export default function AdminActivate() {
               minLength={8}
               required
               disabled={submitting}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="statora-input"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="statora-btn-primary w-full"
           >
             {submitting ? 'Activating...' : 'Activate Account'}
           </button>

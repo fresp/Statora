@@ -22,8 +22,8 @@ export function UptimeTimeline({
   const last90 = history.slice(-90)
 
   return (
-    <div className="w-full space-y-2">
-      <div className="flex w-full gap-[2px] items-end">
+    <div className="min-w-0 w-full space-y-2 overflow-hidden">
+      <div className="flex w-full min-w-0 items-end gap-[2px] overflow-hidden">
         {last90.map((day, i) => {
           let color = 'var(--status-operational)'
 
@@ -38,7 +38,7 @@ export function UptimeTimeline({
           return (
             <div
               key={i}
-              className={`h-8 flex-1 min-w-[2px] rounded-[2px] ${i === last90.length - 1 ? 'ring-1 ring-white/20' : ''}`}
+              className={`h-8 min-w-0 flex-1 rounded-[2px] ${i === last90.length - 1 ? 'ring-1 ring-white/20' : ''}`}
               style={{ backgroundColor: color }}
               title={`${day.date} - ${day.status as ComponentStatus}`}
             />

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import StatusPage from './pages/StatusPage'
 import StatusCategoryPage from './pages/StatusCategoryPage'
@@ -18,8 +18,9 @@ import AdminProfile from './pages/admin/AdminProfile'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminWebhookChannels from './pages/admin/AdminWebhookChannels'
 import HistoryPage from './pages/HistoryPage'
-import { getStoredToken, getStoredProfile } from './lib/auth'
-import type { UserRole } from './types'
+import api from './lib/api'
+import { getStoredToken, getStoredProfile, storeProfileFromAuthMe } from './lib/auth'
+import type { AuthMeResponse, UserRole } from './types'
 
 interface StoredAdminProfile {
   role?: UserRole
@@ -39,10 +40,50 @@ function readStoredRole(): UserRole | null {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = getStoredToken()
-  const profile = getStoredProfile()
+  const [authChecked, setAuthChecked] = useState(!!token)
+  const [authorized, setAuthorized] = useState(!!token)
+  const [profile, setProfile] = useState(getStoredProfile())
   const location = useLocation()
 
-  if (!token) return <Navigate to="/admin/login" replace />
+  useEffect(() => {
+    if (token) {
+      setAuthorized(true)
+      setAuthChecked(true)
+      setProfile(getStoredProfile())
+      return
+    }
+
+    let cancelled = false
+
+    async function bootstrapAuth() {
+      try {
+        const res = await api.get<AuthMeResponse>('/auth/me')
+        if (cancelled) return
+        storeProfileFromAuthMe(res.data)
+        setProfile(getStoredProfile())
+        setAuthorized(true)
+      } catch {
+        if (cancelled) return
+        setAuthorized(false)
+      } finally {
+        if (!cancelled) {
+          setAuthChecked(true)
+        }
+      }
+    }
+
+    void bootstrapAuth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  if (!authChecked) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Loading...</div>
+  }
+
+  if (!authorized) return <Navigate to="/admin/login" replace />
 
   const isProfileRoute = location.pathname === '/admin/profile'
   const isMfaComplete = profile?.mfaVerified ?? false
@@ -81,6 +122,7 @@ export default function App() {
       <Route path="/history" element={<HistoryPage />} />
 
       {/* Admin auth */}
+      <Route path="/login" element={<AdminLogin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/activate" element={<AdminActivate />} />
       {/* Admin protected routes */}

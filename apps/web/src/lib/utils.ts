@@ -58,6 +58,18 @@ export function getOverallStatusLabel(status: ComponentStatus): string {
   return labels[status] || 'Unknown Status'
 }
 
+export function getStatusIllustration(status: ComponentStatus): string {
+  const illustrations: Record<ComponentStatus, string> = {
+    operational: '/illustrations/operational.svg',
+    degraded_performance: '/illustrations/degraded.svg',
+    partial_outage: '/illustrations/partial-outage.svg',
+    major_outage: '/illustrations/major-outage.svg',
+    maintenance: '/illustrations/maintenance.svg',
+  }
+
+  return illustrations[status] ?? illustrations.operational
+}
+
 export function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString('en-US', {
     month: 'short',

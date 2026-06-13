@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApi } from '../../hooks/useApi'
 import { useAdminPagination } from '../../hooks/useAdminPagination'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import type { Monitor, Component, SubComponent, MonitorType } from '../../types'
 import Modal from '../../components/Modal'
 import AdminPaginationControls from '../../components/AdminPaginationControls'
@@ -126,8 +127,8 @@ export default function AdminMonitors() {
         },
       })
       setTestResult(res.data)
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to test monitor')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to test monitor'))
     } finally {
       setTesting(false)
     }
@@ -160,8 +161,8 @@ export default function AdminMonitors() {
       }
       await refetch()
       closeModal()
-    } catch (err: any) {
-      setError(err.response?.data?.error || `Failed to ${editingId ? 'update' : 'create'} monitor`)
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, `Failed to ${editingId ? 'update' : 'create'} monitor`))
     } finally {
       setSaving(false)
     }
@@ -172,8 +173,8 @@ export default function AdminMonitors() {
     try {
       await api.delete(`/monitors/${m.id}`)
       await refetch()
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete')
+    } catch (err: unknown) {
+      alert(getApiErrorMessage(err, 'Failed to delete'))
     }
   }
 

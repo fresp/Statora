@@ -1,53 +1,23 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertCircle, AlertTriangle, CheckCircle, ChevronDown, ChevronRight, ChevronUp, Wrench, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, MessageSquare } from 'lucide-react'
 import { useApi, useCategorySummary } from '../hooks/useApi'
-import { STATUS_LABELS } from '../lib/utils'
-import type { CategoryServiceStatus, ComponentStatus, Incident, MonitorMetrics, StatusPageSettings } from '../types'
-import Footer from '../components/layout/Footer'
+import type { CategoryServiceStatus, ComponentStatus, Incident, StatusPageSettings } from '../types'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { UptimeTimeline } from '../components/status/UptimeTimeline'
-import { IncidentCarouselGroup } from '../components/IncidentCarouselGroup'
+import { IncidentTimeline } from '../components/IncidentTimeline'
+import { DEFAULT_STATUS_PAGE_SETTINGS, normalizeStatusPageSettings } from '../lib/statusPageSettings'
+import { getIncidentContent } from '../lib/contentModel'
+import ContentRenderer from '../components/content/ContentRenderer'
+import {
+  StatusPageBadge,
+  StatusPageFrame,
+  componentStatusToSeverity,
+  incidentImpactToSeverity,
+} from '../components/statuspage/StatusPagePrimitives'
 
 const EMPTY_INCIDENTS: Incident[] = []
 const EMPTY_SERVICES: CategoryServiceStatus[] = []
-
-function getStatusToken(status: ComponentStatus): string {
-  switch (status) {
-    case 'operational':
-      return '--status-operational'
-    case 'degraded_performance':
-      return '--status-degraded'
-    case 'partial_outage':
-      return '--status-partial'
-    case 'major_outage':
-      return '--status-major'
-    case 'maintenance':
-      return '--status-maintenance'
-    default:
-      return '--status-operational'
-  }
-}
-
-function StatusIcon({ status }: { status: ComponentStatus }) {
-  const cls = 'w-5 h-5'
-  const color = `var(${getStatusToken(status)})`
-
-  switch (status) {
-    case 'operational':
-      return <CheckCircle className={cls} style={{ color }} />
-    case 'degraded_performance':
-      return <AlertTriangle className={cls} style={{ color }} />
-    case 'partial_outage':
-      return <AlertCircle className={cls} style={{ color }} />
-    case 'major_outage':
-      return <XCircle className={cls} style={{ color }} />
-    case 'maintenance':
-      return <Wrench className={cls} style={{ color }} />
-    default:
-      return <CheckCircle className={cls} style={{ color }} />
-  }
-}
 
 function isIncidentActive(status: string): boolean {
   const normalized = status.toLowerCase()
@@ -80,28 +50,13 @@ function impactToStatus(impact: string): ComponentStatus {
   }
 }
 
-function impactToLabel(impact: string): string {
-  switch (impact.toLowerCase()) {
-    case 'minor':
-      return 'Degraded / Medium disruptions'
-    case 'major':
-      return 'Partial outage'
-    case 'critical':
-      return 'Major outage'
-    default:
-      return 'No known issues'
-  }
-}
-
 function incidentAffectsService(incident: Incident, service: CategoryServiceStatus): boolean {
   const serviceName = service.name.trim().toLowerCase()
 
   if (incident.affectedComponentTargets && incident.affectedComponentTargets.length > 0) {
     return incident.affectedComponentTargets.some((target) => {
       const targetName = target.component.name.trim().toLowerCase()
-      if (target.component.id === service.id || targetName === serviceName) {
-        return true
-      }
+      if (target.component.id === service.id || targetName === serviceName) return true
 
       if (target.subComponents && target.subComponents.length > 0) {
         return target.subComponents.some((subComponent) => {
@@ -124,257 +79,65 @@ function incidentAffectsService(incident: Incident, service: CategoryServiceStat
   return false
 }
 
-function PlatformStatus({ data, aggregateStatus }: { data: NonNullable<ReturnType<typeof useCategorySummary>['data']>; aggregateStatus: ComponentStatus }) {
-  return (
-    <header className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{data.name}</h1>
-          {data.description && <p className="text-sm mt-1 text-[var(--text-muted)]">{data.description}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusIcon status={aggregateStatus} />
-          <span className="text-sm font-semibold" style={{ color: `var(${getStatusToken(aggregateStatus)})` }}>
-            {STATUS_LABELS[aggregateStatus]}
-          </span>
-        </div>
-      </div>
-    </header>
-  )
-}
-
-function ServiceCard({ service, incidents }: { service: CategoryServiceStatus; incidents: Incident[] }) {
+function ServiceHealthCard({ service, incidents }: { service: CategoryServiceStatus; incidents: Incident[] }) {
   const activeIncidents = incidents.filter((incident) => isIncidentActive(incident.status))
-  const [expandedIncidents, setExpandedIncidents] = useState<Set<string>>(new Set())
-  const [metricsExpanded, setMetricsExpanded] = useState(false)
-  const highestImpact = activeIncidents.reduce<string>((current, incident) => {
-    return impactRank(incident.impact) > impactRank(current) ? incident.impact : current
-  }, '')
-  const hasMonitoringData = service.uptimeHistory.length > 0
+  const highestImpact = activeIncidents.reduce<string>((current, incident) => (
+    impactRank(incident.impact) > impactRank(current) ? incident.impact : current
+  ), '')
   const displayStatus = highestImpact ? impactToStatus(highestImpact) : service.status
-  const displayLabel = STATUS_LABELS[displayStatus] ?? 'Unknown status'
-  const {
-    data: metrics,
-    loading: metricsLoading,
-  } = useApi<MonitorMetrics>(`/v1/monitors/${service.id}/metrics`, [service.id])
-
-  const formatLatency = (value: number | null | undefined): string => {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-      return '-'
-    }
-
-    return `${Math.round(value)} ms`
-  }
-
-  const formatAvailability = (value: number | null | undefined): string => {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-      return '—'
-    }
-
-    return `${value.toFixed(1)}%`
-  }
-
-  const availabilityDotClass = (value: number | null | undefined): string => {
-    if (typeof value !== 'number' || Number.isNaN(value)) {
-      return 'bg-[var(--text-subtle)]'
-    }
-
-    if (value >= 99) {
-      return 'bg-emerald-500'
-    }
-
-    if (value >= 95) {
-      return 'bg-amber-500'
-    }
-
-    return 'bg-red-500'
-  }
-
-  const historyRows = metrics?.history ?? []
-  const hasMetricsData = historyRows.length > 0
-
-  const p90 = metrics?.latency?.p90
-  const p99 = metrics?.latency?.p99
+  const hasMonitoringData = service.uptimeHistory.length > 0
 
   return (
-    <article className='py-2 space-y-4'>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-semibold">{service.name}</h3>
-          {hasMonitoringData && (
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              90-day uptime: {service.uptime90d.toFixed(2)}%
-            </p>
-          )}
+    <div className="min-w-0 overflow-hidden flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+      <div>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <span className="text-lg font-semibold">{service.name}</span>
+            {service.description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{service.description}</p>}
+          </div>
+          <StatusPageBadge status={componentStatusToSeverity(displayStatus)} />
         </div>
-        <div className="text-right">
-          <span
-            className="text-xs font-medium rounded-full px-2.5 py-1"
-            style={{
-              backgroundColor: `color-mix(in oklab, var(${getStatusToken(displayStatus)}) 14%, transparent)`,
-              color: `var(${getStatusToken(displayStatus)})`,
-            }}
-          >
-            {displayLabel}
-          </span>
-        </div>
+        {hasMonitoringData && (
+          <div className="mb-6 min-w-0 overflow-hidden">
+            <UptimeTimeline history={service.uptimeHistory} showLabels={false} />
+          </div>
+        )}
       </div>
-
-      {hasMonitoringData && (
-        <div className="py-2">
-          <UptimeTimeline
-            history={service.uptimeHistory}
-            showAverage
-            average={service.uptime90d}
-          />
-        </div>
-      )}
-
-      {hasMetricsData && (
-        <section
-          className="rounded-md border bg-[var(--surface)] p-5"
-          style={{
-            borderColor: 'var(--border)',
-          }}
-        >
-          {metricsLoading ? (
-            <div className="space-y-3 animate-pulse">
-              <div className="h-4 w-20 rounded bg-[var(--surface-uptime)]" />
-              <div className="h-8 w-80 max-w-full rounded bg-[var(--surface-uptime)]" />
-            </div>
-          ) : (
-            <>
-              <h4 className="text-sm font-semibold">Latency</h4>
-              <p className="mt-2 text-2xl font-semibold leading-tight">
-                {formatLatency(p90)}
-                <span className="ml-2 text-sm font-medium text-[var(--text-muted)] align-middle">
-                  (P90), {formatLatency(p99)} (P99) last 31 days
-                </span>
-              </p>
-
-              <div className="mt-4 border-t border-[var(--border)] pt-3">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-[var(--text)]"
-                  onClick={() => setMetricsExpanded((current) => !current)}
-                  aria-expanded={metricsExpanded}
-                >
-                  {metricsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  Historical latency and availability
-                </button>
-
-                {metricsExpanded && (
-                  <div className="mt-3 overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-left text-[var(--text-muted)]">
-                          <th className="py-2 pr-4 font-medium">Month</th>
-                          <th className="py-2 pr-4 font-medium">Latency (P90)</th>
-                          <th className="py-2 pr-4 font-medium">Latency (P99)</th>
-                          <th className="py-2 pr-2 font-medium">Availability</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historyRows.length > 0 ? (
-                          historyRows.map((entry) => {
-                            const availability = entry.availability
-                            const hasAvailability = typeof availability === 'number' && !Number.isNaN(availability)
-
-                            return (
-                              <tr key={entry.month} className="border-b border-[var(--border)] last:border-b-0">
-                                <td className="py-2 pr-4 text-[var(--text)]">{entry.month}</td>
-                                <td className="py-2 pr-4 text-[var(--text)]">{formatLatency(entry.latency?.p90)}</td>
-                                <td className="py-2 pr-4 text-[var(--text)]">{formatLatency(entry.latency?.p99)}</td>
-                                <td className="py-2 pr-2 text-[var(--text)]">
-                                  {hasAvailability ? (
-                                    <span className="inline-flex items-center gap-2">
-                                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${availabilityDotClass(availability)}`} />
-                                      {formatAvailability(availability)}
-                                    </span>
-                                  ) : (
-                                    '—'
-                                  )}
-                                </td>
-                              </tr>
-                            )
-                          })
-                        ) : (
-                          <tr>
-                            <td className="py-3 text-[var(--text-muted)]" colSpan={4}>
-                              No historical metrics available.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </section>
-      )}
-
-      {activeIncidents.length > 0 ? (
-        <div
-          className="rounded-md border p-5"
-          style={{
-            borderColor: 'var(--border)',
-            backgroundColor: 'var(--surface)',
-          }}
-        >
-          <IncidentCarouselGroup
-            title="Active incidents"
-            incidents={activeIncidents}
-            expandedIncidents={expandedIncidents}
-            onToggleExpand={(incidentId) => {
-              setExpandedIncidents((prev) => {
-                const next = new Set(prev)
-                if (next.has(incidentId)) {
-                  next.delete(incidentId)
-                } else {
-                  next.add(incidentId)
-                }
-                return next
-              })
-            }}
-          />
+      {hasMonitoringData ? (
+        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
+          <span className="text-slate-500 dark:text-slate-400">Uptime</span>
+          <span className="font-bold">{service.uptime90d.toFixed(2)}%</span>
         </div>
       ) : (
-        <div
-          className="rounded-md border p-5"
-          style={{
-            borderColor: 'var(--border)',
-            backgroundColor: 'var(--surface)',
-          }}
-        >
-          <div className="flex items-start gap-3">
-            {/* Icon */}
-            <div className="mt-0.5 text-green-500">
-              ●
-            </div>
-
-            <div>
-              {/* Title */}
-              <p className="text-sm font-medium">
-                No known issues
-              </p>
-
-              {/* Timestamp */}
-              <p className="text-xs text-[var(--text-muted)] mt-1">
-                {new Date().toLocaleString()}
-              </p>
-
-              {/* Description */}
-              <p className="text-sm text-[var(--text-muted)] mt-2">
-                The service is up and running with no known issues.
-              </p>
-            </div>
+        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
+          <span className="text-slate-500 dark:text-slate-400">
+            {activeIncidents.length > 0 ? 'Active incidents' : 'Status'}
+          </span>
+          <span className="font-bold">
+            {activeIncidents.length > 0 ? `${activeIncidents.length} issue(s)` : 'No known issues'}
+          </span>
+        </div>
+      )}
+      {activeIncidents.length > 0 && (
+        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+          <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active incident context</p>
+          <div className="space-y-4">
+            {activeIncidents.map((incident) => (
+              <div key={incident.id}>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold">{incident.title}</span>
+                  <StatusPageBadge status={incidentImpactToSeverity(incident.impact)} />
+                </div>
+                <div className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+                  <ContentRenderer text={getIncidentContent(incident).text} json={getIncidentContent(incident).json} />
+                </div>
+                <IncidentTimeline updates={incident.updates || []} />
+              </div>
+            ))}
           </div>
         </div>
       )}
-
-    </article>
+    </div>
   )
 }
 
@@ -383,21 +146,15 @@ export default function StatusCategoryPage() {
   const { data, loading, error, refetch } = useCategorySummary(categoryPrefix)
   const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
 
+  const settings = normalizeStatusPageSettings(settingsData ?? DEFAULT_STATUS_PAGE_SETTINGS)
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
   const aggregateStatus: ComponentStatus = data?.aggregateStatus ?? 'operational'
-  const subComponentDividerStyle: React.CSSProperties = {
-    borderColor: 'var(--subcomponent-divider)',
-    ['--tw-divide-color' as any]: 'var(--subcomponent-divider)',
-  }
 
   const incidentsByService = useMemo(() => {
     const serviceIncidentMap = new Map<string, Incident[]>()
     for (const service of services) {
-      serviceIncidentMap.set(
-        service.id,
-        incidents.filter((incident) => incidentAffectsService(incident, service)),
-      )
+      serviceIncidentMap.set(service.id, incidents.filter((incident) => incidentAffectsService(incident, service)))
     }
     return serviceIncidentMap
   }, [incidents, services])
@@ -412,66 +169,100 @@ export default function StatusCategoryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
-        <main className="flex-1">
-          <div className="max-w-5xl mx-auto px-4 py-10">Loading category status…</div>
+      <StatusPageFrame settings={settings}>
+        <main className="mx-auto max-w-[768px] px-4 py-10 md:px-8">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 font-mono text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Loading service health...</div>
         </main>
-        <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
-      </div>
+      </StatusPageFrame>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
-        <main className="flex-1">
-          <div className="max-w-5xl mx-auto px-4 py-10 space-y-3">
-            <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
-              <Link to="/" className="hover:underline">Status</Link>
-              <ChevronRight className="w-4 h-4" />
-              <span>{categoryPrefix ?? 'Unknown category'}</span>
-            </nav>
-            <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-6">
-              <h1 className="text-xl font-semibold mb-2">Category unavailable</h1>
-              <p className="text-sm text-[var(--text-muted)]">{error ?? 'Unable to load this category right now.'}</p>
-            </div>
+      <StatusPageFrame settings={settings}>
+        <main className="mx-auto max-w-[768px] space-y-6 px-4 py-10 md:px-8">
+          <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">
+            <ArrowLeft className="h-4 w-4" /> Global Status
+          </Link>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h1 className="text-xl font-semibold">Category unavailable</h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{error ?? `Unable to load ${categoryPrefix ?? 'this category'} right now.`}</p>
           </div>
         </main>
-        <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
-      </div>
+      </StatusPageFrame>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col">
-      <main className="flex-1">
-        <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-          <nav className="text-sm text-[var(--text-muted)] flex items-center gap-2">
-            <Link to="/" className="hover:underline">Status</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>{data.name}</span>
-          </nav>
+    <StatusPageFrame settings={settings}>
+      <main className="mx-auto max-w-[768px] px-4 py-8 md:px-8 md:py-12">
+        <div className="mb-6">
+          <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">
+            <ArrowLeft className="h-4 w-4" /> Global Status
+          </Link>
+        </div>
 
-          <PlatformStatus data={data} aggregateStatus={aggregateStatus} />
+        <div className="mb-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 md:p-8">
+          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+            <div>
+              <div className="mb-2 flex items-center gap-3">
+                <MessageSquare className="h-8 w-8 text-emerald-700 dark:text-emerald-400" />
+                <h1 className="text-3xl font-bold">{data.name}</h1>
+              </div>
+              <p className="text-lg text-slate-600 dark:text-slate-400">{data.description || 'Real-time service health and operational context.'}</p>
+            </div>
+            <div className="flex w-full flex-col items-start md:w-auto md:items-end">
+              <div className="mb-2">
+                <StatusPageBadge status={componentStatusToSeverity(aggregateStatus)} />
+              </div>
+              <div className="mt-2 text-left md:text-right">
+                <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {data.uptime90d.toFixed(2)}<span className="text-2xl font-normal text-slate-400">%</span>
+                </span>
+                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">90-Day Uptime</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <section className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Sub-service Health</h2>
+            <span className="font-mono text-xs text-slate-500">Live updates enabled</span>
+          </div>
           {services.length > 0 ? (
-            <div className="divide-y divide-[color:var(--subcomponent-divider)] rounded-md border border-[var(--border)] bg-[var(--surface)]  p-5" aria-label="Services">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {services.map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  service={service}
-                  incidents={incidentsByService.get(service.id) ?? EMPTY_INCIDENTS}
-                />
+                <ServiceHealthCard key={service.id} service={service} incidents={incidentsByService.get(service.id) ?? EMPTY_INCIDENTS} />
               ))}
             </div>
           ) : (
-            <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-muted)]">
-              No services are configured for this category yet.
-            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">No services are configured for this category yet.</div>
           )}
-        </div>
+        </section>
+
+        {/* <section className="mb-10">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Latency Trend</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Average response time over the last 24 hours.</p>
+              </div>
+              <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+                <button className="rounded-md bg-white px-4 py-1.5 font-mono text-xs font-semibold shadow-sm dark:bg-slate-700">24h</button>
+                <button className="px-4 py-1.5 font-mono text-xs font-semibold text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">7d</button>
+              </div>
+            </div>
+            <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-center dark:border-slate-800 dark:bg-slate-800/40">
+              <div>
+                <CheckCircle className="mx-auto mb-3 h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                <p className="font-mono text-sm font-semibold text-slate-700 dark:text-slate-300">Latency metrics are not exposed by the current public API.</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Service uptime and incident context remain live.</p>
+              </div>
+            </div>
+          </div>
+        </section> */}
       </main>
-      <Footer centerText={settingsData?.footer?.text} showPoweredBy={settingsData?.footer?.showPoweredBy} />
-    </div>
+    </StatusPageFrame>
   )
 }

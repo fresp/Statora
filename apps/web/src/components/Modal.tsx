@@ -27,18 +27,18 @@ export default function Modal({ title, onClose, children, footer, size = 'md' }:
   }, [])
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className={`bg-white rounded-xl shadow-xl w-full ${SIZE_CLASS[size]} max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-none">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+      <div className={`statora-dialog ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col`}>
+        <div className="statora-dialog-header">
+          <h2 className="font-semibold tracking-tight text-slate-950">{title}</h2>
+          <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 flex-1 min-h-0 overflow-y-auto">{children}</div>
 
-        {footer && <div className="px-6 py-4 border-t border-gray-100 bg-white flex-none">{footer}</div>}
+        {footer && <div className="statora-dialog-footer">{footer}</div>}
       </div>
     </div>
   )

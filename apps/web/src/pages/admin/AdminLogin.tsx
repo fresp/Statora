@@ -1,16 +1,35 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
+import { getApiErrorMessage } from '../../lib/apiError'
 import { clearAuthSession, setAuthSession } from '../../lib/auth'
 import { useApi } from '../../hooks/useApi'
 import type { LoginResponse, MfaVerifyResponse, StatusPageSettings, User } from '../../types'
 
-const DEFAULT_PAGE_TITLE = 'StatusForge'
+const DEFAULT_PAGE_TITLE = 'Statora'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { data: settingsData } = useApi<StatusPageSettings>('/status/settings')
   const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
+  const ssoError = useMemo(() => {
+    const code = new URLSearchParams(location.search).get('error')
+    switch (code) {
+      case 'sso_not_configured':
+        return 'SSO is not configured.'
+      case 'sso_disabled':
+        return 'SSO is currently disabled.'
+      case 'user_not_found':
+        return 'No user account matches this SSO login.'
+      case 'sso_not_allowed':
+        return 'SSO is not enabled for this account.'
+      case 'invalid_token':
+        return 'The SSO token is invalid or expired.'
+      default:
+        return ''
+    }
+  }, [location.search])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -40,8 +59,8 @@ export default function AdminLogin() {
         })
         navigate('/admin')
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Invalid credentials')
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Invalid credentials'))
     } finally {
       setLoading(false)
     }
@@ -73,8 +92,8 @@ export default function AdminLogin() {
       setPendingToken(null)
       setPendingUser(null)
       navigate('/admin')
-    } catch (err: any) {
-      setMfaError(err.response?.data?.error || 'Invalid verification code')
+    } catch (err: unknown) {
+      setMfaError(getApiErrorMessage(err, 'Invalid verification code'))
     } finally {
       setMfaLoading(false)
     }
@@ -94,44 +113,45 @@ export default function AdminLogin() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-md w-full max-w-sm p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">User Login</h1>
-          <p className="text-sm text-gray-500 mb-6">{pageTitle}</p>
+      <div className="statora-shell flex items-center justify-center px-4 py-12">
+        <div className="statora-card w-full max-w-sm p-8">
+          <p className="statora-kicker mb-2">Admin access</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 mb-2">User Login</h1>
+          <p className="statora-muted mb-6">{pageTitle}</p>
 
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
+          {(error || ssoError) && (
+            <div className="statora-alert-error mb-4">
+              {error || ssoError}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="statora-input"
                 placeholder="admin@statusplatform.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="statora-input"
                 placeholder="••••••••"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+              className="statora-btn-primary w-full"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -140,22 +160,22 @@ export default function AdminLogin() {
       </div>
 
       {pendingToken && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-1">MFA Verification Required</h2>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 z-50 bg-slate-950/55 flex items-center justify-center px-4 backdrop-blur-sm">
+          <div className="statora-card w-full max-w-sm p-6">
+            <h2 className="text-xl font-semibold text-slate-950 mb-1">MFA Verification Required</h2>
+            <p className="text-sm text-slate-600 mb-4">
               Enter the 6-digit code from your authenticator app for {pendingUser?.email ?? 'your account'}.
             </p>
 
             {mfaError && (
-              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-sm">
+              <div className="statora-alert-error mb-4">
                 {mfaError}
               </div>
             )}
 
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Authenticator Code</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Authenticator Code</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -164,7 +184,7 @@ export default function AdminLogin() {
                   required
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="statora-input tracking-widest"
                   placeholder="123456"
                 />
               </div>
@@ -173,7 +193,7 @@ export default function AdminLogin() {
                 <button
                   type="submit"
                   disabled={mfaLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+                  className="statora-btn-primary flex-1"
                 >
                   {mfaLoading ? 'Verifying...' : 'Verify and Continue'}
                 </button>
@@ -181,7 +201,7 @@ export default function AdminLogin() {
                   type="button"
                   onClick={handleMfaCancel}
                   disabled={mfaLoading}
-                  className="px-3 py-2 rounded-lg text-sm border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="statora-btn-secondary px-3"
                 >
                   Cancel
                 </button>

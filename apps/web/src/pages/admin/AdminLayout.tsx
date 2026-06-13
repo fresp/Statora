@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import api from '../../lib/api'
 import {
   LayoutDashboard,
   Layers,
@@ -22,7 +23,7 @@ import type { UserRole } from '../../types'
 import type { StatusPageSettings } from '../../types'
 import { useApi } from '../../hooks/useApi'
 
-const DEFAULT_PAGE_TITLE = 'StatusForge'
+const DEFAULT_PAGE_TITLE = 'Statora'
 
 interface StoredAdminProfile {
   role?: UserRole
@@ -165,7 +166,13 @@ export default function AdminLayout() {
       .filter(section => section.items.length > 0)
     : navSections
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // ignore logout request failures and still clear local state
+    }
+
     localStorage.removeItem('user_token')
     localStorage.removeItem('user_profile')
     localStorage.removeItem('admin_token')
@@ -248,7 +255,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     document.title = `${pageTitle} - Admin Panel`
-  }, [pageTitle, location.pathname])
+  }, [pageTitle])
 
   function toggleSection(key: string) {
     setOpenSections(prev => ({
@@ -258,43 +265,43 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 ${sidebarWidthClass} bg-gray-900 text-white flex flex-col overflow-hidden transition-[width] duration-300 ease-in-out`}
+        className={`fixed inset-y-0 left-0 z-30 ${sidebarWidthClass} flex flex-col overflow-hidden border-r border-slate-200 bg-white/90 text-slate-600 shadow-sm backdrop-blur-md transition-[width] duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-400`}
       >
-        <div className="border-b border-gray-700">
-          <div className="flex items-start justify-between gap-2 px-3 py-4 min-h-[76px]">
+        <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="flex items-start justify-between gap-2 px-4 py-5 min-h-[80px]">
             <div className={`min-w-0 transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-              <h1 className="text-lg font-bold truncate">{pageTitle}</h1>
-              <p className="text-xs text-gray-400 mt-0.5 truncate">User Console</p>
+              <h1 className="truncate text-base font-bold tracking-wide text-emerald-700 dark:text-emerald-400">{pageTitle}</h1>
+              <p className="mt-1 truncate font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Operations Console</p>
             </div>
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed(prev => !prev)}
               aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/80 transition-colors"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-all duration-200 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
-              {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              {isSidebarCollapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
             </button>
           </div>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-8 [scrollbar-width:thin] [scrollbar-color:rgb(75_85_99)_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-700/70 hover:[&::-webkit-scrollbar-thumb]:bg-gray-600/80">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 pt-5 pb-8 [scrollbar-width:thin] [scrollbar-color:rgb(148_163_184)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:[scrollbar-color:rgb(51_65_85)_transparent] dark:[&::-webkit-scrollbar-thumb]:bg-slate-700/50 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600/80">
           {visibleNavSections.map(section => (
-            <div key={section.label} className="mt-3 first:mt-0 space-y-1.5">
+            <div key={section.label} className="mb-6 last:mb-0 space-y-1">
               {!isSidebarCollapsed && (
                 <button
                   type="button"
                   onClick={() => toggleSection(sectionKey(section.label))}
                   aria-expanded={openSections[sectionKey(section.label)] ?? true}
-                  className="sticky top-0 z-10 -mx-3 w-[calc(100%+1.5rem)] flex items-center justify-between px-3 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500/90 bg-gray-900/95 backdrop-blur-sm"
+                  className="group flex w-full items-center justify-between px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 transition-colors hover:text-emerald-700 dark:text-slate-500 dark:hover:text-emerald-400"
                 >
                   <span>{section.label}</span>
                   {(openSections[sectionKey(section.label)] ?? true) ? (
-                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
                   ) : (
-                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    <ChevronRight className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
                   )}
                 </button>
               )}
@@ -302,35 +309,35 @@ export default function AdminLayout() {
               <div
                 className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${(openSections[sectionKey(section.label)] ?? true) || isSidebarCollapsed ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
               >
-                <div className="overflow-hidden">
+                <div className="overflow-hidden space-y-0.5">
                   {section.items.map(({ to, label, icon: Icon, end, children }) => (
-                    <div key={to} className="space-y-1">
+                    <div key={to} className="space-y-0.5">
                       <NavLink
                         to={to}
                         end={end}
                         title={isSidebarCollapsed ? label : undefined}
                         className={({ isActive }) =>
-                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 pl-3 pr-3'} py-2.5 rounded-lg border-l-2 text-sm leading-5 font-medium transition-colors ${isActive
-                            ? 'bg-blue-600/95 text-white border-blue-300 shadow-sm'
-                            : 'text-gray-500 border-transparent hover:bg-gray-800/60 hover:text-gray-200'
+                          `flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} py-2 rounded-lg font-mono text-[13px] leading-5 font-semibold transition-all duration-200 ${isActive
+                            ? 'bg-emerald-100 text-emerald-800 shadow-[inset_2px_0_0_0_rgb(4,120,87)] dark:bg-emerald-950/40 dark:text-emerald-400 dark:shadow-[inset_2px_0_0_0_rgb(52,211,153)]'
+                            : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-emerald-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-emerald-400'
                           }`
                         }
                       >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isSidebarCollapsed ? '' : 'opacity-80'}`} />
                         {!isSidebarCollapsed && <span className="truncate">{label}</span>}
                       </NavLink>
 
                       {!isSidebarCollapsed && children && children.length > 0 && (
-                        <div className="ml-6 pl-3 border-l border-gray-700/80 space-y-1.5">
+                        <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-slate-200 pl-3 dark:border-slate-800">
                           {children.map(child => (
                             <NavLink
                               key={child.to}
                               to={child.to}
                               end={child.end}
                               className={({ isActive }) =>
-                                `block px-3 py-2 rounded-md text-[13px] leading-5 font-medium transition-colors ${isActive
-                                  ? 'bg-blue-600/90 text-white'
-                                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
+                                `block rounded-md px-3 py-1.5 font-mono text-[13px] font-semibold leading-5 transition-colors ${isActive
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                  : 'text-slate-500 hover:bg-slate-100 hover:text-emerald-700 dark:hover:bg-slate-800/40 dark:hover:text-emerald-400'
                                 }`
                               }
                             >
@@ -347,23 +354,24 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <footer className="px-3 py-4 border-t border-gray-700 space-y-1">
+        <footer className="space-y-1 border-t border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/80">
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
             title={isSidebarCollapsed ? 'View Status Page' : undefined}
-            className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800/70 hover:text-gray-200 transition-colors`}
+            className={`flex items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-emerald-400`}
           >
-            <ExternalLink className="w-4 h-4" />
-            {!isSidebarCollapsed && 'View Status Page'}
+            <ExternalLink className="w-[18px] h-[18px] opacity-80" />
+            {!isSidebarCollapsed && 'Status Page'}
           </a>
           <button
+            type="button"
             onClick={handleLogout}
             title={isSidebarCollapsed ? 'Logout' : undefined}
-            className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-3'} py-2 rounded-lg text-sm text-gray-400 hover:bg-red-700/70 hover:text-white transition-colors`}
+            className={`flex w-full items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400`}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-[18px] h-[18px] opacity-80" />
             {!isSidebarCollapsed && 'Logout'}
           </button>
         </footer>
@@ -371,7 +379,9 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className={`${sidebarOffsetClass} h-screen overflow-auto transition-[margin] duration-300 ease-in-out`}>
-        <Outlet />
+        <div className="max-w-7xl mx-auto p-6 md:p-10 lg:p-12">
+          <Outlet />
+        </div>
       </main>
     </div>
   )
