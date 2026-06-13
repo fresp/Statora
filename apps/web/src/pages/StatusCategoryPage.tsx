@@ -129,18 +129,17 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{secondaryStatusLabel}</p>
           </div>
         )}
+        {hasMonitoringData && (
+          <div className="flex justify-between font-mono text-sm">
+            <span className="text-slate-500 dark:text-slate-400">Uptime</span>
+            <span className="font-bold">{service.uptime30d?.toFixed(2)}%</span>
+          </div>
+        )}
       </div>
-      {hasMonitoringData ? (
-        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
-          <span className="text-slate-500 dark:text-slate-400">Uptime</span>
-          <span className="font-bold">{service.uptime30d?.toFixed(2)}%</span>
-        </div>
-      ) : (
-        <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
-          <span className="text-slate-500 dark:text-slate-400">Last updated</span>
-          <span className="font-bold text-slate-700 dark:text-slate-300">{formatRelativeTime(service.updatedAt)}</span>
-        </div>
-      )}
+      <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
+        <span className="text-slate-500 dark:text-slate-400">Last updated</span>
+        <span className="font-bold text-slate-700 dark:text-slate-300">{formatRelativeTime(service.updatedAt)}</span>
+      </div>
       {hasMonitoringData && activeIncidents.length > 0 && (
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
           <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active incident context</p>
