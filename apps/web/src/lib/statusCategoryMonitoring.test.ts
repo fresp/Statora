@@ -8,6 +8,7 @@ function createSummary(services: CategorySummary['services']): CategorySummary {
     name: 'ULW',
     description: 'Category',
     aggregateStatus: 'operational',
+    hasMonitoring: services.some((service) => service.uptimeHistory.length > 0),
     uptime30d: 100,
     services,
     incidents: [],

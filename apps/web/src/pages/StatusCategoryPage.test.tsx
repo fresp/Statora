@@ -75,6 +75,7 @@ function createSummary(services: CategorySummary['services']): CategorySummary {
     name: 'API Platform',
     description: 'Category summary',
     aggregateStatus: 'operational',
+    hasMonitoring: true,
     uptime30d: 99.95,
     services,
     incidents: [],
@@ -174,6 +175,7 @@ describe('StatusCategoryPage', () => {
             uptimeHistory: [],
           },
         ]),
+        hasMonitoring: false,
         uptime30d: null,
       },
       loading: false,
@@ -183,7 +185,9 @@ describe('StatusCategoryPage', () => {
 
     const html = renderToStaticMarkup(<StatusCategoryPage />)
 
-    expect(html).toContain('—')
-    expect(html).toContain('30-Day Uptime')
+    expect(html).toContain('Incident')
+    expect(html).toContain('Tracking')
+    expect(html).not.toContain('30-Day Uptime')
+    expect(html).not.toContain('—')
   })
 })

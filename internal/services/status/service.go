@@ -40,6 +40,7 @@ type CategorySummary struct {
 	Name            string                       `json:"name"`
 	Description     string                       `json:"description"`
 	AggregateStatus string                       `json:"aggregateStatus"`
+	HasMonitoring   bool                         `json:"hasMonitoring"`
 	Uptime30d       *float64                     `json:"uptime30d"`
 	Services        []CategoryService            `json:"services"`
 	Incidents       []models.IncidentWithUpdates `json:"incidents"`
@@ -200,6 +201,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 	}
 
 	aggregateStatus := aggregateStatusFromServices(services)
+	hasMonitoring := false
 	var categoryUptime *float64
 	if len(services) > 0 {
 		total := 0.0
@@ -212,6 +214,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 			monitoredCount++
 		}
 		if monitoredCount > 0 {
+			hasMonitoring = true
 			average := total / float64(monitoredCount)
 			categoryUptime = &average
 		}
@@ -296,6 +299,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 		Name:            categoryComponent.Name,
 		Description:     categoryComponent.Description,
 		AggregateStatus: aggregateStatus,
+		HasMonitoring:   hasMonitoring,
 		Uptime30d:       categoryUptime,
 		Services:        services,
 		Incidents:       incidentsWithUpdates,

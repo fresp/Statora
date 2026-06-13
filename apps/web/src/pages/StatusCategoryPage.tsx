@@ -123,7 +123,7 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
         )}
         {!hasMonitoringData && (
           <div className="mb-6 flex min-h-[96px] flex-col items-center justify-center text-center">
-            <p className={`text-[30px] font-semibold uppercase leading-none tracking-[-0.04em] ${statusAccentClass}`}>
+            <p className={`font-semibold uppercase leading-none tracking-[-0.04em] ${statusAccentClass}`}>
               {primaryStatusLabel}
             </p>
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{secondaryStatusLabel}</p>
@@ -173,7 +173,7 @@ export default function StatusCategoryPage() {
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
   const aggregateStatus: ComponentStatus = data?.aggregateStatus ?? 'operational'
-  const categoryUptimeLabel = data?.uptime30d != null ? data.uptime30d.toFixed(2) : '—'
+  const categoryHasMonitoring = data?.hasMonitoring ?? false
 
   const incidentsByService = useMemo(() => {
     const serviceIncidentMap = new Map<string, Incident[]>()
@@ -240,11 +240,19 @@ export default function StatusCategoryPage() {
                 <StatusPageBadge status={componentStatusToSeverity(aggregateStatus)} />
               </div>
               <div className="mt-2 text-left md:text-right">
-                <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  {categoryUptimeLabel}
-                  {data?.uptime30d != null && <span className="text-2xl font-normal text-slate-400">%</span>}
-                </span>
-                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">30-Day Uptime</p>
+                {data?.uptime30d != null ? (
+                  <>
+                    <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      {data.uptime30d.toFixed(2)}<span className="text-2xl font-normal text-slate-400">%</span>
+                    </span>
+                    <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">30-Day Uptime</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold uppercase leading-none tracking-tight text-slate-900 dark:text-white">Incident</p>
+                    <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">Tracking</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
