@@ -59,6 +59,7 @@ export interface CategoryServiceStatus {
   name: string
   description: string
   status: ComponentStatus
+  updatedAt: string
   uptime90d: number
   uptimeHistory: UptimeBar[]
 }

@@ -30,6 +30,7 @@ type CategoryService struct {
 	Name          string                 `json:"name"`
 	Description   string                 `json:"description"`
 	Status        models.ComponentStatus `json:"status"`
+	UpdatedAt     time.Time              `json:"updatedAt"`
 	Uptime90d     float64                `json:"uptime90d"`
 	UptimeHistory []DailyUptimeBar       `json:"uptimeHistory"`
 }
@@ -178,6 +179,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 				Name:          sub.Name,
 				Description:   sub.Description,
 				Status:        sub.Status,
+				UpdatedAt:     sub.UpdatedAt,
 				Uptime90d:     averageUptime(history),
 				UptimeHistory: history,
 			})
@@ -189,6 +191,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 			Name:          categoryComponent.Name,
 			Description:   categoryComponent.Description,
 			Status:        categoryComponent.Status,
+			UpdatedAt:     categoryComponent.UpdatedAt,
 			Uptime90d:     averageUptime(history),
 			UptimeHistory: history,
 		})

@@ -8,6 +8,7 @@ import { UptimeTimeline } from '../components/status/UptimeTimeline'
 import { IncidentTimeline } from '../components/IncidentTimeline'
 import { DEFAULT_STATUS_PAGE_SETTINGS, normalizeStatusPageSettings } from '../lib/statusPageSettings'
 import { getIncidentContent } from '../lib/contentModel'
+import { formatRelativeTime } from '../lib/utils'
 import ContentRenderer from '../components/content/ContentRenderer'
 import {
   StatusPageBadge,
@@ -86,6 +87,24 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
   ), '')
   const displayStatus = highestImpact ? impactToStatus(highestImpact) : service.status
   const hasMonitoringData = service.uptimeHistory.length > 0
+  const statusAccentClass = (() => {
+    switch (componentStatusToSeverity(displayStatus)) {
+      case 'critical':
+        return 'text-red-700 dark:text-red-400'
+      case 'major':
+        return 'text-orange-700 dark:text-orange-400'
+      case 'minor':
+        return 'text-amber-700 dark:text-amber-400'
+      case 'operational':
+        return 'text-emerald-700 dark:text-emerald-400'
+    }
+  })()
+  const primaryStatusLabel = activeIncidents.length > 0
+    ? `${activeIncidents.length} ACTIVE INCIDENT${activeIncidents.length === 1 ? '' : 'S'}`
+    : 'NO ACTIVE INCIDENTS'
+  const secondaryStatusLabel = activeIncidents.length > 0
+    ? 'Incident updates are in progress'
+    : 'All systems operating normally'
 
   return (
     <div className="min-w-0 overflow-hidden flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900">
@@ -102,6 +121,14 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
             <UptimeTimeline history={service.uptimeHistory} showLabels={false} />
           </div>
         )}
+        {!hasMonitoringData && (
+          <div className="mb-6 flex min-h-[96px] flex-col items-center justify-center text-center">
+            <p className={`text-[30px] font-semibold uppercase leading-none tracking-[-0.04em] ${statusAccentClass}`}>
+              {primaryStatusLabel}
+            </p>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{secondaryStatusLabel}</p>
+          </div>
+        )}
       </div>
       {hasMonitoringData ? (
         <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
@@ -110,15 +137,11 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
         </div>
       ) : (
         <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
-          <span className="text-slate-500 dark:text-slate-400">
-            {activeIncidents.length > 0 ? 'Active incidents' : 'Status'}
-          </span>
-          <span className="font-bold">
-            {activeIncidents.length > 0 ? `${activeIncidents.length} issue(s)` : 'No known issues'}
-          </span>
+          <span className="text-slate-500 dark:text-slate-400">Last updated</span>
+          <span className="font-bold text-slate-700 dark:text-slate-300">{formatRelativeTime(service.updatedAt)}</span>
         </div>
       )}
-      {activeIncidents.length > 0 && (
+      {hasMonitoringData && activeIncidents.length > 0 && (
         <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
           <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active incident context</p>
           <div className="space-y-4">
