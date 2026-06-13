@@ -133,7 +133,7 @@ function ServiceHealthCard({ service, incidents }: { service: CategoryServiceSta
       {hasMonitoringData ? (
         <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
           <span className="text-slate-500 dark:text-slate-400">Uptime</span>
-          <span className="font-bold">{service.uptime90d.toFixed(2)}%</span>
+          <span className="font-bold">{service.uptime30d?.toFixed(2)}%</span>
         </div>
       ) : (
         <div className="flex justify-between border-t border-slate-100 pt-4 font-mono text-sm dark:border-slate-800/60">
@@ -173,6 +173,7 @@ export default function StatusCategoryPage() {
   const incidents = data?.incidents ?? EMPTY_INCIDENTS
   const services = data?.services ?? EMPTY_SERVICES
   const aggregateStatus: ComponentStatus = data?.aggregateStatus ?? 'operational'
+  const categoryUptimeLabel = data?.uptime30d != null ? data.uptime30d.toFixed(2) : '—'
 
   const incidentsByService = useMemo(() => {
     const serviceIncidentMap = new Map<string, Incident[]>()
@@ -240,7 +241,8 @@ export default function StatusCategoryPage() {
               </div>
               <div className="mt-2 text-left md:text-right">
                 <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  {data.uptime90d.toFixed(2)}<span className="text-2xl font-normal text-slate-400">%</span>
+                  {categoryUptimeLabel}
+                  {data?.uptime30d != null && <span className="text-2xl font-normal text-slate-400">%</span>}
                 </span>
                 <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">30-Day Uptime</p>
               </div>

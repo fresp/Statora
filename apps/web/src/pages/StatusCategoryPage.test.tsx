@@ -75,7 +75,7 @@ function createSummary(services: CategorySummary['services']): CategorySummary {
     name: 'API Platform',
     description: 'Category summary',
     aggregateStatus: 'operational',
-    uptime90d: 99.95,
+    uptime30d: 99.95,
     services,
     incidents: [],
   }
@@ -114,7 +114,7 @@ describe('StatusCategoryPage', () => {
           description: 'Monitored service',
           status: 'operational',
           updatedAt: '2026-06-13T10:00:00.000Z',
-          uptime90d: 99.95,
+          uptime30d: 99.95,
           uptimeHistory: createHistory(30),
         },
       ]),
@@ -142,7 +142,7 @@ describe('StatusCategoryPage', () => {
           description: 'Manual service',
           status: 'operational',
           updatedAt: '2026-06-13T10:00:00.000Z',
-          uptime90d: 100,
+          uptime30d: null,
           uptimeHistory: [],
         },
       ]),
@@ -158,5 +158,32 @@ describe('StatusCategoryPage', () => {
     expect(html).toContain('Last updated')
     expect(html).toContain('2 hours ago')
     expect(html).not.toContain('data-testid="incident-timeline"')
+  })
+
+  it('renders unavailable category uptime when no monitored services exist', () => {
+    mockedUseCategorySummary.mockReturnValue({
+      data: {
+        ...createSummary([
+          {
+            id: 'svc-manual',
+            name: 'Email API',
+            description: 'Manual service',
+            status: 'operational',
+            updatedAt: '2026-06-13T10:00:00.000Z',
+            uptime30d: null,
+            uptimeHistory: [],
+          },
+        ]),
+        uptime30d: null,
+      },
+      loading: false,
+      error: null,
+      refetch: async () => undefined,
+    })
+
+    const html = renderToStaticMarkup(<StatusCategoryPage />)
+
+    expect(html).toContain('—')
+    expect(html).toContain('30-Day Uptime')
   })
 })
