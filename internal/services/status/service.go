@@ -148,7 +148,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 		monitorIDs = append(monitorIDs, monitor.ID)
 	}
 
-	uptimeRecords, err := s.repo.ListDailyUptimeSinceByMonitorIDs(ctx, monitorIDs, time.Now().AddDate(0, 0, -90))
+	uptimeRecords, err := s.repo.ListDailyUptimeSinceByMonitorIDs(ctx, monitorIDs, time.Now().AddDate(0, 0, -30))
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 	services := make([]CategoryService, 0, len(subs))
 	if len(subs) > 0 {
 		for _, sub := range subs {
-			history := build90DayBars(monitorsBySubID[sub.ID], uptimeByMonitorID)
+			history := build30DayBars(monitorsBySubID[sub.ID], uptimeByMonitorID)
 			services = append(services, CategoryService{
 				ID:            sub.ID,
 				Name:          sub.Name,
@@ -185,7 +185,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 			})
 		}
 	} else {
-		history := build90DayBars(componentMonitorIDs, uptimeByMonitorID)
+		history := build30DayBars(componentMonitorIDs, uptimeByMonitorID)
 		services = append(services, CategoryService{
 			ID:            categoryComponent.ID,
 			Name:          categoryComponent.Name,
@@ -447,7 +447,7 @@ func (s *Service) BuildComponents(ctx context.Context, now time.Time) ([]Compone
 			subs = []models.SubComponent{}
 		}
 
-		bars := build90DayBars(monitorsByComp[component.ID], uptimeByMonitor)
+		bars := build30DayBars(monitorsByComp[component.ID], uptimeByMonitor)
 		lastIncident, err := s.repo.FindLatestIncidentByComponent(ctx, component.ID)
 		if err != nil {
 			return nil, err
@@ -1032,8 +1032,8 @@ func componentPrefix(name string) string {
 	return normalizeCategoryPrefix(name)
 }
 
-func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
-	domainBars := uptimedomain.Build90DayBars(monitorIDs, uptimeByMonitorID)
+func build30DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
+	domainBars := uptimedomain.Build30DayBars(monitorIDs, uptimeByMonitorID)
 	bars := make([]DailyUptimeBar, 0, len(domainBars))
 	for _, bar := range domainBars {
 		bars = append(bars, DailyUptimeBar{

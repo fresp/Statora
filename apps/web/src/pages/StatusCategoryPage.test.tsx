@@ -14,7 +14,7 @@ vi.mock('../hooks/useWebSocket', () => ({
 }))
 
 vi.mock('../components/status/UptimeTimeline', () => ({
-  UptimeTimeline: () => React.createElement('div', { 'data-testid': 'uptime-timeline' }, 'timeline'),
+  UptimeTimeline: ({ history }: { history: Array<unknown> }) => React.createElement('div', { 'data-testid': 'uptime-timeline', 'data-bar-count': String(history.length) }, 'timeline'),
 }))
 
 vi.mock('../components/IncidentTimeline', () => ({
@@ -59,6 +59,14 @@ const DEFAULT_SETTINGS: StatusPageSettings = {
   customCss: '',
   updatedAt: '',
   createdAt: '',
+}
+
+function createHistory(days: number): CategorySummary['services'][number]['uptimeHistory'] {
+  return Array.from({ length: days }, (_, index) => ({
+    date: `2026-06-${String(index + 1).padStart(2, '0')}`,
+    uptimePercent: 100,
+    status: 'operational' as const,
+  }))
 }
 
 function createSummary(services: CategorySummary['services']): CategorySummary {
@@ -107,7 +115,7 @@ describe('StatusCategoryPage', () => {
           status: 'operational',
           updatedAt: '2026-06-13T10:00:00.000Z',
           uptime90d: 99.95,
-          uptimeHistory: [{ date: '2026-06-12', uptimePercent: 100, status: 'operational' }],
+          uptimeHistory: createHistory(30),
         },
       ]),
       loading: false,
@@ -118,7 +126,9 @@ describe('StatusCategoryPage', () => {
     const html = renderToStaticMarkup(<StatusCategoryPage />)
 
     expect(html).toContain('data-testid="uptime-timeline"')
+    expect(html).toContain('data-bar-count="30"')
     expect(html).toContain('99.95%')
+    expect(html).toContain('30-Day Uptime')
     expect(html).not.toContain('NO ACTIVE INCIDENTS')
     expect(html).not.toContain('Last updated')
   })

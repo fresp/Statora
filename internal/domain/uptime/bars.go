@@ -13,15 +13,15 @@ type DailyBar struct {
 	Status        models.ComponentStatus
 }
 
-func Build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyBar {
+func Build30DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyBar {
 	if len(monitorIDs) == 0 {
 		return []DailyBar{}
 	}
 
-	bars := make([]DailyBar, 0, 90)
+	bars := make([]DailyBar, 0, 30)
 	now := time.Now()
 
-	for i := 89; i >= 0; i-- {
+	for i := 29; i >= 0; i-- {
 		day := now.AddDate(0, 0, -i)
 		dayKey := day.Format("2006-01-02")
 

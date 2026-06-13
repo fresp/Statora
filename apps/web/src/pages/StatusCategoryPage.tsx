@@ -242,7 +242,7 @@ export default function StatusCategoryPage() {
                 <span className="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
                   {data.uptime90d.toFixed(2)}<span className="text-2xl font-normal text-slate-400">%</span>
                 </span>
-                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">90-Day Uptime</p>
+                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">30-Day Uptime</p>
               </div>
             </div>
           </div>
