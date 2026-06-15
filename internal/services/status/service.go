@@ -30,7 +30,8 @@ type CategoryService struct {
 	Name          string                 `json:"name"`
 	Description   string                 `json:"description"`
 	Status        models.ComponentStatus `json:"status"`
-	Uptime90d     float64                `json:"uptime90d"`
+	UpdatedAt     time.Time              `json:"updatedAt"`
+	Uptime30d     *float64               `json:"uptime30d"`
 	UptimeHistory []DailyUptimeBar       `json:"uptimeHistory"`
 }
 
@@ -39,7 +40,8 @@ type CategorySummary struct {
 	Name            string                       `json:"name"`
 	Description     string                       `json:"description"`
 	AggregateStatus string                       `json:"aggregateStatus"`
-	Uptime90d       float64                      `json:"uptime90d"`
+	HasMonitoring   bool                         `json:"hasMonitoring"`
+	Uptime30d       *float64                     `json:"uptime30d"`
 	Services        []CategoryService            `json:"services"`
 	Incidents       []models.IncidentWithUpdates `json:"incidents"`
 }
@@ -147,7 +149,7 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 		monitorIDs = append(monitorIDs, monitor.ID)
 	}
 
-	uptimeRecords, err := s.repo.ListDailyUptimeSinceByMonitorIDs(ctx, monitorIDs, time.Now().AddDate(0, 0, -90))
+	uptimeRecords, err := s.repo.ListDailyUptimeSinceByMonitorIDs(ctx, monitorIDs, time.Now().AddDate(0, 0, -30))
 	if err != nil {
 		return nil, err
 	}
@@ -172,36 +174,50 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 	services := make([]CategoryService, 0, len(subs))
 	if len(subs) > 0 {
 		for _, sub := range subs {
-			history := build90DayBars(monitorsBySubID[sub.ID], uptimeByMonitorID)
+			history := build30DayBars(monitorsBySubID[sub.ID], uptimeByMonitorID)
+			serviceUptime := averageUptimePointer(history)
 			services = append(services, CategoryService{
 				ID:            sub.ID,
 				Name:          sub.Name,
 				Description:   sub.Description,
 				Status:        sub.Status,
-				Uptime90d:     averageUptime(history),
+				UpdatedAt:     sub.UpdatedAt,
+				Uptime30d:     serviceUptime,
 				UptimeHistory: history,
 			})
 		}
 	} else {
-		history := build90DayBars(componentMonitorIDs, uptimeByMonitorID)
+		history := build30DayBars(componentMonitorIDs, uptimeByMonitorID)
+		serviceUptime := averageUptimePointer(history)
 		services = append(services, CategoryService{
 			ID:            categoryComponent.ID,
 			Name:          categoryComponent.Name,
 			Description:   categoryComponent.Description,
 			Status:        categoryComponent.Status,
-			Uptime90d:     averageUptime(history),
+			UpdatedAt:     categoryComponent.UpdatedAt,
+			Uptime30d:     serviceUptime,
 			UptimeHistory: history,
 		})
 	}
 
 	aggregateStatus := aggregateStatusFromServices(services)
-	categoryUptime := 0.0
+	hasMonitoring := false
+	var categoryUptime *float64
 	if len(services) > 0 {
 		total := 0.0
+		monitoredCount := 0
 		for _, service := range services {
-			total += service.Uptime90d
+			if service.Uptime30d == nil {
+				continue
+			}
+			total += *service.Uptime30d
+			monitoredCount++
 		}
-		categoryUptime = total / float64(len(services))
+		if monitoredCount > 0 {
+			hasMonitoring = true
+			average := total / float64(monitoredCount)
+			categoryUptime = &average
+		}
 	}
 
 	affectedTargets := []primitive.ObjectID{categoryComponent.ID}
@@ -283,7 +299,8 @@ func (s *Service) BuildCategorySummary(ctx context.Context, prefix string) (*Cat
 		Name:            categoryComponent.Name,
 		Description:     categoryComponent.Description,
 		AggregateStatus: aggregateStatus,
-		Uptime90d:       categoryUptime,
+		HasMonitoring:   hasMonitoring,
+		Uptime30d:       categoryUptime,
 		Services:        services,
 		Incidents:       incidentsWithUpdates,
 	}, nil
@@ -444,7 +461,7 @@ func (s *Service) BuildComponents(ctx context.Context, now time.Time) ([]Compone
 			subs = []models.SubComponent{}
 		}
 
-		bars := build90DayBars(monitorsByComp[component.ID], uptimeByMonitor)
+		bars := build30DayBars(monitorsByComp[component.ID], uptimeByMonitor)
 		lastIncident, err := s.repo.FindLatestIncidentByComponent(ctx, component.ID)
 		if err != nil {
 			return nil, err
@@ -1029,8 +1046,8 @@ func componentPrefix(name string) string {
 	return normalizeCategoryPrefix(name)
 }
 
-func build90DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
-	domainBars := uptimedomain.Build90DayBars(monitorIDs, uptimeByMonitorID)
+func build30DayBars(monitorIDs []primitive.ObjectID, uptimeByMonitorID map[primitive.ObjectID][]models.DailyUptime) []DailyUptimeBar {
+	domainBars := uptimedomain.Build30DayBars(monitorIDs, uptimeByMonitorID)
 	bars := make([]DailyUptimeBar, 0, len(domainBars))
 	for _, bar := range domainBars {
 		bars = append(bars, DailyUptimeBar{
@@ -1053,6 +1070,15 @@ func averageUptime(bars []DailyUptimeBar) float64 {
 	}
 
 	return total / float64(len(bars))
+}
+
+func averageUptimePointer(bars []DailyUptimeBar) *float64 {
+	if len(bars) == 0 {
+		return nil
+	}
+
+	average := averageUptime(bars)
+	return &average
 }
 
 func aggregateStatusFromServices(services []CategoryService) string {

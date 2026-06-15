@@ -87,6 +87,33 @@ export function formatDateShort(dateStr: string): string {
   })
 }
 
+export function formatRelativeTime(dateStr?: string): string {
+  if (!dateStr) return 'just now'
+
+  const timestamp = new Date(dateStr).getTime()
+  if (Number.isNaN(timestamp)) return 'just now'
+
+  const diffMs = Math.max(0, Date.now() - timestamp)
+  const minuteMs = 60 * 1000
+  const hourMs = 60 * minuteMs
+  const dayMs = 24 * hourMs
+
+  if (diffMs < minuteMs) return 'just now'
+
+  if (diffMs < hourMs) {
+    const minutes = Math.floor(diffMs / minuteMs)
+    return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  }
+
+  if (diffMs < dayMs) {
+    const hours = Math.floor(diffMs / hourMs)
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  }
+
+  const days = Math.floor(diffMs / dayMs)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
+
 function formatLocalDateKey(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')

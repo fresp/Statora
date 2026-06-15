@@ -187,7 +187,7 @@ export default function StatusPage() {
                             <UptimeTimeline history={component.uptimeHistory} showLabels={false} />
                           </div>
                           <div className="flex justify-between font-mono text-xs text-slate-500 dark:text-slate-400">
-                            <span>90 days ago</span>
+                            <span>Last 30 Days</span>
                             <span className={`font-semibold ${serviceUptime === 100 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-300'}`}>
                               {serviceUptime.toFixed(2)}% Uptime
                             </span>
