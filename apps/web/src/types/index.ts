@@ -59,7 +59,8 @@ export interface CategoryServiceStatus {
   name: string
   description: string
   status: ComponentStatus
-  uptime90d: number
+  updatedAt: string
+  uptime30d: number | null
   uptimeHistory: UptimeBar[]
 }
 
@@ -68,7 +69,8 @@ export interface CategorySummary {
   name: string
   description: string
   aggregateStatus: ComponentStatus
-  uptime90d: number
+  hasMonitoring: boolean
+  uptime30d: number | null
   services: CategoryServiceStatus[]
   incidents: Incident[]
 }

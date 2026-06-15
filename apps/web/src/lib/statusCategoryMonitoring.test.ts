@@ -8,7 +8,8 @@ function createSummary(services: CategorySummary['services']): CategorySummary {
     name: 'ULW',
     description: 'Category',
     aggregateStatus: 'operational',
-    uptime90d: 100,
+    hasMonitoring: services.some((service) => service.uptimeHistory.length > 0),
+    uptime30d: 100,
     services,
     incidents: [],
   }
@@ -35,7 +36,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'API',
         description: 'API service',
         status: 'operational',
-        uptime90d: 99.9,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: null,
         uptimeHistory: [],
       },
       {
@@ -43,7 +45,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'Worker',
         description: 'Worker service',
         status: 'operational',
-        uptime90d: 99.8,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: null,
         uptimeHistory: [],
       },
     ])
@@ -60,7 +63,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'API',
         description: 'API service',
         status: 'operational',
-        uptime90d: 99.9,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: 99.9,
         uptimeHistory: [{ date: '2026-03-29', uptimePercent: 100, status: 'operational' }],
       },
       {
@@ -68,7 +72,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'Worker',
         description: 'Worker service',
         status: 'operational',
-        uptime90d: 99.8,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: null,
         uptimeHistory: [],
       },
     ])
@@ -90,7 +95,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'API',
         description: 'API service',
         status: 'operational',
-        uptime90d: 99.9,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: 99.9,
         uptimeHistory: [{ date: '2026-03-29', uptimePercent: 100, status: 'operational' }],
       },
       {
@@ -98,7 +104,8 @@ describe('statusCategoryMonitoring', () => {
         name: 'Worker',
         description: 'Worker service',
         status: 'operational',
-        uptime90d: 99.8,
+        updatedAt: '2026-03-29T00:00:00.000Z',
+        uptime30d: 99.8,
         uptimeHistory: [{ date: '2026-03-29', uptimePercent: 100, status: 'operational' }],
       },
     ])
@@ -109,5 +116,25 @@ describe('statusCategoryMonitoring', () => {
       totalServiceCount: 2,
       showPartialMonitoringNote: false,
     })
+  })
+
+  it('allows category uptime to be unavailable when no monitored services exist', () => {
+    const summary: CategorySummary = {
+      ...createSummary([
+        {
+          id: 'svc-1',
+          name: 'API',
+          description: 'API service',
+          status: 'operational',
+          updatedAt: '2026-03-29T00:00:00.000Z',
+          uptime30d: null,
+          uptimeHistory: [],
+        },
+      ]),
+      uptime30d: null,
+    }
+
+    expect(summary.uptime30d).toBeNull()
+    expect(hasMonitoringData(summary)).toBe(false)
   })
 })

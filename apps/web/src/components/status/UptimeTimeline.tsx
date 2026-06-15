@@ -19,12 +19,12 @@ export function UptimeTimeline({
   showAverage = false,
   average,
 }: Props) {
-  const last90 = history.slice(-90)
+  const last30 = history.slice(-30)
 
   return (
     <div className="min-w-0 w-full space-y-2 overflow-hidden">
       <div className="flex w-full min-w-0 items-end gap-[2px] overflow-hidden">
-        {last90.map((day, i) => {
+        {last30.map((day, i) => {
           let color = 'var(--status-operational)'
 
           if (day.status === 'major_outage') {
@@ -38,7 +38,7 @@ export function UptimeTimeline({
           return (
             <div
               key={i}
-              className={`h-8 min-w-0 flex-1 rounded-[2px] ${i === last90.length - 1 ? 'ring-1 ring-white/20' : ''}`}
+              className={`h-8 min-w-0 flex-1 rounded-[2px] ${i === last30.length - 1 ? 'ring-1 ring-white/20' : ''}`}
               style={{ backgroundColor: color }}
               title={`${day.date} - ${day.status as ComponentStatus}`}
             />
@@ -48,7 +48,7 @@ export function UptimeTimeline({
 
       {(showLabels || (showAverage && average !== undefined)) && (
         <div className="flex items-end justify-between text-xs">
-          <span className="text-[var(--text-subtle)]">{showLabels ? (last90[0]?.date ?? '') : ''}</span>
+          <span className="text-[var(--text-subtle)]">{showLabels ? (last30[0]?.date ?? '') : ''}</span>
           <div className="flex flex-col items-end leading-tight">
             {showLabels && <span className="text-[var(--text-subtle)]">Today</span>}
             {showAverage && average !== undefined && (

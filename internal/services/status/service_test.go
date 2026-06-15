@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -348,6 +349,166 @@ func TestBuildComponentsExpandsSubcomponentsUptimeAndLastIncident(t *testing.T) 
 	assert.Equal(t, "Checkout outage", component.LastIncident.Title)
 	assert.Equal(t, createdAt, component.LastIncident.Date)
 	assert.Equal(t, "3.0 hour(s)", component.LastIncident.Duration)
+}
+
+func TestBuildCategorySummaryUsesThirtyDayWindowForServiceHistory(t *testing.T) {
+	componentID := primitive.NewObjectID()
+	subID := primitive.NewObjectID()
+	monitorID := primitive.NewObjectID()
+	now := time.Now()
+
+	repo := &stubStatusRepo{
+		components: []models.Component{{
+			ID:        componentID,
+			Name:      "API Platform",
+			Status:    models.StatusOperational,
+			UpdatedAt: now,
+		}},
+		subComponents: []models.SubComponent{{
+			ID:          subID,
+			ComponentID: componentID,
+			Name:        "Gateway",
+			Status:      models.StatusOperational,
+			UpdatedAt:   now,
+		}},
+		monitors: []models.Monitor{{
+			ID:             monitorID,
+			SubComponentID: subID,
+		}},
+		dailyUptime: func() []models.DailyUptime {
+			records := make([]models.DailyUptime, 0, 40)
+			for i := 0; i < 40; i++ {
+				day := time.Now().AddDate(0, 0, -i)
+				records = append(records, models.DailyUptime{
+					MonitorID:         monitorID,
+					Date:              day,
+					TotalChecks:       10,
+					SuccessfulChecks:  10,
+					UptimePercent:     100,
+				})
+			}
+			return records
+		}(),
+	}
+
+	svc := NewService(repo)
+	summary, err := svc.BuildCategorySummary(context.Background(), "api-platform")
+	require.NoError(t, err)
+	require.Len(t, summary.Services, 1)
+	assert.True(t, summary.HasMonitoring)
+	require.Len(t, summary.Services[0].UptimeHistory, 30)
+	assert.Equal(t, time.Now().AddDate(0, 0, -29).Format("2006-01-02"), summary.Services[0].UptimeHistory[0].Date)
+	assert.Equal(t, time.Now().Format("2006-01-02"), summary.Services[0].UptimeHistory[29].Date)
+	require.NotNil(t, summary.Services[0].Uptime30d)
+	require.NotNil(t, summary.Uptime30d)
+	assert.Equal(t, 100.0, *summary.Services[0].Uptime30d)
+	assert.Equal(t, 100.0, *summary.Uptime30d)
+	assert.Equal(t, fmt.Sprintf("%s", now.Format(time.RFC3339)[:10]), summary.Services[0].UpdatedAt.Format(time.RFC3339)[:10])
+}
+
+func TestBuildCategorySummaryExcludesUnmonitoredServicesFromUptimeAggregation(t *testing.T) {
+	componentID := primitive.NewObjectID()
+	monitoredSubID := primitive.NewObjectID()
+	manualSubID := primitive.NewObjectID()
+	monitorID := primitive.NewObjectID()
+	now := time.Now()
+
+	repo := &stubStatusRepo{
+		components: []models.Component{{
+			ID:        componentID,
+			Name:      "API Platform",
+			Status:    models.StatusOperational,
+			UpdatedAt: now,
+		}},
+		subComponents: []models.SubComponent{
+			{
+				ID:          monitoredSubID,
+				ComponentID: componentID,
+				Name:        "Gateway",
+				Status:      models.StatusOperational,
+				UpdatedAt:   now,
+			},
+			{
+				ID:          manualSubID,
+				ComponentID: componentID,
+				Name:        "Manual Service",
+				Status:      models.StatusOperational,
+				UpdatedAt:   now,
+			},
+		},
+		monitors: []models.Monitor{{
+			ID:             monitorID,
+			SubComponentID: monitoredSubID,
+		}},
+		dailyUptime: func() []models.DailyUptime {
+			records := make([]models.DailyUptime, 0, 30)
+			for i := 0; i < 30; i++ {
+				records = append(records, models.DailyUptime{
+					MonitorID:        monitorID,
+					Date:             now.AddDate(0, 0, -i),
+					TotalChecks:      10000,
+					SuccessfulChecks: 9915,
+					UptimePercent:    99.15,
+				})
+			}
+			return records
+		}(),
+	}
+
+	svc := NewService(repo)
+	summary, err := svc.BuildCategorySummary(context.Background(), "api-platform")
+	require.NoError(t, err)
+	require.Len(t, summary.Services, 2)
+	assert.True(t, summary.HasMonitoring)
+	require.NotNil(t, summary.Uptime30d)
+	assert.InDelta(t, 99.15, *summary.Uptime30d, 0.000001)
+
+	var monitoredService CategoryService
+	var manualService CategoryService
+	for _, service := range summary.Services {
+		switch service.ID {
+		case monitoredSubID:
+			monitoredService = service
+		case manualSubID:
+			manualService = service
+		}
+	}
+
+	require.NotNil(t, monitoredService.Uptime30d)
+	assert.InDelta(t, 99.15, *monitoredService.Uptime30d, 0.000001)
+	assert.Nil(t, manualService.Uptime30d)
+	assert.Empty(t, manualService.UptimeHistory)
+}
+
+func TestBuildCategorySummaryReturnsNilUptimeWhenNoMonitoredServicesExist(t *testing.T) {
+	componentID := primitive.NewObjectID()
+	manualSubID := primitive.NewObjectID()
+	now := time.Now()
+
+	repo := &stubStatusRepo{
+		components: []models.Component{{
+			ID:        componentID,
+			Name:      "API Platform",
+			Status:    models.StatusOperational,
+			UpdatedAt: now,
+		}},
+		subComponents: []models.SubComponent{{
+			ID:          manualSubID,
+			ComponentID: componentID,
+			Name:        "Manual Service",
+			Status:      models.StatusOperational,
+			UpdatedAt:   now,
+		}},
+	}
+
+	svc := NewService(repo)
+	summary, err := svc.BuildCategorySummary(context.Background(), "api-platform")
+	require.NoError(t, err)
+	require.Len(t, summary.Services, 1)
+	assert.False(t, summary.HasMonitoring)
+	assert.Nil(t, summary.Uptime30d)
+	assert.Nil(t, summary.Services[0].Uptime30d)
+	assert.Empty(t, summary.Services[0].UptimeHistory)
 }
 
 func TestBuildIncidentsDefaultsToRecentWindowAndExpandsTargets(t *testing.T) {
