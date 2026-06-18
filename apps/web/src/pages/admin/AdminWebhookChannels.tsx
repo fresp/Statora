@@ -54,22 +54,22 @@ export default function AdminWebhookChannels() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Webhook Channels</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Webhook Channels</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
             {totalChannels} total · {enabled.length} active · {disabled.length} inactive
           </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Webhook Channel</h2>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">Add Webhook Channel</h2>
         <form onSubmit={handleCreate} className="flex gap-3">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Channel name"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
           <input
@@ -77,7 +77,7 @@ export default function AdminWebhookChannels() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/webhook"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
           <button
@@ -88,48 +88,48 @@ export default function AdminWebhookChannels() {
             {creating ? 'Adding...' : 'Add Channel'}
           </button>
         </form>
-        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>}
       </div>
 
       <AdminListCard>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 dark:bg-slate-800/50 dark:border-slate-700">
             <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Name</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">URL</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Created</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Name</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">URL</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Status</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Created</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-slate-800/50">
             {(channels || []).map(channel => (
-              <tr key={channel.id} className="hover:bg-gray-50">
+              <tr key={channel.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-900 font-medium">{channel.name}</span>
+                    <LinkIcon className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                    <span className="text-gray-900 dark:text-slate-100 font-medium">{channel.name}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-gray-600 truncate block max-w-xs">{channel.url}</span>
+                  <span className="text-gray-600 dark:text-slate-300 truncate block max-w-xs">{channel.url}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     channel.enabled
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400'
                   }`}>
                     {channel.enabled ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-gray-500">{formatDate(channel.createdAt)}</td>
+                <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{formatDate(channel.createdAt)}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end">
                     <button
                       onClick={() => handleDelete(channel)}
                       disabled={deleting === channel.id}
-                      className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-40"
+                      className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-40"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -138,10 +138,10 @@ export default function AdminWebhookChannels() {
               </tr>
             ))}
              {(channels || []).length === 0 && (
-               <AdminTableEmptyRow colSpan={5}>
-                 No webhook channels configured. Add your first webhook above.
-               </AdminTableEmptyRow>
-             )}
+                <AdminTableEmptyRow colSpan={5}>
+                  No webhook channels configured. Add your first webhook above.
+                </AdminTableEmptyRow>
+              )}
           </tbody>
         </table>
 
@@ -152,9 +152,9 @@ export default function AdminWebhookChannels() {
           limit={limit}
           loading={loading}
           onPageChange={setPage}
-           onLimitChange={setLimit}
-         />
-       </AdminListCard>
+          onLimitChange={setLimit}
+        />
+      </AdminListCard>
     </div>
   )
 }

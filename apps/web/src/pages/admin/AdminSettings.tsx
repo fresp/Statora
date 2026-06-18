@@ -8,6 +8,7 @@ import api from '../../lib/api'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
 import { CheckCircle } from 'lucide-react'
+import { useTheme } from '../../hooks/useTheme'
 
 const ADMIN_TITLE_SUFFIX = ' - Admin Panel'
 
@@ -120,6 +121,7 @@ function metaTagsToText(metaTags: Record<string, string>): string {
 }
 
 export default function AdminSettings() {
+  const { theme, setTheme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -233,111 +235,111 @@ export default function AdminSettings() {
   }
 
   if (loading) {
-    return <div className="p-8 text-sm text-gray-500">Loading settings...</div>
+    return <div className="p-8 text-sm text-gray-500 dark:text-slate-400">Loading settings...</div>
   }
 
   return (
     <div className="p-8 max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Status Page Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Status Page Settings</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
           Configure SEO, branding, footer, theme, and custom CSS for the public status page.
         </p>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-      {themePresetNotice && <p className="mb-4 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{themePresetNotice}</p>}
-      {success && <p className="mb-4 text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{success}</p>}
+      {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
+      {themePresetNotice && <p className="mb-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">{themePresetNotice}</p>}
+      {success && <p className="mb-4 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-905/20 rounded-lg px-3 py-2">{success}</p>}
 
       <form onSubmit={handleSave} className="space-y-6">
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Head & SEO</h2>
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Head & SEO</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Page Title</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Page Title</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.head.title}
               onChange={(e) => setSettings(prev => ({ ...prev, head: { ...prev.head, title: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Description</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.head.description}
               onChange={(e) => setSettings(prev => ({ ...prev, head: { ...prev.head, description: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Keywords</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.head.keywords}
               onChange={(e) => setSettings(prev => ({ ...prev, head: { ...prev.head, keywords: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Favicon URL</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Favicon URL</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.head.faviconUrl}
               onChange={(e) => setSettings(prev => ({ ...prev, head: { ...prev.head, faviconUrl: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Additional Meta Tags</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Additional Meta Tags</label>
             <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[110px]"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm min-h-[110px]"
               placeholder={'og:title: My Status Page\nog:site_name: Statora'}
               value={metaTagsText}
               onChange={(e) => setMetaTagsText(e.target.value)}
             />
-            <p className="text-xs text-gray-500 mt-1">One tag per line using format: key: value</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">One tag per line using format: key: value</p>
           </div>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Branding Assets</h2>
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Branding Assets</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Site Name</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.branding.siteName}
               onChange={(e) => setSettings(prev => ({ ...prev, branding: { ...prev.branding, siteName: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Logo URL</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.branding.logoUrl}
               onChange={(e) => setSettings(prev => ({ ...prev, branding: { ...prev.branding, logoUrl: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Background Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Background Image URL</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.branding.backgroundImageUrl}
               onChange={(e) => setSettings(prev => ({ ...prev, branding: { ...prev.branding, backgroundImageUrl: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hero Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Hero Image URL</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.branding.heroImageUrl}
               onChange={(e) => setSettings(prev => ({ ...prev, branding: { ...prev.branding, heroImageUrl: e.target.value } }))}
             />
           </div>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Visual Theme</h2>
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Visual Theme</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Preset</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Preset</label>
             <select
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.theme.preset}
               onChange={(e) => {
                 const selectedPreset = normalizeThemePresetSelection(e.target.value, themePresets)
@@ -355,11 +357,11 @@ export default function AdminSettings() {
             </select>
           </div>
 
-          <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">Live Preview</h3>
+          <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Live Preview</h3>
             <div className="rounded-lg p-4" style={previewStyle}>
               <div
-                className="rounded-lg p-3  items-center justify-between"
+                className="rounded-lg p-3 items-center justify-between"
                 style={{
                   backgroundColor: 'var(--status-operational)',
                   color: 'var(--on-primary)',
@@ -385,19 +387,18 @@ export default function AdminSettings() {
                   </div>
                 </div>
               </div>
-
-
             </div>
           </div>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">SSO Settings</h2>
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">SSO Settings</h2>
           <div className="flex items-center gap-2">
             <input
               id="sso-enabled"
               type="checkbox"
               checked={settings.sso?.enabled ?? false}
+              className="rounded"
               onChange={(e) => setSettings(prev => ({
                 ...prev,
                 sso: {
@@ -412,36 +413,36 @@ export default function AdminSettings() {
                 },
               }))}
             />
-            <label htmlFor="sso-enabled" className="text-sm text-gray-700">Enable SSO</label>
+            <label htmlFor="sso-enabled" className="text-sm text-gray-700 dark:text-slate-300 cursor-pointer">Enable SSO</label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Provider</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.sso?.provider ?? ''}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, provider: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Issuer</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Issuer</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.sso?.issuer ?? ''}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, issuer: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Audience</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.sso?.audience ?? ''}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, audience: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Algorithm</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Algorithm</label>
             <select
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.sso?.algorithm ?? 'HS256'}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, algorithm: e.target.value as 'HS256' | 'RS256' } }))}
             >
@@ -450,31 +451,31 @@ export default function AdminSettings() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Shared Secret</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Shared Secret</label>
             <input
               type="password"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.sso?.sharedSecret ?? ''}
               placeholder={settings.sso?.hasSecret ? 'Stored secret exists; enter to replace' : 'Enter shared secret'}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, sharedSecret: e.target.value } }))}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">RSA Public Key (PEM)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">RSA Public Key (PEM)</label>
             <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[120px] font-mono"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm min-h-[120px] font-mono"
               value={settings.sso?.publicKeyPem ?? ''}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, publicKeyPem: e.target.value } }))}
             />
           </div>
         </section>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">Footer & Custom CSS</h2>
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Footer & Custom CSS</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Footer Text</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Footer Text</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
               value={settings.footer.text}
               onChange={(e) => setSettings(prev => ({ ...prev, footer: { ...prev.footer, text: e.target.value } }))}
             />
@@ -484,17 +485,49 @@ export default function AdminSettings() {
               id="show-powered"
               type="checkbox"
               checked={settings.footer.showPoweredBy}
+              className="rounded"
               onChange={(e) => setSettings(prev => ({ ...prev, footer: { ...prev.footer, showPoweredBy: e.target.checked } }))}
             />
-            <label htmlFor="show-powered" className="text-sm text-gray-700">Show “Powered by” text</label>
+            <label htmlFor="show-powered" className="text-sm text-gray-700 dark:text-slate-300 cursor-pointer">Show “Powered by” text</label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Custom CSS</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Custom CSS</label>
             <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[160px] font-mono"
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm min-h-[160px] font-mono"
               value={settings.customCss}
               onChange={(e) => setSettings(prev => ({ ...prev, customCss: e.target.value }))}
             />
+          </div>
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Admin Panel Theme</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            Select your preferred theme for the admin panel. This preference is saved on this browser.
+          </p>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-350 cursor-pointer">
+              <input
+                type="radio"
+                name="adminPanelTheme"
+                value="light"
+                checked={theme === 'light'}
+                onChange={() => setTheme('light')}
+                className="rounded-full text-blue-600 focus:ring-blue-500"
+              />
+              Light Mode
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-350 cursor-pointer">
+              <input
+                type="radio"
+                name="adminPanelTheme"
+                value="dark"
+                checked={theme === 'dark'}
+                onChange={() => setTheme('dark')}
+                className="rounded-full text-blue-600 focus:ring-blue-500"
+              />
+              Dark Mode
+            </label>
           </div>
         </section>
 

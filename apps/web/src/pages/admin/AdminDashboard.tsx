@@ -27,13 +27,13 @@ function StatCard({
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconClassName}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 group-hover:text-emerald-600 group-hover:bg-emerald-50 transition-colors">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/30 transition-colors">
           <TrendingUp className="w-4 h-4 opacity-0 -translate-x-1 translate-y-1 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 transition-all" />
         </div>
       </div>
       <div>
-        <p className="text-3xl font-bold text-slate-950 tracking-tight">{value}</p>
-        <p className="text-[13px] font-medium text-slate-500 mt-1">{title}</p>
+        <p className="text-3xl font-bold text-slate-950 dark:text-slate-50 tracking-tight">{value}</p>
+        <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-1">{title}</p>
       </div>
     </Link>
   )
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
     <div className="max-w-6xl statora-page py-0">
       <div className="mb-8">
         <p className="statora-kicker mb-2">Operations Console</p>
-        <h1 className="statora-title">Dashboard</h1>
+        <h1 className="statora-title text-slate-900 dark:text-slate-50">Dashboard</h1>
         <p className="statora-muted mt-2">System overview and active status</p>
       </div>
 
@@ -65,42 +65,42 @@ export default function AdminDashboard() {
           title="Components"
           value={totalComponents}
           icon={Layers}
-          iconClassName="bg-emerald-50 text-emerald-600"
+          iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-405"
           to="/admin/components"
         />
         <StatCard
           title="Active Incidents"
           value={activeIncidents.length}
           icon={AlertTriangle}
-          iconClassName={activeIncidents.length > 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'}
+          iconClassName={activeIncidents.length > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-455' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-405'}
           to="/admin/incidents"
         />
         <StatCard
           title="Monitors"
           value={totalMonitors}
           icon={Activity}
-          iconClassName="bg-sky-50 text-sky-600"
+          iconClassName="bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-405"
           to="/admin/monitors"
         />
         <StatCard
           title="Subscribers"
           value={totalSubscribers}
           icon={Users}
-          iconClassName="bg-purple-50 text-purple-600"
+          iconClassName="bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-405"
           to="/admin/subscribers"
         />
         <StatCard
           title="Scheduled Maintenance"
           value={scheduledMaintenance.length}
           icon={Wrench}
-          iconClassName="bg-amber-50 text-amber-600"
+          iconClassName="bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-405"
           to="/admin/maintenance"
         />
         <StatCard
           title="Total Incidents"
           value={totalIncidents}
           icon={TrendingUp}
-          iconClassName="bg-slate-100 text-slate-600"
+          iconClassName="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
           to="/admin/incidents"
         />
       </div>
@@ -108,21 +108,21 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Component Status */}
         <div className="admin-surface flex flex-col">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-950">Component Status</h2>
-            <Link to="/admin/components" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">View all</Link>
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-950 dark:text-slate-50">Component Status</h2>
+            <Link to="/admin/components" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300">View all</Link>
           </div>
           <div className="p-2 flex-1">
             {(components || []).length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">No components yet.</div>
+              <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">No components yet.</div>
             ) : (
               <div className="space-y-1">
                 {(components || []).slice(0, 8).map(c => (
-                  <Link key={c.id} to={`/admin/components`} className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors group">
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700 transition-colors">{c.name}</span>
+                  <Link key={c.id} to={`/admin/components`} className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">{c.name}</span>
                     <span className={`flex items-center gap-2 text-xs font-medium`}>
                       <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[c.status]} shadow-sm`} />
-                      <span className="text-slate-600">{STATUS_LABELS[c.status]}</span>
+                      <span className="text-slate-600 dark:text-slate-400">{STATUS_LABELS[c.status]}</span>
                     </span>
                   </Link>
                 ))}
@@ -133,24 +133,24 @@ export default function AdminDashboard() {
 
         {/* Recent Incidents */}
         <div className="admin-surface flex flex-col">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-950">Recent Incidents</h2>
-            <Link to="/admin/incidents" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">View all</Link>
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-950 dark:text-slate-50">Recent Incidents</h2>
+            <Link to="/admin/incidents" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300">View all</Link>
           </div>
           <div className="p-2 flex-1">
             {(incidents || []).length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">No incidents.</div>
+              <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">No incidents.</div>
             ) : (
               <div className="space-y-1">
                 {(incidents || []).slice(0, 5).map(inc => (
-                  <Link key={inc.id} to={`/admin/incidents`} className="block px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                  <Link key={inc.id} to={`/admin/incidents`} className="block px-4 py-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{inc.title}</p>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-205 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">{inc.title}</p>
                       <span className={`badge ${inc.status === 'resolved' ? 'badge-success' : 'badge-error'} flex-shrink-0`}>
                         {INCIDENT_STATUS_LABELS[inc.status]}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1.5">{formatDate(inc.createdAt)}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{formatDate(inc.createdAt)}</p>
                   </Link>
                 ))}
               </div>

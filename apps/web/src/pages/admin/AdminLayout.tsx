@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useTheme } from '../../hooks/useTheme'
 import api from '../../lib/api'
 import {
   LayoutDashboard,
@@ -16,6 +17,8 @@ import {
   Webhook,
   PanelLeftClose,
   PanelLeftOpen,
+  Sun,
+  Moon,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
@@ -134,6 +137,7 @@ export default function AdminLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const role = readStoredRole()
+  const { theme, toggleTheme, isDark } = useTheme()
   const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
   const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
   const visibleNavSections: NavSection[] = role === 'operator'
@@ -365,6 +369,15 @@ export default function AdminLayout() {
             <ExternalLink className="w-[18px] h-[18px] opacity-80" />
             {!isSidebarCollapsed && 'Status Page'}
           </a>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={isSidebarCollapsed ? (isDark ? 'Switch to Light' : 'Switch to Dark') : undefined}
+            className={`flex w-full items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-400 dark:hover:bg-amber-950/30 dark:hover:text-amber-400`}
+          >
+            {isDark ? <Sun className="w-[18px] h-[18px] opacity-80" /> : <Moon className="w-[18px] h-[18px] opacity-80" />}
+            {!isSidebarCollapsed && (isDark ? 'Light Mode' : 'Dark Mode')}
+          </button>
           <button
             type="button"
             onClick={handleLogout}

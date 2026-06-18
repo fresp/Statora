@@ -100,24 +100,24 @@ function IncidentRow({
 
   const statusColor =
     incident.status === 'resolved'
-      ? 'bg-green-100 text-green-700'
+      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
       : incident.status === 'monitoring'
-        ? 'bg-blue-100 text-blue-700'
-        : 'bg-red-100 text-red-700'
+        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
 
   const impactColor: Record<IncidentImpact, string> = {
-    none: 'bg-gray-100 text-gray-600',
-    minor: 'bg-yellow-100 text-yellow-700',
-    major: 'bg-orange-100 text-orange-700',
-    critical: 'bg-red-100 text-red-700',
+    none: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
+    minor: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    major: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   }
 
   const descriptionContent = getIncidentContent(incident)
 
   return (
     <>
-      <tr className="hover:bg-gray-50">
-        <td className="px-6 py-4 font-medium text-gray-900 max-w-xs truncate">{incident.title}</td>
+      <tr className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+        <td className="px-6 py-4 font-medium text-gray-900 dark:text-slate-100 max-w-xs truncate">{incident.title}</td>
         <td className="px-6 py-4">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
             {INCIDENT_STATUS_LABELS[incident.status]}
@@ -128,20 +128,20 @@ function IncidentRow({
             {INCIDENT_IMPACT_LABELS[incident.impact]}
           </span>
         </td>
-        <td className="px-6 py-4 text-sm text-gray-500">{formatDate(incident.createdAt)}</td>
-        <td className="px-6 py-4 text-sm text-gray-500">{textOrEmDash(incident.creatorUsername)}</td>
+        <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{formatDate(incident.createdAt)}</td>
+        <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">{textOrEmDash(incident.creatorUsername)}</td>
         <td className="px-6 py-4">
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => onView(incident)}
-              className="text-gray-400 hover:text-emerald-600 transition-colors"
+              className="text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
               title="View"
             >
               <Eye className="w-4 h-4" />
             </button>
             <button
               onClick={() => onEdit(incident)}
-              className="text-gray-400 hover:text-blue-600 transition-colors"
+              className="text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               title="Edit"
             >
               <Pencil className="w-4 h-4" />
@@ -149,7 +149,7 @@ function IncidentRow({
             {incident.status !== 'resolved' && (
               <button
                 onClick={() => onResolve(incident)}
-                className="text-gray-400 hover:text-green-600 transition-colors"
+                className="text-gray-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 transition-colors"
                 title="Resolve"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -157,18 +157,18 @@ function IncidentRow({
             )}
             <button
               onClick={() => onDelete(incident)}
-              className="text-gray-400 hover:text-red-600 transition-colors"
+              className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowUpdateModal(true)}
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
               Add Update
             </button>
-            <button onClick={loadUpdates} className="text-gray-400 hover:text-gray-600">
+            <button onClick={loadUpdates} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
           </div>
@@ -176,22 +176,22 @@ function IncidentRow({
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="px-6 pb-4 bg-gray-50">
-            <div className="pl-4 border-l-2 border-gray-200 space-y-3 mt-1">
-              <div className="text-sm text-gray-700">
+          <td colSpan={6} className="px-6 pb-4 bg-gray-50 dark:bg-slate-800/40">
+            <div className="pl-4 border-l-2 border-gray-200 dark:border-slate-700 space-y-3 mt-1">
+              <div className="text-sm text-gray-700 dark:text-slate-300">
                 <ContentRenderer text={descriptionContent.text} json={descriptionContent.json} />
               </div>
               {(updates || []).length === 0 ? (
-                <p className="text-sm text-gray-400">No updates yet.</p>
+                <p className="text-sm text-gray-400 dark:text-slate-500">No updates yet.</p>
               ) : (
                 <div className="space-y-2">
                   {(updates || []).map((u) => {
                     const uc = getIncidentUpdateContent(u)
                     return (
                       <div key={u.id} className="text-sm">
-                        <span className="font-medium text-gray-700">{INCIDENT_STATUS_LABELS[u.status]}</span>
-                        <span className="text-gray-400 ml-2 text-xs">{formatDate(u.createdAt)}</span>
-                        <div className="mt-1">
+                        <span className="font-medium text-gray-700 dark:text-slate-300">{INCIDENT_STATUS_LABELS[u.status]}</span>
+                        <span className="text-gray-400 dark:text-slate-500 ml-2 text-xs">{formatDate(u.createdAt)}</span>
+                        <div className="mt-1 text-gray-600 dark:text-slate-300">
                           <ContentRenderer text={uc.text} json={uc.json} />
                         </div>
                       </div>
@@ -208,11 +208,11 @@ function IncidentRow({
         <Modal title="Add Incident Update" onClose={() => setShowUpdateModal(false)} size="lg">
           <form onSubmit={submitUpdate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
               <select
                 value={updateStatus}
                 onChange={(e) => setUpdateStatus(e.target.value as IncidentStatus)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -222,7 +222,7 @@ function IncidentRow({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Message</label>
               <RichTextEditor
                 value={updateMsgJson}
                 onChange={(json) => {
@@ -237,7 +237,7 @@ function IncidentRow({
               <button
                 type="button"
                 onClick={() => setShowUpdateModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -415,8 +415,8 @@ export default function AdminIncidents() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Incidents</h1>
-          <p className="text-sm text-gray-500 mt-1">{totalIncidents} total</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Incidents</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{totalIncidents} total</p>
         </div>
         <button
           onClick={openCreate}
@@ -432,7 +432,9 @@ export default function AdminIncidents() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-              filter === f ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              filter === f
+                ? 'bg-gray-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700'
             }`}
           >
             {f}
@@ -442,17 +444,17 @@ export default function AdminIncidents() {
 
       <AdminListCard>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 dark:bg-slate-800/50 dark:border-slate-700">
             <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Title</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Impact</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Created</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Creator</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Title</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Status</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Impact</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Created</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Creator</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-slate-800/50">
             {filtered.map((inc) => (
               <IncidentRow
                 key={inc.id}
@@ -483,20 +485,20 @@ export default function AdminIncidents() {
 
       {showModal && (
         <Modal title={editingId ? 'Edit Incident' : 'Create Incident'} onClose={closeModal} size="lg">
-          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Title</label>
               <input
                 required
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Brief incident title"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Description</label>
               <RichTextEditor
                 value={form.descriptionJson || form.description}
                 onChange={(json) => setForm((f) => ({ ...f, descriptionJson: json, description: '' }))}
@@ -506,11 +508,11 @@ export default function AdminIncidents() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
                 <select
                   value={form.status}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as IncidentStatus }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
@@ -520,11 +522,11 @@ export default function AdminIncidents() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Impact</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Impact</label>
                 <select
                   value={form.impact}
                   onChange={(e) => setForm((f) => ({ ...f, impact: e.target.value as IncidentImpact }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {IMPACTS.map((i) => (
                     <option key={i} value={i}>
@@ -536,7 +538,7 @@ export default function AdminIncidents() {
             </div>
             {(components || []).length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Affected Components</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Affected Components</label>
                 <div className="space-y-1">
                   {(components || []).map((component) => {
                     const target = getTarget(component.id)
@@ -546,8 +548,8 @@ export default function AdminIncidents() {
                     )
 
                     return (
-                      <div key={component.id} className="rounded-lg border border-gray-200 px-3 py-2">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-800">
+                      <div key={component.id} className="rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-2">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-gray-800 dark:text-slate-200">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -564,7 +566,7 @@ export default function AdminIncidents() {
                               return (
                                 <label
                                   key={subComponent.id}
-                                  className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer"
+                                  className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-400 cursor-pointer"
                                 >
                                   <input
                                     type="checkbox"
@@ -576,7 +578,7 @@ export default function AdminIncidents() {
                                 </label>
                               )
                             })}
-                            <p className="text-[11px] text-gray-500 pt-1">
+                            <p className="text-[11px] text-gray-500 dark:text-slate-500 pt-1">
                               Leave sub-components unchecked to affect the whole component.
                             </p>
                           </div>
@@ -587,15 +589,15 @@ export default function AdminIncidents() {
                 </div>
               </div>
             )}
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-              <p className="text-xs font-medium text-slate-500 mb-2">Preview</p>
+            <div className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Preview</p>
               <ContentRenderer text={previewContent.text} json={previewContent.json} />
             </div>
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -618,10 +620,10 @@ export default function AdminIncidents() {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   viewing.status === 'resolved'
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     : viewing.status === 'monitoring'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-red-100 text-red-700'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 }`}
               >
                 {INCIDENT_STATUS_LABELS[viewing.status]}
@@ -629,38 +631,40 @@ export default function AdminIncidents() {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   {
-                    none: 'bg-gray-100 text-gray-600',
-                    minor: 'bg-yellow-100 text-yellow-700',
-                    major: 'bg-orange-100 text-orange-700',
-                    critical: 'bg-red-100 text-red-700',
+                    none: 'bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-400',
+                    minor: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                    major: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+                    critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
                   }[viewing.impact]
                 }`}
               >
                 {INCIDENT_IMPACT_LABELS[viewing.impact]}
               </span>
             </div>
-            <div>
+            <div className="text-gray-900 dark:text-slate-100">
               <ContentRenderer
                 text={getIncidentContent(viewing).text}
                 json={getIncidentContent(viewing).json}
               />
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-gray-400 dark:text-slate-500">
               Created {formatDate(viewing.createdAt)}
               {viewing.resolvedAt ? ` · Resolved ${formatDate(viewing.resolvedAt)}` : ''}
             </div>
             {(viewing.updates || []).length > 0 && (
-              <div className="border-t border-slate-100 pt-3 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Updates</p>
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Updates</p>
                 {viewing.updates?.map((u) => {
                   const uc = getIncidentUpdateContent(u)
                   return (
                     <div key={u.id} className="text-sm">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-gray-700">{INCIDENT_STATUS_LABELS[u.status]}</span>
-                        <span className="text-gray-400 text-xs">{formatDate(u.createdAt)}</span>
+                        <span className="font-medium text-gray-700 dark:text-slate-300">{INCIDENT_STATUS_LABELS[u.status]}</span>
+                        <span className="text-gray-400 dark:text-slate-500 text-xs">{formatDate(u.createdAt)}</span>
                       </div>
-                      <ContentRenderer text={uc.text} json={uc.json} />
+                      <div className="text-gray-600 dark:text-slate-300">
+                        <ContentRenderer text={uc.text} json={uc.json} />
+                      </div>
                     </div>
                   )
                 })}
@@ -673,14 +677,14 @@ export default function AdminIncidents() {
       {deleting && (
         <Modal title="Delete Incident" onClose={() => setDeleting(null)}>
           <div className="space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-slate-300">
               Are you sure you want to delete <strong>{deleting.title}</strong>? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setDeleting(null)}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
@@ -700,14 +704,14 @@ export default function AdminIncidents() {
       {resolving && (
         <Modal title="Resolve Incident" onClose={() => setResolving(null)}>
           <div className="space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 dark:text-slate-300">
               Resolve <strong>{resolving.title}</strong>? This will mark the incident as resolved.
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setResolving(null)}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50"
+                className="flex-1 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
