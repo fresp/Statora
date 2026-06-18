@@ -8,7 +8,6 @@ import api from '../../lib/api'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
 import { CheckCircle } from 'lucide-react'
-import { useTheme } from '../../hooks/useTheme'
 
 const ADMIN_TITLE_SUFFIX = ' - Admin Panel'
 
@@ -28,6 +27,7 @@ const DEFAULT_SETTINGS: StatusPageSettings = {
   },
   theme: {
     preset: 'default.css',
+    mode: 'light',
   },
   footer: {
     text: '',
@@ -71,6 +71,7 @@ function normalizeSettings(input: StatusPageSettings | null | undefined, presets
     },
     theme: {
       preset: normalizedPreset,
+      mode: input.theme?.mode ?? 'light',
     },
     footer: {
       text: input.footer?.text ?? '',
@@ -121,7 +122,6 @@ function metaTagsToText(metaTags: Record<string, string>): string {
 }
 
 export default function AdminSettings() {
-  const { theme, setTheme } = useTheme()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -179,6 +179,25 @@ export default function AdminSettings() {
     loadThemePresetStylesheet(settings.theme.preset, themePresets).catch(() => { })
   }, [settings.theme.preset, themePresets])
 
+  useEffect(() => {
+    if (settings.theme.mode) {
+      const mode = settings.theme.mode
+      const root = document.documentElement
+      if (mode === 'dark') {
+        root.classList.add('dark')
+      } else if (mode === 'light') {
+        root.classList.remove('dark')
+      } else if (mode === 'system') {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (systemDark) {
+          root.classList.add('dark')
+        } else {
+          root.classList.remove('dark')
+        }
+      }
+    }
+  }, [settings.theme.mode])
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -202,6 +221,7 @@ export default function AdminSettings() {
         },
         theme: {
           preset: settings.theme.preset,
+          mode: settings.theme.mode || 'light',
         },
         footer: {
           text: settings.footer.text,
@@ -336,25 +356,49 @@ export default function AdminSettings() {
 
         <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Visual Theme</h2>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Preset</label>
-            <select
-              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
-              value={settings.theme.preset}
-              onChange={(e) => {
-                const selectedPreset = normalizeThemePresetSelection(e.target.value, themePresets)
-                setSettings(prev => ({
-                  ...prev,
-                  theme: {
-                    preset: selectedPreset,
-                  },
-                }))
-              }}
-            >
-              {themePresets.map((preset) => (
-                <option key={preset.key} value={preset.key}>{preset.label}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Preset</label>
+              <select
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                value={settings.theme.preset}
+                onChange={(e) => {
+                  const selectedPreset = normalizeThemePresetSelection(e.target.value, themePresets)
+                  setSettings(prev => ({
+                    ...prev,
+                    theme: {
+                      ...prev.theme,
+                      preset: selectedPreset,
+                    },
+                  }))
+                }}
+              >
+                {themePresets.map((preset) => (
+                  <option key={preset.key} value={preset.key}>{preset.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Theme Mode</label>
+              <select
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                value={settings.theme.mode || 'light'}
+                onChange={(e) => {
+                  const selectedMode = e.target.value as 'light' | 'dark' | 'system'
+                  setSettings(prev => ({
+                    ...prev,
+                    theme: {
+                      ...prev.theme,
+                      mode: selectedMode,
+                    },
+                  }))
+                }}
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System Preference</option>
+              </select>
+            </div>
           </div>
 
           <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-4 space-y-3">
@@ -500,36 +544,6 @@ export default function AdminSettings() {
           </div>
         </section>
 
-        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Admin Panel Theme</h2>
-          <p className="text-sm text-gray-500 dark:text-slate-400">
-            Select your preferred theme for the admin panel. This preference is saved on this browser.
-          </p>
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-350 cursor-pointer">
-              <input
-                type="radio"
-                name="adminPanelTheme"
-                value="light"
-                checked={theme === 'light'}
-                onChange={() => setTheme('light')}
-                className="rounded-full text-blue-600 focus:ring-blue-500"
-              />
-              Light Mode
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-350 cursor-pointer">
-              <input
-                type="radio"
-                name="adminPanelTheme"
-                value="dark"
-                checked={theme === 'dark'}
-                onChange={() => setTheme('dark')}
-                className="rounded-full text-blue-600 focus:ring-blue-500"
-              />
-              Dark Mode
-            </label>
-          </div>
-        </section>
 
         <div className="flex justify-end">
           <button

@@ -137,9 +137,38 @@ export default function AdminLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
   const role = readStoredRole()
-  const { theme, toggleTheme, isDark } = useTheme()
-  const { data: settingsData } = useApi<StatusPageSettings>('/settings/status-page')
+  const { theme, setTheme } = useTheme()
+  const isDark = theme === 'dark'
+  const { data: settingsData, refetch: refetchSettings } = useApi<StatusPageSettings>('/settings/status-page')
   const pageTitle = settingsData?.head?.title?.trim() || DEFAULT_PAGE_TITLE
+
+  // Sync theme mode with backend settings
+  useEffect(() => {
+    if (settingsData?.theme?.mode) {
+      const mode = settingsData.theme.mode
+      if (mode === 'system') {
+        const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        setTheme(isSystemDark ? 'dark' : 'light')
+      } else {
+        setTheme(mode)
+      }
+    }
+  }, [settingsData?.theme?.mode, setTheme])
+
+  const handleToggleTheme = async () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(nextTheme)
+    try {
+      await api.patch('/settings/status-page', {
+        theme: {
+          mode: nextTheme,
+        },
+      })
+      void refetchSettings()
+    } catch (err) {
+      console.error('Failed to save theme toggle settings to backend', err)
+    }
+  }
   const visibleNavSections: NavSection[] = role === 'operator'
     ? navSections
       .map(section => {
@@ -371,7 +400,7 @@ export default function AdminLayout() {
           </a>
           <button
             type="button"
-            onClick={toggleTheme}
+            onClick={handleToggleTheme}
             title={isSidebarCollapsed ? (isDark ? 'Switch to Light' : 'Switch to Dark') : undefined}
             className={`flex w-full items-center ${isSidebarCollapsed ? 'justify-center px-0 w-10 mx-auto' : 'gap-3 px-3'} rounded-lg py-2 font-mono text-[13px] font-semibold text-slate-600 transition-colors hover:bg-amber-50 hover:text-amber-700 dark:text-slate-400 dark:hover:bg-amber-950/30 dark:hover:text-amber-400`}
           >
