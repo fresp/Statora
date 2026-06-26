@@ -239,8 +239,8 @@ export default function AdminMembers() {
     <div className="max-w-6xl">
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Users</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage user accounts, roles, invitations, and access state.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Users</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage user accounts, roles, invitations, and access state.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -267,44 +267,50 @@ export default function AdminMembers() {
       </div>
 
       {actionError && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+        <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm">
           {actionError}
         </div>
       )}
 
       {error && !loading && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+        <div className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm">
           Failed to load users.
         </div>
       )}
 
       {loading && members.length === 0 && (
-        <div className="admin-surface p-10 text-center text-sm text-slate-500">
+        <div className="admin-surface p-10 text-center text-sm text-slate-500 dark:text-slate-400">
           Loading users...
         </div>
       )}
 
       {!loading && !error && members.length === 0 && (
-        <div className="admin-surface p-10 text-center text-sm text-slate-500">
+        <div className="admin-surface p-10 text-center text-sm text-slate-500 dark:text-slate-400">
           No users found.
         </div>
       )}
 
       <div className="mb-6">
-        <div className="inline-flex rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+        <div className="inline-flex rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-sm">
           <button
             type="button"
             onClick={() => setActiveTab('members')}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${activeTab === 'members' ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+              activeTab === 'members'
+                ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
           >
             Users
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('invitations')}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${activeTab === 'invitations' ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-              }`}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+              activeTab === 'invitations'
+                ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
           >
             Invitations
           </button>
@@ -318,12 +324,12 @@ export default function AdminMembers() {
       {activeTab === 'members' && members.length > 0 && (
         <div className="admin-surface">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50/80">
+            <thead className="bg-slate-50/80 dark:bg-slate-800/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">User</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">User</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -338,15 +344,15 @@ export default function AdminMembers() {
                 const nextStatus: UserStatus = member.status === 'disabled' ? 'active' : 'disabled'
 
                 return (
-                  <tr key={member.id} className="border-t border-slate-100/80 transition-colors hover:bg-slate-50/80">
+                  <tr key={member.id} className="border-t border-slate-100/80 dark:border-slate-800 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                           <Shield className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-medium text-slate-900">{member.username}</p>
-                          <p className="text-xs text-slate-500">{member.email}</p>
+                          <p className="font-medium text-slate-900 dark:text-slate-100">{member.username}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{member.email}</p>
                         </div>
                       </div>
                     </td>
@@ -358,7 +364,7 @@ export default function AdminMembers() {
                           const role = e.target.value as UserRole
                           void updateMember(member.id, { role })
                         }}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 disabled:opacity-60"
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 disabled:opacity-60"
                       >
                         {ROLE_OPTIONS.map((role) => (
                           <option key={role} value={role}>
@@ -372,11 +378,12 @@ export default function AdminMembers() {
                         <span className={STATUS_BADGE_CLASS[member.status]}>
                           {STATUS_LABELS[member.status]}
                         </span>
-                        <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                        <label className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-450 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={member.ssoEnabled}
                             disabled={isSaving || isDeleting}
+                            className="rounded"
                             onChange={(e) => {
                               void updateMember(member.id, { ssoEnabled: e.target.checked })
                             }}
@@ -393,7 +400,7 @@ export default function AdminMembers() {
                             void updateMember(member.id, { status: nextStatus })
                           }}
                           disabled={!canToggleStatus}
-                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {member.status === 'invited'
                             ? 'Pending Invite'
@@ -407,7 +414,7 @@ export default function AdminMembers() {
                             void deleteMember(member)
                           }}
                           disabled={!canDelete}
-                          className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-full border border-red-200 dark:border-red-900/30 bg-white dark:bg-slate-850 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 shadow-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isDeleting ? 'Removing...' : 'Remove'}
                         </button>
@@ -432,29 +439,29 @@ export default function AdminMembers() {
       )}
 
       <div className="mt-8" hidden={activeTab !== 'invitations'}>
-        <h2 className="text-lg font-semibold tracking-tight text-slate-900">Invited Users</h2>
-        <p className="mt-1 text-sm text-slate-500">Pending invitations, token refresh, and removal.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">Invited Users</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Pending invitations, token refresh, and removal.</p>
 
         {inviteActionError && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+          <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm">
             {inviteActionError}
           </div>
         )}
 
         {invitationsError && !invitationsLoading && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+          <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm">
             Failed to load invitations.
           </div>
         )}
 
         {invitationsLoading && invitations.length === 0 && (
-          <div className="admin-surface mt-4 p-8 text-center text-sm text-slate-500">
+          <div className="admin-surface mt-4 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             Loading invitations...
           </div>
         )}
 
         {!invitationsLoading && !invitationsError && invitations.length === 0 && (
-          <div className="admin-surface mt-4 p-8 text-center text-sm text-slate-500">
+          <div className="admin-surface mt-4 p-8 text-center text-sm text-slate-500 dark:text-slate-400">
             No pending invitations.
           </div>
         )}
@@ -462,23 +469,23 @@ export default function AdminMembers() {
         {invitations.length > 0 && (
           <div className="admin-surface mt-4">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50/80">
+              <thead className="bg-slate-50/80 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Expires</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Expires</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {invitations.map((invitation) => {
                   const isActing = inviteActionId === invitation.id
                   return (
-                    <tr key={invitation.id} className="border-t border-slate-100/80 transition-colors hover:bg-slate-50/80">
-                      <td className="px-6 py-4 font-medium text-slate-900">{invitation.email}</td>
-                      <td className="px-6 py-4 text-slate-700">{invitation.role}</td>
+                    <tr key={invitation.id} className="border-t border-slate-100/80 dark:border-slate-800 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                      <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{invitation.email}</td>
+                      <td className="px-6 py-4 text-slate-700 dark:text-slate-300">{invitation.role}</td>
                       <td className="px-6 py-4">
-                        <span className={invitation.isExpired ? 'text-xs font-medium text-red-600' : 'text-xs text-slate-600'}>
+                        <span className={invitation.isExpired ? 'text-xs font-medium text-red-650 dark:text-red-400' : 'text-xs text-slate-600 dark:text-slate-400'}>
                           {new Date(invitation.expiresAt).toLocaleString()}
                         </span>
                       </td>
@@ -490,7 +497,7 @@ export default function AdminMembers() {
                               void refreshInvitationToken(invitation)
                             }}
                             disabled={isActing}
-                            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-100 disabled:opacity-50"
+                            className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-sm transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
                           >
                             Refresh Token
                           </button>
@@ -500,7 +507,7 @@ export default function AdminMembers() {
                               void removeInvitation(invitation.id)
                             }}
                             disabled={isActing}
-                            className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:opacity-50"
+                            className="rounded-full border border-red-200 dark:border-red-900/30 bg-white dark:bg-slate-850 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 shadow-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50"
                           >
                             Remove
                           </button>
@@ -529,13 +536,13 @@ export default function AdminMembers() {
         <Modal title="Invite User" onClose={() => setShowInviteModal(false)} size="lg">
           <form onSubmit={handleInvite} className="space-y-5">
               {inviteError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                <div className="rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-4 py-3 text-sm text-red-700 dark:text-red-400 shadow-sm">
                   {inviteError}
                 </div>
               )}
 
               <div>
-                <label htmlFor="inviteEmail" className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+                <label htmlFor="inviteEmail" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
                 <input
                   id="inviteEmail"
                   type="email"
@@ -549,7 +556,7 @@ export default function AdminMembers() {
               </div>
 
               <div>
-                <label htmlFor="inviteRole" className="mb-1.5 block text-sm font-medium text-slate-700">Role</label>
+                <label htmlFor="inviteRole" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Role</label>
                 <select
                   id="inviteRole"
                   value={inviteRole}
@@ -576,8 +583,8 @@ export default function AdminMembers() {
               </div>
 
               {activationLink && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-                  <p className="mb-3 text-sm font-medium text-slate-700">Activation Link</p>
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900 p-4 shadow-sm">
+                  <p className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">Activation Link</p>
                   <div className="flex gap-2">
                     <input
                       value={activationLink}
@@ -592,7 +599,7 @@ export default function AdminMembers() {
                       Copy
                     </button>
                   </div>
-                  {copySuccess && <p className="mt-2 text-xs text-slate-600">{copySuccess}</p>}
+                  {copySuccess && <p className="mt-2 text-xs text-slate-600 dark:text-slate-450">{copySuccess}</p>}
                 </div>
               )}
             </form>

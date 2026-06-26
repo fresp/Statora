@@ -32,7 +32,7 @@ interface AdminTableEmptyRowProps {
 export function AdminTableEmptyRow({ colSpan, children }: AdminTableEmptyRowProps) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-6 py-12 text-center text-sm text-slate-500">
+      <td colSpan={colSpan} className="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
         {children}
       </td>
     </tr>
@@ -49,7 +49,7 @@ interface AdminListStateMessageProps {
  * admin list containers.
  */
 export function AdminListStateMessage({ tone = 'default', children }: AdminListStateMessageProps) {
-  const colorClass = tone === 'error' ? 'text-red-600 bg-red-50 border-red-100' : 'text-slate-500 bg-slate-50/70 border-slate-100'
+  const colorClass = tone === 'error' ? 'text-red-600 bg-red-50 border-red-100 dark:text-red-400 dark:bg-red-950/30 dark:border-red-800' : 'text-slate-500 bg-slate-50/70 border-slate-100 dark:text-slate-400 dark:bg-slate-800/40 dark:border-slate-700'
 
   return (
     <div className={`m-4 rounded-xl border px-6 py-8 text-sm ${colorClass}`}>

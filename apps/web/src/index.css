@@ -33,6 +33,36 @@
     --shadow-statora: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 24px rgba(15, 23, 42, 0.04);
   }
 
+  .dark {
+    --bg-base: #020617;
+    --bg-surface: #0f172a;
+    --bg-surface-elevated: #1e293b;
+    --bg-surface-muted: #1e293b;
+
+    --border-subtle: #334155;
+    --border-strong: #475569;
+
+    --text-strong: #f1f5f9;
+    --text-base: #cbd5e1;
+    --text-muted: #94a3b8;
+
+    --color-brand: #34d399;
+    --color-brand-strong: #10b981;
+    --color-brand-soft: #064e3b;
+    --color-brand-border: #065f46;
+    --color-warning: #fbbf24;
+    --color-warning-soft: #451a03;
+    --color-critical: #f87171;
+    --color-critical-soft: #450a0a;
+
+    --primary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --primary-subtle: #064e3b;
+
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --shadow-statora: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -40,11 +70,15 @@
   body {
     @apply bg-[var(--bg-base)] text-[var(--text-base)] font-sans antialiased selection:bg-emerald-100 selection:text-emerald-950;
   }
+
+  .dark body {
+    @apply selection:bg-emerald-900 selection:text-emerald-100;
+  }
 }
 
 @layer components {
   .statora-shell {
-    @apply min-h-screen bg-slate-50 text-slate-700 antialiased;
+    @apply min-h-screen bg-slate-50 text-slate-700 antialiased dark:bg-slate-950 dark:text-slate-300;
   }
 
   .statora-container {
@@ -56,49 +90,49 @@
   }
 
   .statora-card {
-    @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors;
+    @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-900;
     box-shadow: var(--shadow-statora);
   }
 
   .statora-card-muted {
-    @apply rounded-xl border border-slate-200 bg-slate-50/80 shadow-sm transition-colors;
+    @apply rounded-xl border border-slate-200 bg-slate-50/80 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800/50;
   }
 
   .statora-card-header {
-    @apply border-b border-slate-200 bg-slate-50/80 px-6 py-4;
+    @apply border-b border-slate-200 bg-slate-50/80 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50;
   }
 
   .statora-toolbar {
-    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex md:items-center md:justify-between md:gap-4;
+    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:flex md:items-center md:justify-between md:gap-4 dark:border-slate-700 dark:bg-slate-900;
     box-shadow: var(--shadow-statora);
   }
 
   .statora-kicker {
-    @apply font-mono text-xs font-semibold uppercase tracking-wider text-slate-500;
+    @apply font-mono text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
   }
 
   .statora-title {
-    @apply text-2xl font-bold tracking-tight text-slate-950 md:text-3xl;
+    @apply text-2xl font-bold tracking-tight text-slate-950 md:text-3xl dark:text-slate-50;
   }
 
   .statora-section-title {
-    @apply text-xl font-semibold tracking-tight text-slate-950;
+    @apply text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50;
   }
 
   .statora-muted {
-    @apply text-sm leading-6 text-slate-500;
+    @apply text-sm leading-6 text-slate-500 dark:text-slate-400;
   }
 
   .statora-focus {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900;
   }
 
   .statora-input {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10;
+    @apply w-full rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-emerald-400;
   }
 
   .statora-input-icon {
-    @apply w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10;
+    @apply w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-800 shadow-sm transition-colors placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500;
   }
 
   .statora-btn {
@@ -106,19 +140,19 @@
   }
 
   .statora-btn-primary {
-    @apply statora-btn border-emerald-700/20 bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-2 text-white hover:from-emerald-700 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+    @apply statora-btn border-emerald-700/20 bg-gradient-to-b from-emerald-600 to-emerald-700 px-4 py-2 text-white hover:from-emerald-700 hover:to-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900;
   }
 
   .statora-btn-secondary {
-    @apply statora-btn border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+    @apply statora-btn border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900;
   }
 
   .statora-btn-danger {
-    @apply statora-btn border-red-200 bg-white px-4 py-2 text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+    @apply statora-btn border-red-200 bg-white px-4 py-2 text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:border-red-800 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-950/50 dark:focus-visible:ring-offset-slate-900;
   }
 
   .statora-table-wrap {
-    @apply overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm;
+    @apply overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900;
     box-shadow: var(--shadow-statora);
   }
 
@@ -127,31 +161,31 @@
   }
 
   .statora-table-head {
-    @apply border-b border-slate-200 bg-slate-50/90 text-left text-xs font-semibold uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-200 bg-slate-50/90 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400;
   }
 
   .statora-table-cell {
-    @apply px-6 py-4 text-slate-700;
+    @apply px-6 py-4 text-slate-700 dark:text-slate-300;
   }
 
   .statora-empty {
-    @apply rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500;
+    @apply rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-400;
   }
 
   .statora-alert-error {
-    @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
+    @apply rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400;
   }
 
   .statora-dialog {
-    @apply w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10;
+    @apply w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/30;
   }
 
   .statora-dialog-header {
-    @apply flex flex-none items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4;
+    @apply flex flex-none items-center justify-between border-b border-slate-100 bg-slate-50/80 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/60;
   }
 
   .statora-dialog-footer {
-    @apply flex-none border-t border-slate-100 bg-slate-50/80 px-6 py-4;
+    @apply flex-none border-t border-slate-100 bg-slate-50/80 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/60;
   }
 
   /* Beacon-inspired Admin Components */
@@ -160,7 +194,7 @@
   }
 
   .admin-surface-hover {
-    @apply transition-all duration-300 hover:border-slate-300 hover:shadow-md;
+    @apply transition-all duration-300 hover:border-slate-300 hover:shadow-md dark:hover:border-slate-600;
   }
 
   .admin-input {
@@ -185,23 +219,23 @@
   }
 
   .badge-success {
-    @apply bg-emerald-50 text-emerald-700 border-emerald-200/60;
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-700/40;
   }
 
   .badge-warning {
-    @apply bg-amber-50 text-amber-700 border-amber-200/60;
+    @apply bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700/40;
   }
 
   .badge-error {
-    @apply bg-red-50 text-red-700 border-red-200/60;
+    @apply bg-red-50 text-red-700 border-red-200/60 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700/40;
   }
 
   .badge-info {
-    @apply bg-blue-50 text-blue-700 border-blue-200/60;
+    @apply bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-700/40;
   }
 
   .badge-neutral {
-    @apply bg-slate-50 text-slate-700 border-slate-200/80;
+    @apply bg-slate-50 text-slate-700 border-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600/60;
   }
 }
 
