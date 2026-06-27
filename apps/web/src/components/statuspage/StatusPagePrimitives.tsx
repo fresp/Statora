@@ -140,6 +140,23 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
 }
 
 export function StatusPageFrame({ settings, children }: { settings: StatusPageSettings; children: React.ReactNode }) {
+  React.useEffect(() => {
+    const mode = settings.theme?.mode || 'light'
+    const root = document.documentElement
+    if (mode === 'dark') {
+      root.classList.add('dark')
+    } else if (mode === 'light') {
+      root.classList.remove('dark')
+    } else if (mode === 'system') {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (systemDark) {
+        root.classList.add('dark')
+      } else {
+        root.classList.remove('dark')
+      }
+    }
+  }, [settings.theme?.mode])
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100" style={{ fontFamily: 'var(--font-family)' }}>
       <StatusPageHeader settings={settings} />

@@ -81,8 +81,8 @@ export default function AdminComponents() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Components</h1>
-          <p className="text-sm text-gray-500 mt-1">{totalComponents} total</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Components</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{totalComponents} total</p>
         </div>
         <button
           onClick={openCreate}
@@ -94,19 +94,19 @@ export default function AdminComponents() {
 
       <AdminListCard>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 dark:bg-slate-800/50 dark:border-slate-700">
             <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Name</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Description</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Name</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Description</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Status</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
             {(components || []).map(c => (
-              <tr key={c.id} className="hover:bg-gray-50">
-                 <td className="px-6 py-4 font-medium text-gray-900">{c.name}</td>
-                 <td className="px-6 py-4 text-gray-500">{textOrEmDash(c.description)}</td>
+              <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                 <td className="px-6 py-4 font-medium text-gray-900 dark:text-slate-100">{c.name}</td>
+                 <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{textOrEmDash(c.description)}</td>
                 <td className="px-6 py-4">
                   <span className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[c.status]}`} />
@@ -115,10 +115,10 @@ export default function AdminComponents() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                    <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-blue-600 transition-colors dark:text-slate-500 dark:hover:text-blue-400">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(c)} className="text-gray-400 hover:text-red-600 transition-colors">
+                    <button onClick={() => handleDelete(c)} className="text-gray-400 hover:text-red-600 transition-colors dark:text-slate-500 dark:hover:text-red-400">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -146,31 +146,31 @@ export default function AdminComponents() {
 
       {showModal && (
         <Modal title={editing ? 'Edit Component' : 'New Component'} onClose={closeModal}>
-          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:text-red-400 dark:bg-red-950/30">{error}</p>}
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
               <input
                 required
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Description</label>
               <input
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
               <select
                 value={form.status}
                 onChange={e => setForm(f => ({ ...f, status: e.target.value as ComponentStatus }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               >
                 {STATUSES.map(s => (
                   <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -178,7 +178,7 @@ export default function AdminComponents() {
               </select>
             </div>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
+              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
                 Cancel
               </button>
               <button type="submit" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">

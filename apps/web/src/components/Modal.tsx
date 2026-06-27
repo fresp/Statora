@@ -30,8 +30,8 @@ export default function Modal({ title, onClose, children, footer, size = 'md' }:
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
       <div className={`statora-dialog ${SIZE_CLASS[size]} flex max-h-[90vh] flex-col`}>
         <div className="statora-dialog-header">
-          <h2 className="font-semibold tracking-tight text-slate-950">{title}</h2>
-          <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2" aria-label="Close modal">
+          <h2 className="font-semibold tracking-tight text-slate-950 dark:text-slate-50">{title}</h2>
+          <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-white hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200 dark:focus-visible:ring-offset-slate-900" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>

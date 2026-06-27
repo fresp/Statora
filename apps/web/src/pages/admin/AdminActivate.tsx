@@ -57,7 +57,7 @@ export default function AdminActivate() {
     <div className="statora-shell flex items-center justify-center p-4">
       <div className="statora-card w-full max-w-md p-6">
         <p className="statora-kicker mb-2">Invitation setup</p>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-950 mb-1">Activate User Account</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-55 mb-1">Activate User Account</h1>
         <p className="statora-muted mb-6">Create your username and password to complete activation.</p>
 
         {error && (
@@ -68,7 +68,7 @@ export default function AdminActivate() {
 
         <form className="space-y-4" onSubmit={onSubmit}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Username</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Username</label>
             <input
               type="text"
               value={username}
@@ -80,7 +80,7 @@ export default function AdminActivate() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
             <input
               type="password"
               value={password}
@@ -93,7 +93,7 @@ export default function AdminActivate() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Confirm Password</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}

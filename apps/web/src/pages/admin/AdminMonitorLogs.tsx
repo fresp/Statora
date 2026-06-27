@@ -9,14 +9,14 @@ import { formatDate } from '../../lib/utils'
 
 export function statusBadgeClass(status: string): string {
   if (status === 'up') {
-    return 'bg-green-50 text-green-700 border border-green-200'
+    return 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30'
   }
 
   if (status === 'down') {
-    return 'bg-red-50 text-red-700 border border-red-200'
+    return 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30'
   }
 
-  return 'bg-gray-50 text-gray-700 border border-gray-200'
+  return 'bg-gray-50 text-gray-700 border border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
 }
 
 export function latencyBarWidth(responseTime: number): number {
@@ -47,7 +47,7 @@ export default function AdminMonitorLogs() {
   if (!id) {
     return (
       <div className="p-8">
-        <p className="text-sm text-red-600">Invalid monitor id.</p>
+        <p className="text-sm text-red-650 dark:text-red-400">Invalid monitor id.</p>
       </div>
     )
   }
@@ -56,8 +56,8 @@ export default function AdminMonitorLogs() {
     <div className="p-8">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Monitor Logs</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Monitor Logs</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             {monitorsLoading
               ? 'Loading monitor details...'
               : monitor
@@ -67,7 +67,7 @@ export default function AdminMonitorLogs() {
         </div>
         <Link
           to="/admin/monitors"
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-gray-300 dark:border-slate-750 px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800"
         >
           Back to Monitors
         </Link>
@@ -87,7 +87,7 @@ export default function AdminMonitorLogs() {
         )}
 
         {!loading && !error && (logs || []).length === 0 && (
-          <div className="px-6 py-12 text-center text-sm text-gray-500">
+          <div className="px-6 py-12 text-center text-sm text-gray-500 dark:text-slate-400">
             No logs yet for this monitor.
           </div>
         )}
@@ -95,18 +95,18 @@ export default function AdminMonitorLogs() {
         {!loading && !error && (logs || []).length > 0 && (
           <>
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-100 bg-gray-50">
+              <thead className="border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-6 py-3 text-left font-medium text-gray-600">Status</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-600">Latency</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-600">Status Code</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-600">Region</th>
-                  <th className="px-6 py-3 text-left font-medium text-gray-600">Checked At</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-600 dark:text-slate-300">Status</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-600 dark:text-slate-300">Latency</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-600 dark:text-slate-300">Status Code</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-600 dark:text-slate-300">Region</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-600 dark:text-slate-300">Checked At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-slate-800/50">
                 {(logs || []).map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50">
+                  <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeClass(log.status)}`}
@@ -116,8 +116,8 @@ export default function AdminMonitorLogs() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="w-20 text-xs text-gray-700">{log.responseTime}ms</span>
-                        <div className="h-2 w-32 rounded bg-gray-100">
+                        <span className="w-20 text-xs text-gray-700 dark:text-slate-300">{log.responseTime}ms</span>
+                        <div className="h-2 w-32 rounded bg-gray-100 dark:bg-slate-800">
                           <div
                             className="h-2 rounded bg-blue-500"
                             style={{ width: `${latencyBarWidth(log.responseTime)}%` }}
@@ -125,9 +125,9 @@ export default function AdminMonitorLogs() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-700">{log.statusCode || '-'}</td>
-                    <td className="px-6 py-4 text-gray-500">{log.region || 'global'}</td>
-                    <td className="px-6 py-4 text-gray-500">{formatDate(log.checkedAt)}</td>
+                    <td className="px-6 py-4 text-gray-700 dark:text-slate-300">{log.statusCode || '-'}</td>
+                    <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{log.region || 'global'}</td>
+                    <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{formatDate(log.checkedAt)}</td>
                   </tr>
                 ))}
               </tbody>

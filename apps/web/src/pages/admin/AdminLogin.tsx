@@ -116,7 +116,7 @@ export default function AdminLogin() {
       <div className="statora-shell flex items-center justify-center px-4 py-12">
         <div className="statora-card w-full max-w-sm p-8">
           <p className="statora-kicker mb-2">Admin access</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-950 mb-2">User Login</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-50 mb-2">User Login</h1>
           <p className="statora-muted mb-6">{pageTitle}</p>
 
           {(error || ssoError) && (
@@ -127,7 +127,7 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
               <input
                 type="email"
                 required
@@ -138,7 +138,7 @@ export default function AdminLogin() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
               <input
                 type="password"
                 required
@@ -162,8 +162,8 @@ export default function AdminLogin() {
       {pendingToken && (
         <div className="fixed inset-0 z-50 bg-slate-950/55 flex items-center justify-center px-4 backdrop-blur-sm">
           <div className="statora-card w-full max-w-sm p-6">
-            <h2 className="text-xl font-semibold text-slate-950 mb-1">MFA Verification Required</h2>
-            <p className="text-sm text-slate-600 mb-4">
+            <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-50 mb-1">MFA Verification Required</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
               Enter the 6-digit code from your authenticator app for {pendingUser?.email ?? 'your account'}.
             </p>
 
@@ -175,7 +175,7 @@ export default function AdminLogin() {
 
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Authenticator Code</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Authenticator Code</label>
                 <input
                   type="text"
                   inputMode="numeric"

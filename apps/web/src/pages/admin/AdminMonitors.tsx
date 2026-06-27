@@ -201,8 +201,8 @@ export default function AdminMonitors() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Monitors</h1>
-          <p className="text-sm text-gray-500 mt-1">{totalMonitors ?? 0} active monitors</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Monitors</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{totalMonitors ?? 0} active monitors</p>
         </div>
         <button
           onClick={openCreate}
@@ -214,52 +214,52 @@ export default function AdminMonitors() {
 
        <AdminListCard>
          <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 dark:bg-slate-800/50 dark:border-slate-700">
             <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Name</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Type</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Target</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Component</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Interval</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Name</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Type</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Target</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Status</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Component</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-400">Interval</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
             {(monitors || []).map(m => (
               <tr
                 key={m.id}
-                className="cursor-pointer hover:bg-gray-50"
+                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800/50"
                 onClick={() => navigate(monitorLogsPath(m.id))}
               >
-                <td className="px-6 py-4 font-medium text-gray-900">{m.name}</td>
+                <td className="px-6 py-4 font-medium text-gray-900 dark:text-slate-100">{m.name}</td>
                 <td className="px-6 py-4">
                   <span className="flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-purple-500" />
-                    <span className="uppercase text-xs font-medium text-purple-700">{m.type}</span>
+                    <Activity className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+                    <span className="uppercase text-xs font-medium text-purple-700 dark:text-purple-400">{m.type}</span>
                   </span>
                 </td>
-                <td className="px-6 py-4 text-gray-500 max-w-xs truncate font-mono text-xs">{m.target}</td>
+                <td className="px-6 py-4 text-gray-500 dark:text-slate-400 max-w-xs truncate font-mono text-xs">{m.target}</td>
                 <td className="px-6 py-4">
                   {m.lastStatus === 'up' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700/40">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Up
                     </span>
                   ) : m.lastStatus === 'down' ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700/40">
                       <XCircle className="w-3.5 h-3.5" />
                       Down
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600 border border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600">
                       <AlertCircle className="w-3.5 h-3.5" />
                       Pending
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-gray-500">{getComponentNameAndSubcomponentText(m)}</td>
-                <td className="px-6 py-4 text-gray-500">{m.intervalSeconds}s</td>
+                <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{getComponentNameAndSubcomponentText(m)}</td>
+                <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{m.intervalSeconds}s</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
                     <button
@@ -267,7 +267,7 @@ export default function AdminMonitors() {
                         e.stopPropagation()
                         openEdit(m)
                       }}
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      className="text-gray-400 hover:text-blue-600 transition-colors dark:text-slate-500 dark:hover:text-blue-400"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -276,7 +276,7 @@ export default function AdminMonitors() {
                         e.stopPropagation()
                         void handleDelete(m)
                       }}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
+                      className="text-gray-400 hover:text-red-600 transition-colors dark:text-slate-500 dark:hover:text-red-400"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -309,10 +309,10 @@ export default function AdminMonitors() {
           onClose={closeModal}
           footer={(
             <div className="flex gap-3">
-              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
+              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
                 Cancel
               </button>
-              <button type="button" onClick={handleTest} disabled={testing || !form.target} className="flex-1 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 rounded-lg py-2 text-sm font-medium">
+              <button type="button" onClick={handleTest} disabled={testing || !form.target} className="flex-1 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-60 rounded-lg py-2 text-sm font-medium dark:border-blue-700/40 dark:text-blue-400 dark:bg-blue-950/30 dark:hover:bg-blue-950/50">
                 {testing ? 'Testing...' : 'Test Target'}
               </button>
               <button type="submit" form="monitor-form" disabled={saving} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
@@ -321,20 +321,20 @@ export default function AdminMonitors() {
             </div>
           )}
         >
-          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 dark:text-red-400 dark:bg-red-950/30">{error}</p>}
           <form id="monitor-form" onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
               <input
                 required
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 placeholder="API Health Check"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Type</label>
               <select
                 value={form.type}
                 onChange={e =>
@@ -362,7 +362,7 @@ export default function AdminMonitors() {
                     }
                   })
                 }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               >
                 {MONITOR_TYPES.map(t => (
                   <option key={t} value={t}>{t.toUpperCase()}</option>
@@ -370,41 +370,41 @@ export default function AdminMonitors() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Target</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Target</label>
               <input
                 required
                 value={form.target}
                 onChange={e => setForm(f => ({ ...f, target: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                 placeholder={TYPE_PLACEHOLDERS[form.type]}
               />
             </div>
             {needsThresholds && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Alert Thresholds (days)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Alert Thresholds (days)</label>
                 <input
                   value={form.sslThresholds}
                   onChange={e => setForm(f => ({ ...f, sslThresholds: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
                   placeholder="30,14,7"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                   Used for certificate and domain expiry warnings (highest threshold first).
                 </p>
               </div>
             )}
 
             {(supportsDomainExpiry || supportsCertExpiry || supportsIgnoreTLSError) && (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3 dark:border-slate-700 dark:bg-slate-800/50">
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Advanced Monitoring</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-gray-800 dark:text-slate-200">Advanced Monitoring</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                     Enable optional checks depending on monitor type compatibility.
                   </p>
                 </div>
 
                 {supportsDomainExpiry && (
-                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={form.domainExpiry}
@@ -416,7 +416,7 @@ export default function AdminMonitors() {
                 )}
 
                 {supportsCertExpiry && (
-                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={form.certExpiry}
@@ -434,7 +434,7 @@ export default function AdminMonitors() {
                 )}
 
                 {supportsIgnoreTLSError && (
-                  <label className="flex items-start gap-2 text-sm text-gray-700">
+                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-slate-300">
                     <input
                       type="checkbox"
                       checked={form.ignoreTLSError}
@@ -453,18 +453,18 @@ export default function AdminMonitors() {
                 )}
 
                 {form.type === 'http' && (form.certExpiry || form.ignoreTLSError) && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-700/40">
                     HTTP target must use <span className="font-mono">https://</span> when certificate expiry or ignore TLS errors is enabled.
                   </p>
                 )}
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Component / Subcomponent</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Component / Subcomponent</label>
               <select
                 value={form.componentId}
                 onChange={e => setForm(f => ({ ...f, componentId: e.target.value, subComponentId: '' }))} // Clear subComponentId when component changes
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
               >
                 {(components || []).map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -476,7 +476,7 @@ export default function AdminMonitors() {
                 <select
                   value={form.subComponentId}
                   onChange={e => setForm(f => ({ ...f, subComponentId: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <option value="">Select subcomponent (optional)...</option>
                   {(subcomponents || [])
@@ -490,30 +490,30 @@ export default function AdminMonitors() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Interval (seconds)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Interval (seconds)</label>
                 <input
                   type="number"
                   min={10}
                   max={3600}
                   value={form.intervalSeconds}
                   onChange={e => setForm(f => ({ ...f, intervalSeconds: parseInt(e.target.value) }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Timeout (seconds)</label>
                 <input
                   type="number"
                   min={1}
                   max={60}
                   value={form.timeoutSeconds}
                   onChange={e => setForm(f => ({ ...f, timeoutSeconds: parseInt(e.target.value) }))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
                 />
               </div>
             </div>
             {testResult && (
-              <div className={`px-3 py-2 rounded-lg text-sm flex items-center justify-between ${testResult.status === 'up' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <div className={`px-3 py-2 rounded-lg text-sm flex items-center justify-between ${testResult.status === 'up' ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700/40' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700/40'}`}>
                 <span className="font-medium">
                   Test Result: {testResult.status.toUpperCase()}
                   {testResult.sslWarning || testResult.domainWarning ? ' (WARNING)' : ''}

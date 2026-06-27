@@ -220,7 +220,7 @@ export default function AdminProfile() {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     )
   }
@@ -228,42 +228,42 @@ export default function AdminProfile() {
   return (
     <div className="p-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">My Profile</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
           Manage your account details, password, and multi-factor authentication.
         </p>
       </div>
 
       {/* General notifications */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-405 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-red-900">Error</p>
-            <p className="text-sm text-red-700 mt-0.5">{error}</p>
+            <p className="text-sm font-medium text-red-900 dark:text-red-200">Error</p>
+            <p className="text-sm text-red-700 dark:text-red-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-905/30 rounded-lg flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-405 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-green-900">Success</p>
-            <p className="text-sm text-green-700 mt-0.5">{success}</p>
+            <p className="text-sm font-medium text-green-900 dark:text-green-200">Success</p>
+            <p className="text-sm text-green-700 dark:text-green-400 mt-0.5">{success}</p>
           </div>
         </div>
       )}
 
       {/* Account Settings */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <User className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Account Settings</h2>
+          <User className="w-5 h-5 text-gray-600 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Account Settings</h2>
         </div>
 
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Username
             </label>
             <input
@@ -271,27 +271,27 @@ export default function AdminProfile() {
               value={formState.username}
               onChange={(e) => setFormState(prev => ({ ...prev, username: e.target.value }))}
               placeholder="Enter your display username"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Email
             </label>
             <input
               type="email"
               value={formState.email}
               disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-gray-500 dark:text-slate-500 text-sm cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Email cannot be changed</p>
           </div>
 
            <div className="grid grid-cols-2 gap-4">
              <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
+               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                  Current Password
                </label>
                <input
@@ -299,9 +299,9 @@ export default function AdminProfile() {
                 value={formState.currentPassword}
                 onChange={(e) => setFormState(prev => ({ ...prev, currentPassword: e.target.value }))}
                 placeholder="Only needed when changing password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-slate-550 mt-1">
                 Leave this blank unless you are setting a new password.
               </p>
              </div>
@@ -309,7 +309,7 @@ export default function AdminProfile() {
 
            <div className="grid grid-cols-2 gap-4">
              <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">
+               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                  New Password (optional)
               </label>
               <input
@@ -317,11 +317,11 @@ export default function AdminProfile() {
                 value={formState.newPassword}
                 onChange={(e) => setFormState(prev => ({ ...prev, newPassword: e.target.value }))}
                 placeholder="Leave blank to keep current"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                 Confirm Password
               </label>
               <input
@@ -329,7 +329,7 @@ export default function AdminProfile() {
                 value={formState.confirmPassword}
                 onChange={(e) => setFormState(prev => ({ ...prev, confirmPassword: e.target.value }))}
                 placeholder="Confirm new password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
           </div>
@@ -348,28 +348,28 @@ export default function AdminProfile() {
       </div>
 
       {/* MFA Settings */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-5 h-5 text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Multi-Factor Authentication</h2>
+          <Shield className="w-5 h-5 text-gray-600 dark:text-slate-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Multi-Factor Authentication</h2>
         </div>
 
         {/* MFA notifications */}
         {mfaError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-955/20 border border-red-200 dark:border-red-900/30 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-405 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-900">MFA Error</p>
-              <p className="text-sm text-red-700 mt-0.5">{mfaError}</p>
+              <p className="text-sm font-medium text-red-900 dark:text-red-200">MFA Error</p>
+              <p className="text-sm text-red-700 dark:text-red-400 mt-0.5">{mfaError}</p>
             </div>
           </div>
         )}
         {mfaSuccess && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-955/20 border border-green-200 dark:border-green-905/30 rounded-lg flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-405 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-green-900">MFA Status</p>
-              <p className="text-sm text-green-700 mt-0.5">{mfaSuccess}</p>
+              <p className="text-sm font-medium text-green-900 dark:text-green-200">MFA Status</p>
+              <p className="text-sm text-green-700 dark:text-green-400 mt-0.5">{mfaSuccess}</p>
             </div>
           </div>
         )}
@@ -377,11 +377,11 @@ export default function AdminProfile() {
         {/* MFA not enabled - show setup CTA */}
         {!profile?.mfaEnabled && mfaStep === 'idle' && (
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-blue-600" />
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Secure Your Account</h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">Secure Your Account</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
               Add an authenticator app to protect this account with a time-based verification code.
               After setup, every password login will require a second factor.
             </p>
@@ -398,12 +398,12 @@ export default function AdminProfile() {
         {/* MFA setup in progress - show secret */}
         {mfaStep === 'setup-show-secret' && (
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-955/20 border border-blue-200 dark:border-blue-900/30 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-405 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-blue-900">Setup Instructions</p>
-                  <ol className="text-sm text-blue-700 mt-2 space-y-1 list-decimal list-inside">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Setup Instructions</p>
+                  <ol className="text-sm text-blue-700 dark:text-blue-400 mt-2 space-y-1 list-decimal list-inside">
                     <li>Open your authenticator app (Google Authenticator, Authy, etc.)</li>
                     <li>Manually enter the secret below if QR scanning is unavailable</li>
                     <li>Save your recovery codes before finishing setup</li>
@@ -415,13 +415,13 @@ export default function AdminProfile() {
 
             {mfaSetup.otpauthUrl && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Scan QR Code
                 </label>
-                <div className="border border-gray-200 rounded-lg p-4 bg-white inline-block">
+                <div className="border border-gray-200 dark:border-slate-800 rounded-lg p-4 bg-white inline-block">
                   <QrCodeDisplay text={mfaSetup.otpauthUrl} size={200} />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
                   If scanning is unavailable, use the manual secret below.
                 </p>
               </div>
@@ -429,7 +429,7 @@ export default function AdminProfile() {
 
             {/* Secret display */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 TOTP Secret
               </label>
               <div className="flex gap-2">
@@ -437,11 +437,12 @@ export default function AdminProfile() {
                   type="text"
                   value={mfaSetup.secret}
                   readOnly
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 rounded-lg text-sm font-mono"
                 />
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(mfaSetup.secret, 'Secret')}
-                  className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-300"
+                  className="px-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded-lg border border-gray-300 dark:border-slate-700"
                 >
                   Copy
                 </button>
@@ -450,26 +451,27 @@ export default function AdminProfile() {
 
             {/* Recovery codes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Recovery Codes
               </label>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-xs text-gray-600 mb-3">
+              <div className="bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-lg p-4">
+                <p className="text-xs text-gray-600 dark:text-slate-400 mb-3">
                   Store these codes in a safe place. Each code can only be used once.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {mfaSetup.recoveryCodes.map((code, idx) => (
                     <div
                       key={idx}
-                      className="px-3 py-2 bg-white border border-gray-200 rounded text-xs font-mono text-center"
+                      className="px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded text-xs font-mono text-center text-gray-805 dark:text-slate-200"
                     >
                       {code}
                     </div>
                   ))}
                 </div>
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(mfaSetup.recoveryCodes.join('\n'), 'Recovery codes')}
-                  className="mt-3 px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded border border-gray-300"
+                  className="mt-3 px-3 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 rounded border border-gray-300 dark:border-slate-700"
                 >
                   Copy All Codes
                 </button>
@@ -479,7 +481,7 @@ export default function AdminProfile() {
             {/* Verification form */}
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   Verification Code
                 </label>
                 <input
@@ -488,7 +490,7 @@ export default function AdminProfile() {
                   onChange={(e) => setMfaSetup(prev => ({ ...prev, verificationCode: e.target.value }))}
                   placeholder="Enter 6-digit code from authenticator app"
                   maxLength={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-905 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -514,7 +516,7 @@ export default function AdminProfile() {
                     setMfaError(null)
                     setMfaSuccess(null)
                   }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-300"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-850 rounded-lg border border-gray-300 dark:border-slate-700"
                 >
                   Cancel
                 </button>
@@ -525,12 +527,12 @@ export default function AdminProfile() {
 
         {profile?.mfaEnabled && !profile.mfaVerified && (
           <div className="space-y-6">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="bg-amber-50 dark:bg-amber-955/20 border border-amber-200 dark:border-amber-900/30 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-405 flex-shrink-0 mt-0.5" />
                 <div>
-                 <p className="text-sm font-medium text-amber-900">MFA verification required</p>
-                  <p className="text-sm text-amber-700 mt-1">
+                 <p className="text-sm font-medium text-amber-900 dark:text-amber-200">MFA verification required</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
                     Your password was accepted, but this session is still restricted.
                     Enter a code from your authenticator app to finish signing in, or use a recovery code if needed.
                   </p>
@@ -540,7 +542,7 @@ export default function AdminProfile() {
 
             <form onSubmit={handleMfaVerify} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   Authenticator Code
                 </label>
                 <input
@@ -549,12 +551,12 @@ export default function AdminProfile() {
                   onChange={(e) => setMfaSetup(prev => ({ ...prev, verificationCode: e.target.value, recoveryCode: '' }))}
                   placeholder="Enter 6-digit code"
                   maxLength={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-905 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                   Recovery Code
                 </label>
                 <input
@@ -562,9 +564,9 @@ export default function AdminProfile() {
                   value={mfaSetup.recoveryCode}
                   onChange={(e) => setMfaSetup(prev => ({ ...prev, recoveryCode: e.target.value, verificationCode: '' }))}
                   placeholder="Enter single-use recovery code"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-905 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                   Use a recovery code only if you cannot access your authenticator app. Each code works once.
                 </p>
               </div>
@@ -584,25 +586,25 @@ export default function AdminProfile() {
         {/* MFA enabled - show status and disable option */}
         {profile?.mfaEnabled && profile.mfaVerified && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-955/20 border border-green-200 dark:border-green-905/30 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-405 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-green-900">MFA is Enabled</p>
-                <p className="text-sm text-green-700 mt-0.5">
+                <p className="text-sm font-medium text-green-900 dark:text-green-200">MFA is Enabled</p>
+                <p className="text-sm text-green-700 dark:text-green-400 mt-0.5">
                   Your account is protected with multi-factor authentication and requires a second factor at login.
                 </p>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Disable MFA</h3>
-              <p className="text-sm text-gray-500 mb-4">
+            <div className="pt-4 border-t border-gray-200 dark:border-slate-800">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">Disable MFA</h3>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
                 To disable MFA, confirm your current password and provide a current authenticator code.
                 This removes the extra login protection from your account.
               </p>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Current Password
                   </label>
                   <input
@@ -610,11 +612,11 @@ export default function AdminProfile() {
                     value={disablePassword}
                     onChange={(e) => setDisablePassword(e.target.value)}
                     placeholder="Confirm your password"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-905 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Authenticator Code
                   </label>
                   <input
@@ -623,11 +625,12 @@ export default function AdminProfile() {
                     onChange={(e) => setDisableCode(e.target.value)}
                     placeholder="Enter 6-digit code"
                     maxLength={10}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-905 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleMfaDisable}
                 disabled={mfaStep === 'disable-pending'}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"

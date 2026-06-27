@@ -114,8 +114,8 @@ export default function AdminSubComponents() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sub-Components</h1>
-          <p className="text-sm text-gray-500 mt-1">{totalSubComponents} total · {totalComponents} components</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Sub-Components</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{totalSubComponents} total · {totalComponents} components</p>
         </div>
         <button
           onClick={openCreate}
@@ -127,27 +127,27 @@ export default function AdminSubComponents() {
       </div>
 
       {!components?.length && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-700 mb-4">
+        <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 rounded-lg px-4 py-3 text-sm text-yellow-700 dark:text-yellow-400 mb-4">
           Create at least one component before adding sub-components.
         </div>
       )}
 
       <AdminListCard>
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 dark:bg-slate-800/50 dark:border-slate-700">
             <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Name</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Parent Component</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-600">Status</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Name</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Parent Component</th>
+              <th className="text-left px-6 py-3 font-medium text-gray-600 dark:text-slate-300">Status</th>
               <th className="px-6 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-50 dark:divide-slate-800/50">
             {(subComponents || []).map(s => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium text-gray-900">{s.name}</td>
-                <td className="px-6 py-4 text-gray-500">{getComponentName(s.componentId)}</td>
-                <td className="px-6 py-4">
+              <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                <td className="px-6 py-4 font-medium text-gray-900 dark:text-slate-100">{s.name}</td>
+                <td className="px-6 py-4 text-gray-500 dark:text-slate-400">{getComponentName(s.componentId)}</td>
+                <td className="px-6 py-4 text-slate-700 dark:text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[s.status]}`} />
                     {STATUS_LABELS[s.status]}
@@ -155,10 +155,10 @@ export default function AdminSubComponents() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => openEdit(s)} className="text-gray-400 hover:text-blue-600 transition-colors" aria-label={`Edit ${s.name}`}>
+                    <button onClick={() => openEdit(s)} className="text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" aria-label={`Edit ${s.name}`}>
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(s)} className="text-gray-400 hover:text-red-600 transition-colors" aria-label={`Delete ${s.name}`}>
+                    <button onClick={() => handleDelete(s)} className="text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label={`Delete ${s.name}`}>
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -186,15 +186,15 @@ export default function AdminSubComponents() {
 
       {showModal && (
         <Modal title={editing ? 'Edit Sub-Component' : 'New Sub-Component'} onClose={closeModal}>
-          {error && <p className="mb-4 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && <p className="mb-4 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{error}</p>}
           <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Component</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Parent Component</label>
               <select
                 required
                 value={form.componentId}
                 onChange={e => setForm(f => ({ ...f, componentId: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select component...</option>
                 {(components || []).map(c => (
@@ -203,28 +203,28 @@ export default function AdminSubComponents() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
               <input
                 required
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Description</label>
               <input
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
               <select
                 value={form.status}
                 onChange={e => setForm(f => ({ ...f, status: e.target.value as ComponentStatus }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {STATUSES.map(s => (
                   <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -232,7 +232,7 @@ export default function AdminSubComponents() {
               </select>
             </div>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2 text-sm hover:bg-gray-50">
+              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-lg py-2 text-sm hover:bg-gray-50 dark:hover:bg-slate-800">
                 Cancel
               </button>
               <button type="submit" disabled={saving || (Boolean(editing) && isUnchanged)} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium">
