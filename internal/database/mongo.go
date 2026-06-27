@@ -28,8 +28,12 @@ func ConnectMongo(uri, dbName string) error {
 
 	client = c
 	database = c.Database(dbName)
-	log.Printf("Connected to MongoDB: %s/%s", uri, dbName)
+	log.Printf("Connected to MongoDB: %s", safeMongoLogTarget(uri, dbName))
 	return nil
+}
+
+func safeMongoLogTarget(_ string, dbName string) string {
+	return "database " + dbName
 }
 
 func GetDB() *mongo.Database {
