@@ -17,7 +17,7 @@ import (
 func TestSSOVerifierHS256(t *testing.T) {
 	settings := models.StatusPageSSOSettings{
 		Enabled:      true,
-		Issuer:       "oca-dashboard",
+		Issuer:       "my-dashboard",
 		Audience:     "statora",
 		Algorithm:    "HS256",
 		SharedSecret: "shared-secret",
@@ -29,7 +29,7 @@ func TestSSOVerifierHS256(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, externalSSOClaims{
 		Email: "user@example.com",
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "oca-dashboard",
+			Issuer:    "my-dashboard",
 			Audience:  jwt.ClaimStrings{"statora"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
@@ -53,7 +53,7 @@ func TestSSOVerifierRS256(t *testing.T) {
 
 	settings := models.StatusPageSSOSettings{
 		Enabled:      true,
-		Issuer:       "oca-dashboard",
+		Issuer:       "my-dashboard",
 		Audience:     "statora",
 		Algorithm:    "RS256",
 		PublicKeyPEM: string(publicKeyPEM),
@@ -65,7 +65,7 @@ func TestSSOVerifierRS256(t *testing.T) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, externalSSOClaims{
 		Email: "user@example.com",
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "oca-dashboard",
+			Issuer:    "my-dashboard",
 			Audience:  jwt.ClaimStrings{"statora"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
