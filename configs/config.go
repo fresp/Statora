@@ -29,6 +29,14 @@ type Config struct {
 	EnableWorker       bool
 	GracefulShutdown   bool
 	GracefulTimeout    int
+	AllowedOrigins     []string
+}
+
+var defaultAllowedOrigins = []string{
+	"http://localhost:8080",
+	"http://127.0.0.1:8080",
+	"http://localhost:5173",
+	"http://127.0.0.1:5173",
 }
 
 func Load() *Config {
@@ -54,6 +62,7 @@ func Load() *Config {
 		EnableWorker:       getBoolEnv("ENABLE_WORKER", "true"),
 		GracefulShutdown:   getBoolEnv("GRACEFUL_SHUTDOWN", "true"),
 		GracefulTimeout:    getEnvInt("SHUTDOWN_TIMEOUT", 30),
+		AllowedOrigins:     getCSVEnv("ALLOWED_ORIGINS", defaultAllowedOrigins),
 	}
 }
 
@@ -87,6 +96,13 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+func (c *Config) CORSAllowedOrigins() []string {
+	if len(c.AllowedOrigins) == 0 {
+		return append([]string(nil), defaultAllowedOrigins...)
+	}
+	return append([]string(nil), c.AllowedOrigins...)
 }
 
 type requiredField struct {
@@ -136,4 +152,21 @@ func getBoolEnv(key, fallback string) bool {
 		return fallback == "true"
 	}
 	return v == "true"
+}
+
+func getCSVEnv(key string, fallback []string) []string {
+	raw := os.Getenv(key)
+	if strings.TrimSpace(raw) == "" {
+		return append([]string(nil), fallback...)
+	}
+
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
 }

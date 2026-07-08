@@ -22,18 +22,14 @@ import (
 
 // RegisterAPIRoutes registers all API routes on the given Gin engine
 func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
+	allowedOrigins := cfg.CORSAllowedOrigins()
+	originPolicy := handlers.NewOriginPolicy(allowedOrigins)
+
 	// Apply CORS middleware
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(cors.New(corsConfig(allowedOrigins)))
 
 	api := r.Group("/api")
-	r.GET("/ws", handlers.ServeWs(hub))
+	r.GET("/ws", handlers.ServeWs(hub, originPolicy))
 	r.GET("/sso/callback", handlers.SSOCallback(database.GetDB(), cfg))
 
 	api.GET("/status/summary", handlers.GetStatusSummary(database.GetDB()))
@@ -129,6 +125,17 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	adminOnly.GET("/users/invitations", handlers.GetUserInvitations(database.GetDB(), cfg))
 	adminOnly.POST("/users/invitations/:id/refresh", handlers.RefreshUserInvitation(database.GetDB(), cfg))
 	adminOnly.DELETE("/users/invitations/:id", handlers.RevokeUserInvitation(database.GetDB()))
+}
+
+func corsConfig(allowedOrigins []string) cors.Config {
+	return cors.Config{
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
 }
 
 func SeedAdmin(db *mongo.Database, cfg *configs.Config) {

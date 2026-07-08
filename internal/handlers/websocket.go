@@ -2,20 +2,11 @@ package handlers
 
 import (
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins in dev; restrict in prod
-	},
-}
 
 type Hub struct {
 	clients    map[*Client]bool
@@ -69,11 +60,8 @@ func (c *Client) readPump() {
 	}()
 	c.conn.SetReadLimit(512)
 	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		c.conn.SetPongHandler(func(string) error {
-			log.Print("[WS] Ping received")
-			c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-			return nil
+	c.conn.SetPongHandler(func(string) error {
+		log.Print("[WS] Ping received")
 		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
@@ -116,7 +104,13 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub) gin.HandlerFunc {
+func ServeWs(hub *Hub, originPolicy OriginPolicy) gin.HandlerFunc {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     originPolicy.AllowRequest,
+	}
+
 	return func(c *gin.Context) {
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {

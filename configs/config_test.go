@@ -76,6 +76,33 @@ func TestLoadDatabaseEnvFields(t *testing.T) {
 	}
 }
 
+func TestLoadAllowedOriginsDefaultLocalDevelopment(t *testing.T) {
+	t.Setenv("ALLOWED_ORIGINS", "")
+
+	cfg := Load()
+
+	wants := []string{
+		"http://localhost:8080",
+		"http://127.0.0.1:8080",
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	}
+	if strings.Join(cfg.AllowedOrigins, ",") != strings.Join(wants, ",") {
+		t.Fatalf("AllowedOrigins = %v, want %v", cfg.AllowedOrigins, wants)
+	}
+}
+
+func TestLoadAllowedOriginsFromEnv(t *testing.T) {
+	t.Setenv("ALLOWED_ORIGINS", " https://status.example.com, http://localhost:5173 ,,https://admin.example.com ")
+
+	cfg := Load()
+
+	wants := []string{"https://status.example.com", "http://localhost:5173", "https://admin.example.com"}
+	if strings.Join(cfg.AllowedOrigins, ",") != strings.Join(wants, ",") {
+		t.Fatalf("AllowedOrigins = %v, want %v", cfg.AllowedOrigins, wants)
+	}
+}
+
 func TestConfigValidateDatabaseDriver(t *testing.T) {
 	validKey := strings.Repeat("a", 32)
 	tests := []struct {
