@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	AppEnv             string
 	MongoURI           string
 	MongoDBName        string
 	DBDriver           string
@@ -33,6 +34,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
+		AppEnv:             normalizeAppEnv(getEnv("APP_ENV", "development")),
 		MongoURI:           getEnv("MONGODB_URI", "mongodb://localhost:27017"),
 		MongoDBName:        getEnv("MONGODB_DB", "statusplatform"),
 		DBDriver:           getEnv("DB_DRIVER", "mongodb"),
@@ -60,6 +62,30 @@ func Load() *Config {
 func (c *Config) Validate() error {
 	if len(c.EmailEncryptionKey) != 32 {
 		return fmt.Errorf("APP_ENCRYPTION_KEY must be exactly 32 bytes")
+	}
+
+	if c.isProductionLike() {
+		placeholderFields := requiredPlaceholderFields(
+			requiredField{name: "JWT_SECRET", value: c.JWTSecret},
+			requiredField{name: "APP_ENCRYPTION_KEY", value: c.EmailEncryptionKey},
+			requiredField{name: "ADMIN_PASSWORD", value: c.AdminPass},
+		)
+
+		switch strings.TrimSpace(c.DBDriver) {
+		case "mongodb":
+			placeholderFields = append(placeholderFields, requiredPlaceholderFields(requiredField{name: "MONGODB_URI", value: c.MongoURI})...)
+		case "postgres", "mysql":
+			placeholderFields = append(placeholderFields,
+				requiredPlaceholderFields(
+					requiredField{name: "DB_USERNAME", value: c.DBUsername},
+					requiredField{name: "DB_PASSWORD", value: c.DBPassword},
+				)...,
+			)
+		}
+
+		if len(placeholderFields) > 0 {
+			return fmt.Errorf("production configuration contains change-me placeholders: %s", strings.Join(placeholderFields, ", "))
+		}
 	}
 
 	switch strings.TrimSpace(c.DBDriver) {
@@ -102,6 +128,33 @@ func requiredMissing(fields ...requiredField) []string {
 		}
 	}
 	return missing
+}
+
+func requiredPlaceholderFields(fields ...requiredField) []string {
+	placeholders := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if isPlaceholder(field.value) {
+			placeholders = append(placeholders, field.name)
+		}
+	}
+	return placeholders
+}
+
+func isPlaceholder(value string) bool {
+	trimmed := strings.TrimSpace(strings.ToLower(value))
+	return trimmed != "" && strings.Contains(trimmed, "change-me")
+}
+
+func normalizeAppEnv(value string) string {
+	trimmed := strings.TrimSpace(strings.ToLower(value))
+	if trimmed == "" {
+		return "development"
+	}
+	return trimmed
+}
+
+func (c *Config) isProductionLike() bool {
+	return normalizeAppEnv(c.AppEnv) != "development"
 }
 
 func validPort(port string) bool {

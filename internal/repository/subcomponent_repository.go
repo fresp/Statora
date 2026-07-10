@@ -27,7 +27,9 @@ type MongoSubComponentRepository struct {
 	collection *mongo.Collection
 }
 
-func NewMongoSubComponentRepository(db *mongo.Database) *MongoSubComponentRepository {
+var _ SubComponentRepository = (*MongoSubComponentRepository)(nil)
+
+func NewMongoSubComponentRepository(db *mongo.Database) SubComponentRepository {
 	return &MongoSubComponentRepository{collection: db.Collection("subcomponents")}
 }
 

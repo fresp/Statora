@@ -27,7 +27,9 @@ type MongoMaintenanceRepository struct {
 	auditLogs  *mongo.Collection
 }
 
-func NewMongoMaintenanceRepository(db *mongo.Database) *MongoMaintenanceRepository {
+var _ MaintenanceRepository = (*MongoMaintenanceRepository)(nil)
+
+func NewMongoMaintenanceRepository(db *mongo.Database) MaintenanceRepository {
 	return &MongoMaintenanceRepository{
 		collection: db.Collection("maintenance"),
 		auditLogs:  db.Collection("audit_logs"),

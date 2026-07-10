@@ -23,7 +23,10 @@ type MongoSubscriberRepository struct {
 	collection *mongo.Collection
 }
 
-func NewMongoSubscriberRepository(db *mongo.Database) *MongoSubscriberRepository {
+
+var _ SubscriberRepository = (*MongoSubscriberRepository)(nil)
+
+func NewMongoSubscriberRepository(db *mongo.Database) SubscriberRepository {
 	return &MongoSubscriberRepository{collection: db.Collection("subscribers")}
 }
 

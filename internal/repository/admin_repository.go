@@ -30,9 +30,11 @@ type MongoUserRepository struct {
 	db *mongo.Database
 }
 
+var _ UserRepository = (*MongoUserRepository)(nil)
+
 var userEmailHashIndexOnce sync.Once
 
-func NewMongoUserRepository(db *mongo.Database) *MongoUserRepository {
+func NewMongoUserRepository(db *mongo.Database) UserRepository {
 	userEmailHashIndexOnce.Do(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

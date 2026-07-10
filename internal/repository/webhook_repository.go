@@ -20,7 +20,10 @@ type MongoWebhookChannelRepository struct {
 	collection *mongo.Collection
 }
 
-func NewMongoWebhookChannelRepository(db *mongo.Database) *MongoWebhookChannelRepository {
+
+var _ WebhookChannelRepository = (*MongoWebhookChannelRepository)(nil)
+
+func NewMongoWebhookChannelRepository(db *mongo.Database) WebhookChannelRepository {
 	return &MongoWebhookChannelRepository{collection: db.Collection("webhook_channels")}
 }
 

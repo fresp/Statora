@@ -54,6 +54,11 @@ func (s *Service) ListPublic(ctx context.Context, page, limit int) ([]models.Mai
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (models.Maintenance, error) {
+	title := strings.TrimSpace(input.Title)
+	if title == "" {
+		return models.Maintenance{}, fmt.Errorf("%w: title is required", shared.ErrInvalidInput)
+	}
+
 	startTime, err := time.Parse(time.RFC3339, input.StartTime)
 	if err != nil {
 		return models.Maintenance{}, fmt.Errorf("%w: invalid startTime format, use RFC3339", shared.ErrInvalidInput)
@@ -61,6 +66,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Mainten
 	endTime, err := time.Parse(time.RFC3339, input.EndTime)
 	if err != nil {
 		return models.Maintenance{}, fmt.Errorf("%w: invalid endTime format, use RFC3339", shared.ErrInvalidInput)
+	}
+	if !startTime.Before(endTime) {
+		return models.Maintenance{}, fmt.Errorf("%w: startTime must be before endTime", shared.ErrInvalidInput)
 	}
 
 	creatorID, err := primitive.ObjectIDFromHex(input.CreatorIDHex)
@@ -71,9 +79,10 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Mainten
 	componentIDs := make([]primitive.ObjectID, 0, len(input.Components))
 	for _, raw := range input.Components {
 		oid, parseErr := primitive.ObjectIDFromHex(raw)
-		if parseErr == nil {
-			componentIDs = append(componentIDs, oid)
+		if parseErr != nil {
+			return models.Maintenance{}, fmt.Errorf("%w: invalid component id", shared.ErrInvalidInput)
 		}
+		componentIDs = append(componentIDs, oid)
 	}
 
 	status := models.MaintenanceScheduled
@@ -91,7 +100,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Mainten
 
 	maintenance := models.Maintenance{
 		ID:              primitive.NewObjectID(),
-		Title:           input.Title,
+		Title:           title,
 		Description:     plainDescription,
 		DescriptionJSON: input.DescriptionJSON,
 		CreatorID:       &creatorID,
@@ -138,6 +147,9 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Updat
 		}
 	}
 	if input.Status != "" {
+		if !isValidMaintenanceStatus(input.Status) {
+			return models.Maintenance{}, fmt.Errorf("%w: invalid maintenance status", shared.ErrInvalidInput)
+		}
 		setFields["status"] = input.Status
 	}
 	if input.VisibilityState == models.IncidentVisibilityDraft {
@@ -235,6 +247,15 @@ func auditActionForMaintenance(status models.MaintenanceStatus) models.AuditActi
 	}
 
 	return models.AuditActionEdited
+}
+
+func isValidMaintenanceStatus(status models.MaintenanceStatus) bool {
+	switch status {
+	case models.MaintenanceDraft, models.MaintenanceScheduled, models.MaintenanceInProgress, models.MaintenanceActive, models.MaintenanceCompleted:
+		return true
+	default:
+		return false
+	}
 }
 
 func derivePlainText(document models.RichTextDocument) string {

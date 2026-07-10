@@ -30,9 +30,11 @@ type MongoMonitorRepository struct {
 	collection *mongo.Collection
 }
 
+var _ MonitorRepository = (*MongoMonitorRepository)(nil)
+
 var monitorLogIndexOnce sync.Once
 
-func NewMongoMonitorRepository(db *mongo.Database) *MongoMonitorRepository {
+func NewMongoMonitorRepository(db *mongo.Database) MonitorRepository {
 	monitorLogIndexOnce.Do(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

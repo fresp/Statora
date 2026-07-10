@@ -38,7 +38,9 @@ type MongoStatusRepository struct {
 	db *mongo.Database
 }
 
-func NewMongoStatusRepository(db *mongo.Database) *MongoStatusRepository {
+var _ StatusRepository = (*MongoStatusRepository)(nil)
+
+func NewMongoStatusRepository(db *mongo.Database) StatusRepository {
 	return &MongoStatusRepository{db: db}
 }
 

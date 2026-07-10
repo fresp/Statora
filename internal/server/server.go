@@ -47,6 +47,7 @@ func RunServer() error {
 
 	db := database.GetDB()
 	rdb := database.GetRedis()
+	factory := database.NewRepositoryFactory(db)
 
 	// Create WebSocket hub
 	hub := handlers.NewHub()
@@ -74,7 +75,7 @@ func RunServer() error {
 	}
 
 	// Seed admin user
-	SeedAdmin(db, cfg)
+	SeedAdmin(factory, cfg)
 
 	// Serve React root
 	r.NoRoute(StaticFileServer())

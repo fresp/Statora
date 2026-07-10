@@ -34,7 +34,10 @@ type MongoIncidentRepository struct {
 	subcomponents   *mongo.Collection
 }
 
-func NewMongoIncidentRepository(db *mongo.Database) *MongoIncidentRepository {
+
+var _ IncidentRepository = (*MongoIncidentRepository)(nil)
+
+func NewMongoIncidentRepository(db *mongo.Database) IncidentRepository {
 	return &MongoIncidentRepository{
 		incidents:       db.Collection("incidents"),
 		incidentUpdates: db.Collection("incident_updates"),

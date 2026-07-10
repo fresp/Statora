@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +10,12 @@ import (
 
 func TestMongoUserRepositoryImplementsUserRepository(t *testing.T) {
 	var _ UserRepository = (*MongoUserRepository)(nil)
+}
+
+func TestNewMongoUserRepositoryReturnsUserRepositoryInterface(t *testing.T) {
+	constructorType := reflect.TypeOf(NewMongoUserRepository)
+	require.Equal(t, reflect.Interface, constructorType.Out(0).Kind())
+	require.Equal(t, "UserRepository", constructorType.Out(0).Name())
 }
 
 func TestUserRepositoryEmailHashIndexShape(t *testing.T) {

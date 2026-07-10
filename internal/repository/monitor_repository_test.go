@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,12 @@ import (
 
 func TestMongoMonitorRepositoryImplementsMonitorRepository(t *testing.T) {
 	var _ MonitorRepository = (*MongoMonitorRepository)(nil)
+}
+
+func TestNewMongoMonitorRepositoryReturnsMonitorRepositoryInterface(t *testing.T) {
+	constructorType := reflect.TypeOf(NewMongoMonitorRepository)
+	assert.Equal(t, reflect.Interface, constructorType.Out(0).Kind())
+	assert.Equal(t, "MonitorRepository", constructorType.Out(0).Name())
 }
 
 func TestBuildMonitorLogsPaginationQueryBuildsExpectedFilterAndOptions(t *testing.T) {

@@ -214,3 +214,141 @@ func TestConfigValidatePreservesEncryptionKeyValidation(t *testing.T) {
 		t.Fatalf("Validate() error = %q, want APP_ENCRYPTION_KEY length error", err.Error())
 	}
 }
+
+func TestLoadAppEnvDefault(t *testing.T) {
+	t.Setenv("APP_ENV", "")
+
+	cfg := Load()
+
+	if cfg.AppEnv != "development" {
+		t.Fatalf("AppEnv = %q, want development", cfg.AppEnv)
+	}
+}
+
+func TestConfigValidateProductionSecretPlaceholders(t *testing.T) {
+	placeholderKey := "change-me-app-encryption-key!!!!"
+	if len(placeholderKey) != 32 {
+		t.Fatalf("placeholder key length = %d, want 32", len(placeholderKey))
+	}
+
+	tests := []struct {
+		name       string
+		cfg        Config
+		wantErr    bool
+		wantFields []string
+	}{
+		{
+			name: "development allows placeholders",
+			cfg: Config{
+				AppEnv:             "development",
+				JWTSecret:          "change-me-jwt-secret",
+				EmailEncryptionKey: placeholderKey,
+				AdminPass:          "change-me-admin-password",
+				DBDriver:           "mongodb",
+			},
+		},
+		{
+			name: "production rejects jwt placeholder",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "change-me-jwt-secret",
+				EmailEncryptionKey: strings.Repeat("a", 32),
+				AdminPass:          "strong-admin-password",
+				DBDriver:           "mongodb",
+			},
+			wantErr:    true,
+			wantFields: []string{"JWT_SECRET"},
+		},
+		{
+			name: "production rejects app encryption placeholder",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "real-jwt-secret",
+				EmailEncryptionKey: placeholderKey,
+				AdminPass:          "strong-admin-password",
+				DBDriver:           "mongodb",
+			},
+			wantErr:    true,
+			wantFields: []string{"APP_ENCRYPTION_KEY"},
+		},
+		{
+			name: "production rejects admin password placeholder",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "real-jwt-secret",
+				EmailEncryptionKey: strings.Repeat("a", 32),
+				AdminPass:          "change-me-admin-password",
+				DBDriver:           "mongodb",
+			},
+			wantErr:    true,
+			wantFields: []string{"ADMIN_PASSWORD"},
+		},
+		{
+			name: "production rejects sql placeholder credentials",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "real-jwt-secret",
+				EmailEncryptionKey: strings.Repeat("a", 32),
+				AdminPass:          "strong-admin-password",
+				DBDriver:           "postgres",
+				DBHost:             "localhost",
+				DBPort:             "5432",
+				DBDatabase:         "statora",
+				DBUsername:         "change-me-db-username",
+				DBPassword:         "change-me-db-password",
+			},
+			wantErr:    true,
+			wantFields: []string{"DB_USERNAME", "DB_PASSWORD"},
+		},
+		{
+			name: "production rejects mongodb placeholder uri",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "real-jwt-secret",
+				EmailEncryptionKey: strings.Repeat("a", 32),
+				AdminPass:          "strong-admin-password",
+				DBDriver:           "mongodb",
+				MongoURI:           "mongodb://change-me-db-user:change-me-db-password@localhost:27017",
+			},
+			wantErr:    true,
+			wantFields: []string{"MONGODB_URI"},
+		},
+		{
+			name: "production accepts non-placeholder secrets",
+			cfg: Config{
+				AppEnv:             "production",
+				JWTSecret:          "real-jwt-secret",
+				EmailEncryptionKey: strings.Repeat("a", 32),
+				AdminPass:          "strong-admin-password",
+				DBDriver:           "postgres",
+				DBHost:             "localhost",
+				DBPort:             "5432",
+				DBDatabase:         "statora",
+				DBUsername:         "statora",
+				DBPassword:         "strong-db-password",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatal("Validate() error = nil, want error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("Validate() error = %v, want nil", err)
+			}
+			if err == nil {
+				return
+			}
+
+			msg := err.Error()
+			for _, field := range tt.wantFields {
+				if !strings.Contains(msg, field) {
+					t.Fatalf("Validate() error = %q, want field %s", msg, field)
+				}
+			}
+		})
+	}
+}

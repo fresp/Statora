@@ -19,7 +19,10 @@ type MongoSettingsRepository struct {
 	db *mongo.Database
 }
 
-func NewMongoSettingsRepository(db *mongo.Database) *MongoSettingsRepository {
+
+var _ SettingsRepository = (*MongoSettingsRepository)(nil)
+
+func NewMongoSettingsRepository(db *mongo.Database) SettingsRepository {
 	return &MongoSettingsRepository{db: db}
 }
 

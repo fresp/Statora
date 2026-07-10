@@ -8,15 +8,11 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/fresp/Statora/configs"
 	"github.com/fresp/Statora/internal/database"
 	"github.com/fresp/Statora/internal/handlers"
 	"github.com/fresp/Statora/internal/middleware"
-	"github.com/fresp/Statora/internal/models"
-	"github.com/fresp/Statora/internal/security/pii"
 	authservice "github.com/fresp/Statora/internal/services/auth"
 )
 
@@ -131,16 +127,17 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	adminOnly.DELETE("/users/invitations/:id", handlers.RevokeUserInvitation(database.GetDB()))
 }
 
-func SeedAdmin(db *mongo.Database, cfg *configs.Config) {
+func SeedAdmin(factory *database.RepositoryFactory, cfg *configs.Config) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	authSvc := authservice.NewServiceFromDB(db, cfg.JWTSecret, cfg.EmailEncryptionKey)
-	normalizedEmail := pii.Normalize(cfg.AdminEmail)
-	emailHash := pii.Hash(normalizedEmail)
-
-	var existing models.User
-	if err := db.Collection("users").FindOne(ctx, bson.M{"emailHash": emailHash}).Decode(&existing); err == nil {
+	authSvc := authservice.NewService(factory.Users, cfg.JWTSecret, cfg.EmailEncryptionKey)
+	exists, err := authSvc.EmailExists(ctx, cfg.AdminEmail)
+	if err != nil {
+		log.Printf("[HTTP] Failed to check seeded admin: %v", err)
+		return
+	}
+	if exists {
 		return
 	}
 

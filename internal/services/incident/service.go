@@ -84,6 +84,11 @@ func (s *Service) List(ctx context.Context, statusFilter, startDateRaw, endDateR
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (models.Incident, error) {
+	title := strings.TrimSpace(input.Title)
+	if title == "" {
+		return models.Incident{}, fmt.Errorf("%w: title is required", shared.ErrInvalidInput)
+	}
+
 	status := input.Status
 	if status == "" {
 		status = models.IncidentInvestigating
@@ -92,6 +97,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Inciden
 	impact := input.Impact
 	if impact == "" {
 		impact = models.ImpactMinor
+	}
+	if !isValidIncidentImpact(impact) {
+		return models.Incident{}, fmt.Errorf("%w: invalid incident impact", shared.ErrInvalidInput)
 	}
 
 	userID, err := primitive.ObjectIDFromHex(input.CreatorIDHex)
@@ -131,7 +139,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.Inciden
 
 	incident := models.Incident{
 		ID:                       primitive.NewObjectID(),
-		Title:                    input.Title,
+		Title:                    title,
 		Description:              plainDescription,
 		DescriptionJSON:          input.DescriptionJSON,
 		VisibilityState:          visibility,
@@ -239,6 +247,11 @@ func (s *Service) Update(ctx context.Context, id primitive.ObjectID, input Reque
 }
 
 func (s *Service) AddUpdate(ctx context.Context, incidentID primitive.ObjectID, message string, status models.IncidentStatus) (models.IncidentUpdate, error) {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		return models.IncidentUpdate{}, fmt.Errorf("%w: update message is required", shared.ErrInvalidInput)
+	}
+
 	if _, err := s.repo.FindByID(ctx, incidentID); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return models.IncidentUpdate{}, fmt.Errorf("%w: incident not found", shared.ErrNotFound)
@@ -387,6 +400,15 @@ func auditActionForVisibility(visibility models.IncidentVisibilityState, fallbac
 	}
 
 	return fallback
+}
+
+func isValidIncidentImpact(impact models.IncidentImpact) bool {
+	switch impact {
+	case models.ImpactNone, models.ImpactMinor, models.ImpactMajor, models.ImpactCritical:
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Service) validateIncidentTargets(ctx context.Context, targets []models.IncidentAffectedComponent) error {
