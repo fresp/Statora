@@ -3,6 +3,7 @@ package subcomponent
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	shared "github.com/fresp/Statora/internal/domain/shared"
@@ -48,10 +49,27 @@ func (s *Service) List(ctx context.Context, componentIDHex string, page, limit i
 	return s.repo.List(ctx, filter, page, limit)
 }
 
+func (s *Service) GetByComponentID(ctx context.Context, componentID primitive.ObjectID, page, limit int) ([]models.SubComponent, int64, error) {
+	return s.repo.List(ctx, bson.M{"componentId": componentID}, page, limit)
+}
+
 func (s *Service) Create(ctx context.Context, input CreateInput) (models.SubComponent, error) {
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return models.SubComponent{}, fmt.Errorf("%w: subcomponent name is required", shared.ErrInvalidInput)
+	}
+
 	compID, err := primitive.ObjectIDFromHex(input.ComponentID)
 	if err != nil {
 		return models.SubComponent{}, fmt.Errorf("%w: invalid componentId", shared.ErrInvalidInput)
+	}
+
+	exists, err := s.repo.ComponentExists(ctx, compID)
+	if err != nil {
+		return models.SubComponent{}, err
+	}
+	if !exists {
+		return models.SubComponent{}, fmt.Errorf("%w: component not found", shared.ErrInvalidInput)
 	}
 
 	status := input.Status
@@ -63,7 +81,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (models.SubComp
 	sub := models.SubComponent{
 		ID:          primitive.NewObjectID(),
 		ComponentID: compID,
-		Name:        input.Name,
+		Name:        name,
 		Description: input.Description,
 		Status:      status,
 		CreatedAt:   now,

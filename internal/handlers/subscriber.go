@@ -15,7 +15,7 @@ import (
 	"net/http"
 )
 
-func Subscribe(db *mongo.Database) gin.HandlerFunc {
+func Subscribe(db *mongo.Database, emailEncryptionKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			Email string `json:"email" binding:"required,email"`
@@ -28,7 +28,7 @@ func Subscribe(db *mongo.Database) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db))
+		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db), emailEncryptionKey)
 		sub, err := service.Create(ctx, req.Email)
 		if err != nil {
 			if isConflictError(err) {
@@ -43,7 +43,7 @@ func Subscribe(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func GetSubscribers(db *mongo.Database) gin.HandlerFunc {
+func GetSubscribers(db *mongo.Database, emailEncryptionKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		page, limit, err := parsePaginationParams(c)
 		if err != nil {
@@ -54,7 +54,7 @@ func GetSubscribers(db *mongo.Database) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db))
+		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db), emailEncryptionKey)
 		subs, total64, err := service.List(ctx, page, limit)
 		if err != nil {
 			writeDomainError(c, err)
@@ -67,7 +67,7 @@ func GetSubscribers(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func DeleteSubscriber(db *mongo.Database) gin.HandlerFunc {
+func DeleteSubscriber(db *mongo.Database, emailEncryptionKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
@@ -78,7 +78,7 @@ func DeleteSubscriber(db *mongo.Database) gin.HandlerFunc {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db))
+		service := subscriberservice.NewService(repository.NewMongoSubscriberRepository(db), emailEncryptionKey)
 		err = service.DeleteByID(ctx, id)
 		if err != nil {
 			if isNotFoundError(err) {

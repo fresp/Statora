@@ -13,7 +13,7 @@ import (
 )
 
 type SubscriberRepository interface {
-	FindByEmail(ctx context.Context, email string) (*models.Subscriber, error)
+	FindByEmailHash(ctx context.Context, emailHash string) (*models.Subscriber, error)
 	Insert(ctx context.Context, sub models.Subscriber) error
 	List(ctx context.Context, page, limit int) ([]models.Subscriber, int64, error)
 	DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error)
@@ -30,9 +30,9 @@ func NewMongoSubscriberRepository(db *mongo.Database) SubscriberRepository {
 	return &MongoSubscriberRepository{collection: db.Collection("subscribers")}
 }
 
-func (r *MongoSubscriberRepository) FindByEmail(ctx context.Context, email string) (*models.Subscriber, error) {
+func (r *MongoSubscriberRepository) FindByEmailHash(ctx context.Context, emailHash string) (*models.Subscriber, error) {
 	var existing models.Subscriber
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&existing)
+	err := r.collection.FindOne(ctx, bson.M{"emailHash": emailHash}).Decode(&existing)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, nil
@@ -80,10 +80,11 @@ func (r *MongoSubscriberRepository) DeleteByID(ctx context.Context, id primitive
 	return res.DeletedCount > 0, nil
 }
 
-func NewSubscriber(email string) models.Subscriber {
+func NewSubscriber(email string, emailHash string) models.Subscriber {
 	return models.Subscriber{
 		ID:        primitive.NewObjectID(),
 		Email:     email,
+		EmailHash: emailHash,
 		Verified:  false,
 		CreatedAt: time.Now(),
 	}

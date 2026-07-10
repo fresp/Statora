@@ -39,7 +39,7 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	api.GET("/v1/status/category/:prefix", handlers.GetStatusCategory(database.GetDB()))
 	api.GET("/status/settings", handlers.GetPublicStatusPageSettings(database.GetDB()))
 	api.GET("/status/maintenance", handlers.GetPublicMaintenance(database.GetDB()))
-	api.POST("/subscribe", handlers.Subscribe(database.GetDB()))
+	api.POST("/subscribe", handlers.Subscribe(database.GetDB(), cfg.EmailEncryptionKey))
 
 	api.POST("/auth/login", handlers.Login(database.GetDB(), cfg.JWTSecret, cfg.EmailEncryptionKey))
 	api.POST("/auth/logout", handlers.Logout())
@@ -109,8 +109,8 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	adminOnly.GET("/monitors/outages", handlers.GetMonitorOutages(database.GetDB()))
 	api.GET("/v1/monitors/:id/metrics", handlers.GetMonitorMetrics(database.GetDB()))
 
-	adminOnly.GET("/subscribers", handlers.GetSubscribers(database.GetDB()))
-	adminOnly.DELETE("/subscribers/:id", handlers.DeleteSubscriber(database.GetDB()))
+	adminOnly.GET("/subscribers", handlers.GetSubscribers(database.GetDB(), cfg.EmailEncryptionKey))
+	adminOnly.DELETE("/subscribers/:id", handlers.DeleteSubscriber(database.GetDB(), cfg.EmailEncryptionKey))
 	adminOnly.GET("/settings/status-page", handlers.GetAdminStatusPageSettings(database.GetDB()))
 	adminOnly.PATCH("/settings/status-page", handlers.UpdateStatusPageSettings(database.GetDB(), hub))
 	adminOnly.GET("/webhook-channels", handlers.GetWebhookChannels(database.GetDB()))
