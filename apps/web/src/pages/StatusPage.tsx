@@ -17,6 +17,7 @@ import {
   parseStatusPageSettingsPayload,
   readCachedStatusPageSettings,
 } from '../lib/statusPageSettings'
+import { AvailabilityMetrics } from '../components/status/AvailabilityMetrics'
 import { UptimeTimeline } from '../components/status/UptimeTimeline'
 import {
   StatusPageBadge,
@@ -107,6 +108,8 @@ export default function StatusPage() {
           serviceCount={totalServices}
           maintenanceCount={summary?.scheduledMaintenance ?? upcomingMaintenance.length}
         />
+
+        <AvailabilityMetrics />
 
         {upcomingMaintenance.map((maintenance) => (
           <section key={maintenance.id} className="flex flex-col items-start gap-5 rounded-xl border border-slate-200 bg-slate-100 p-6 transition-colors dark:border-slate-800 dark:bg-slate-800/50 md:flex-row">

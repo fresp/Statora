@@ -30,6 +30,7 @@ type stubStatusRepo struct {
 	latestIncidentByComp    map[primitive.ObjectID]*models.Incident
 	incidentsByCreatedRange []models.Incident
 	resolvedSince           []models.Incident
+	overlappingIncidents    []models.Incident
 	err                     error
 }
 
@@ -207,6 +208,10 @@ func (r *stubStatusRepo) ListResolvedIncidentsSince(_ context.Context, _ time.Ti
 	return r.resolvedSince, r.err
 }
 
+func (r *stubStatusRepo) ListIncidentsOverlappingPeriod(_ context.Context, _, _ time.Time) ([]models.Incident, error) {
+	return r.overlappingIncidents, r.err
+}
+
 func (r *stubStatusRepo) ListComponentsByIDs(_ context.Context, ids []primitive.ObjectID) ([]models.Component, error) {
 	result := make([]models.Component, 0, len(ids))
 	for _, id := range ids {
@@ -380,11 +385,11 @@ func TestBuildCategorySummaryUsesThirtyDayWindowForServiceHistory(t *testing.T) 
 			for i := 0; i < 40; i++ {
 				day := time.Now().AddDate(0, 0, -i)
 				records = append(records, models.DailyUptime{
-					MonitorID:         monitorID,
-					Date:              day,
-					TotalChecks:       10,
-					SuccessfulChecks:  10,
-					UptimePercent:     100,
+					MonitorID:        monitorID,
+					Date:             day,
+					TotalChecks:      10,
+					SuccessfulChecks: 10,
+					UptimePercent:    100,
 				})
 			}
 			return records

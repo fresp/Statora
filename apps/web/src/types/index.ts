@@ -462,3 +462,43 @@ export interface WebhookChannel {
   enabled: boolean
   createdAt: string
 }
+
+// Availability metrics (incident-based)
+export interface AvailabilityPeriod {
+  label: string
+  start: string
+  end: string
+}
+
+export interface AvailabilityOverall {
+  availability: number
+  totalMinutes: number
+  downtimeMinutes: number
+  incidentCount: number
+}
+
+export interface AvailabilityIncident {
+  id: string
+  title: string
+  impact: IncidentImpact
+  status: IncidentStatus
+  startedAt: string
+  resolvedAt: string | null
+  effectiveDowntimeMinutes: number
+  affectedComponents: Array<{ id: string; name: string }>
+}
+
+export interface AvailabilityService {
+  componentId: string
+  name: string
+  availability: number
+  downtimeMinutes: number
+  incidentCount: number
+}
+
+export interface AvailabilityResponse {
+  period: AvailabilityPeriod
+  overall: AvailabilityOverall
+  incidents: AvailabilityIncident[]
+  services: AvailabilityService[]
+}
