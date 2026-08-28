@@ -37,6 +37,7 @@ func RegisterAPIRoutes(r *gin.Engine, hub *handlers.Hub, cfg *configs.Config) {
 	r.GET("/sso/callback", handlers.SSOCallback(database.GetDB(), cfg))
 
 	api.GET("/status/summary", handlers.GetStatusSummary(database.GetDB()))
+	api.GET("/status/availability", handlers.GetAvailability(database.GetDB()))
 	api.GET("/status/components", handlers.GetStatusComponents(database.GetDB()))
 	api.GET("/status/incidents", handlers.GetStatusIncidents(database.GetDB()))
 	api.GET("/status/category/:prefix", handlers.GetStatusCategory(database.GetDB()))

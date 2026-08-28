@@ -30,6 +30,7 @@ type StatusRepository interface {
 	FindLatestIncidentByComponent(ctx context.Context, componentID primitive.ObjectID) (*models.Incident, error)
 	ListIncidentsByCreatedAtRange(ctx context.Context, start, end time.Time) ([]models.Incident, error)
 	ListResolvedIncidentsSince(ctx context.Context, since time.Time) ([]models.Incident, error)
+	ListIncidentsOverlappingPeriod(ctx context.Context, start, end time.Time) ([]models.Incident, error)
 	ListIncidentsByAffectedComponents(ctx context.Context, affectedIDs []primitive.ObjectID, limit int64) ([]models.Incident, error)
 	ListIncidentUpdatesByIncidentIDs(ctx context.Context, incidentIDs []primitive.ObjectID) (map[primitive.ObjectID][]models.IncidentUpdate, error)
 }
@@ -429,6 +430,33 @@ func (r *MongoStatusRepository) ListResolvedIncidentsSince(ctx context.Context, 
 	return incidents, nil
 }
 
+func (r *MongoStatusRepository) ListIncidentsOverlappingPeriod(ctx context.Context, start, end time.Time) ([]models.Incident, error) {
+	cursor, err := r.db.Collection("incidents").Find(
+		ctx,
+		bson.M{
+			"createdAt": bson.M{"$lt": end},
+			"$or": []bson.M{
+				{"resolvedAt": bson.M{"$gt": start}},
+				{"status": bson.M{"$ne": models.IncidentResolved}},
+			},
+		},
+		options.Find().SetSort(bson.D{{Key: "createdAt", Value: 1}}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var incidents []models.Incident
+	if err := cursor.All(ctx, &incidents); err != nil {
+		return nil, err
+	}
+	if incidents == nil {
+		incidents = []models.Incident{}
+	}
+
+	return incidents, nil
+}
 func (r *MongoStatusRepository) ListIncidentsByAffectedComponents(ctx context.Context, affectedIDs []primitive.ObjectID, limit int64) ([]models.Incident, error) {
 	if len(affectedIDs) == 0 {
 		return []models.Incident{}, nil
