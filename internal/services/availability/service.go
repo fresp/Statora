@@ -3,6 +3,7 @@ package availability
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/fresp/Statora/internal/domain/shared"
@@ -150,7 +151,12 @@ func (s *Service) ComputeAvailability(ctx context.Context, periodStart, periodEn
 	}
 
 	// Incidents breakdown, newest first.
-	for _, e := range entries {
+	sortedEntries := make([]entry, len(entries))
+	copy(sortedEntries, entries)
+	sort.Slice(sortedEntries, func(i, j int) bool {
+		return sortedEntries[i].incident.CreatedAt.After(sortedEntries[j].incident.CreatedAt)
+	})
+	for _, e := range sortedEntries {
 		result.Incidents = append(result.Incidents, IncidentBreakdown{
 			ID:                       e.incident.ID.Hex(),
 			Title:                    e.incident.Title,

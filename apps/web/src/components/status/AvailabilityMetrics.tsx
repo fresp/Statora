@@ -23,7 +23,7 @@ function formatDuration(minutes: number): string {
   const parts: string[] = []
   if (days > 0) parts.push(`${days}d`)
   if (hours > 0) parts.push(`${hours}h`)
-  if (mins > 0 && days === 0) parts.push(`${mins}m`)
+  if (mins > 0) parts.push(`${mins}m`)
   return parts.length > 0 ? parts.join(' ') : '0m'
 }
 
@@ -42,9 +42,17 @@ function formatDateTime(iso: string): string {
 
 export function AvailabilityMetrics() {
   const [period, setPeriod] = useState<PeriodPreset>('30d')
-  const { data, loading, error, refetch } = useApi<AvailabilityResponse>('/status/availability', [], { period })
+  const [customRange, setCustomRange] = useState(false)
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
 
-  const hasActiveIncident = (data?.incidents ?? []).some((incident) => incident.resolvedAt === null)
+  const apiParams = customRange && customFrom && customTo
+    ? { from: customFrom, to: customTo }
+    : { period }
+
+  const { data, loading, error, refetch } = useApi<AvailabilityResponse>('/status/availability', [], apiParams)
+
+  const activeIncidentCount = (data?.incidents ?? []).filter((incident) => incident.resolvedAt === null).length
 
   return (
     <section
@@ -56,14 +64,15 @@ export function AvailabilityMetrics() {
           <Activity className="h-5 w-5 text-slate-500 dark:text-slate-400" />
           <h2 className="text-xl font-semibold">Availability</h2>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
           {PERIOD_PRESETS.map((preset) => (
             <button
               key={preset.value}
               type="button"
-              onClick={() => setPeriod(preset.value)}
+              aria-pressed={!customRange && period === preset.value}
+              onClick={() => { setCustomRange(false); setPeriod(preset.value) }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                period === preset.value
+                !customRange && period === preset.value
                   ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
                   : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
               }`}
@@ -71,8 +80,51 @@ export function AvailabilityMetrics() {
               {preset.label}
             </button>
           ))}
+          <button
+            type="button"
+            aria-pressed={customRange}
+            onClick={() => setCustomRange(true)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              customRange
+                ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+            }`}
+          >
+            Custom
+          </button>
         </div>
       </div>
+
+      {customRange && (
+        <div className="flex flex-wrap items-end gap-3" data-testid="availability-custom-range">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">From</span>
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">To</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={!customFrom || !customTo}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            Apply
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div className="space-y-4" data-testid="availability-loading">
@@ -123,9 +175,9 @@ export function AvailabilityMetrics() {
             </div>
           </div>
 
-          {hasActiveIncident && (
+          {activeIncidentCount > 0 && (
             <p className="text-xs text-amber-600 dark:text-amber-400" data-testid="availability-active-note">
-              Includes an active incident &mdash; availability is live and updates as the incident progresses.
+              Includes {activeIncidentCount === 1 ? 'an active incident' : `${activeIncidentCount} active incidents`} &mdash; availability is live and updates as incidents progress.
             </p>
           )}
 

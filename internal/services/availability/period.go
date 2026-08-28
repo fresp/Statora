@@ -38,6 +38,7 @@ type ResolvedPeriod struct {
 //	year:         historical year "YYYY"; Jan 1 00:00 → Dec 31 23:59:59 UTC
 //	from, to:     custom range (RFC3339 or YYYY-MM-DD); to clamped to now
 func ResolvePeriod(period, year string, from, to *time.Time, now time.Time) (ResolvedPeriod, error) {
+	now = now.UTC()
 	// Custom range has highest precedence.
 	if from != nil || to != nil {
 		if from == nil || to == nil {
