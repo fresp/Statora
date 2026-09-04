@@ -125,7 +125,7 @@ export default function HistoryPage() {
         <div className="mb-10">
           <nav className="mb-4">
             <Link to="/" className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-600 transition-colors hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-400">
-              <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+              <ArrowLeft className="h-4 w-4" /> Back to Overview
             </Link>
           </nav>
           <h1 className="mb-2 text-3xl font-bold">Incident History</h1>
