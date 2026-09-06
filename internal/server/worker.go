@@ -17,7 +17,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/fresp/Statora/internal/models"
+	"github.com/fresp/Statora/internal/repository"
 	"github.com/fresp/Statora/internal/utils"
+	subscriberservice "github.com/fresp/Statora/internal/services/subscriber"
 )
 
 // workerCtx and workerCancel are used to signal shutdown to all worker goroutines
@@ -65,6 +67,7 @@ func StartWorker(ctx context.Context, db *mongo.Database, rdb *redis.Client) {
 				defer workerCycleRunning.Store(false)
 				runChecks(db)
 				updateMaintenanceStatus(db)
+				pruneExpiredUnverifiedSubscribers(db)
 			}()
 		}
 	}
@@ -570,4 +573,24 @@ func updateMaintenanceStatus(db *mongo.Database) {
 		bson.M{"status": models.MaintenanceInProgress, "endTime": bson.M{"$lte": now}},
 		bson.M{"$set": bson.M{"status": models.MaintenanceCompleted}},
 	)
+}
+
+// pruneExpiredUnverifiedSubscribers deletes unverified subscribers older than
+// the retention window every worker cycle.
+func pruneExpiredUnverifiedSubscribers(db *mongo.Database) {
+	if db == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(workerCtx, 10*time.Second)
+	defer cancel()
+
+	repo := repository.NewMongoSubscriberRepository(db)
+	removed, err := repo.PruneUnverified(ctx, subscriberservice.UnverifiedRetention)
+	if err != nil {
+		log.Printf("[WORKER] Failed to prune unverified subscribers: %v", err)
+		return
+	}
+	if removed > 0 {
+		log.Printf("[WORKER] Pruned %d unverified subscriber(s) older than %s", removed, subscriberservice.UnverifiedRetention)
+	}
 }

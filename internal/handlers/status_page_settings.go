@@ -8,8 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fresp/Statora/configs"
 	"github.com/fresp/Statora/internal/models"
 	"github.com/fresp/Statora/internal/repository"
+	"github.com/fresp/Statora/internal/security/pii"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -68,6 +70,29 @@ type statusPageSSOResponse struct {
 	HasSecret    bool   `json:"hasSecret"`
 }
 
+type statusPageMailResponse struct {
+	Provider string                     `json:"provider"`
+	SMTP     statusPageSMTPResponse     `json:"smtp"`
+	SendGrid statusPageSendGridResponse `json:"sendgrid"`
+	BaseURL  string                     `json:"baseUrl"`
+}
+
+type statusPageSMTPResponse struct {
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	Username    string `json:"username"`
+	HasPassword bool   `json:"hasPassword"`
+	FromEmail   string `json:"fromEmail"`
+	FromName    string `json:"fromName"`
+	Encryption  string `json:"encryption"`
+}
+
+type statusPageSendGridResponse struct {
+	HasAPIKey bool   `json:"hasApiKey"`
+	FromEmail string `json:"fromEmail"`
+	FromName  string `json:"fromName"`
+}
+
 type adminStatusPageSettingsResponse struct {
 	Head      models.StatusPageHeadSettings     `json:"head"`
 	Branding  models.StatusPageBrandingSettings `json:"branding"`
@@ -75,6 +100,7 @@ type adminStatusPageSettingsResponse struct {
 	Layout    models.StatusPageLayoutSettings   `json:"layout"`
 	Footer    models.StatusPageFooterSettings   `json:"footer"`
 	SSO       statusPageSSOResponse             `json:"sso"`
+	Mail      statusPageMailResponse            `json:"mail"`
 	CustomCSS string                            `json:"customCss"`
 	UpdatedAt time.Time                         `json:"updatedAt"`
 	CreatedAt time.Time                         `json:"createdAt"`
@@ -131,6 +157,24 @@ type statusPageSettingsPatchRequest struct {
 		PublicKeyPEM *string `json:"publicKeyPem"`
 	} `json:"sso"`
 	CustomCSS *string `json:"customCss"`
+	Mail      *struct {
+		Provider *string `json:"provider"`
+		BaseURL  *string `json:"baseUrl"`
+		SMTP     *struct {
+			Host       *string `json:"host"`
+			Port       *int    `json:"port"`
+			Username   *string `json:"username"`
+			Password   *string `json:"password"`
+			FromEmail  *string `json:"fromEmail"`
+			FromName   *string `json:"fromName"`
+			Encryption *string `json:"encryption"`
+		} `json:"smtp"`
+		SendGrid *struct {
+			APIKey    *string `json:"apiKey"`
+			FromEmail *string `json:"fromEmail"`
+			FromName  *string `json:"fromName"`
+		} `json:"sendgrid"`
+	} `json:"mail"`
 }
 
 func settingsCollection(db *mongo.Database) *mongo.Collection {
@@ -184,6 +228,7 @@ func GetAdminStatusPageSettings(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
+
 func buildAdminStatusPageSettingsResponse(settings models.StatusPageSettings) adminStatusPageSettingsResponse {
 	return adminStatusPageSettingsResponse{
 		Head:     settings.Head,
@@ -200,20 +245,36 @@ func buildAdminStatusPageSettingsResponse(settings models.StatusPageSettings) ad
 			PublicKeyPEM: settings.SSO.PublicKeyPEM,
 			HasSecret:    strings.TrimSpace(settings.SSO.SharedSecret) != "",
 		},
+		Mail: statusPageMailResponse{
+			Provider: string(settings.Mail.Provider),
+			SMTP: statusPageSMTPResponse{
+				Host:        settings.Mail.SMTP.Host,
+				Port:        settings.Mail.SMTP.Port,
+				Username:    settings.Mail.SMTP.Username,
+				HasPassword: strings.TrimSpace(settings.Mail.SMTP.Password) != "",
+				FromEmail:   settings.Mail.SMTP.FromEmail,
+				FromName:    settings.Mail.SMTP.FromName,
+				Encryption:  settings.Mail.SMTP.Encryption,
+			},
+			SendGrid: statusPageSendGridResponse{
+				HasAPIKey: strings.TrimSpace(settings.Mail.SendGrid.APIKey) != "",
+				FromEmail: settings.Mail.SendGrid.FromEmail,
+				FromName:  settings.Mail.SendGrid.FromName,
+			},
+			BaseURL: settings.Mail.BaseURL,
+		},
 		CustomCSS: settings.CustomCSS,
 		UpdatedAt: settings.UpdatedAt,
 		CreatedAt: settings.CreatedAt,
 	}
 }
-
-func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+func UpdateStatusPageSettings(db *mongo.Database, hub *Hub, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req statusPageSettingsPatchRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -412,10 +473,86 @@ func UpdateStatusPageSettings(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			}
 		}
 
+		if req.Mail != nil {
+			mail := req.Mail
+			if mail.Provider != nil {
+				provider := models.MailProviderType(strings.TrimSpace(*mail.Provider))
+				switch provider {
+				case models.MailProviderNone, models.MailProviderSMTP, models.MailProviderSendGrid:
+					set["mail.provider"] = provider
+				default:
+					c.JSON(http.StatusBadRequest, gin.H{"error": "mail.provider must be one of: none, smtp, sendgrid"})
+					return
+				}
+			}
+			if mail.BaseURL != nil {
+				baseURL := strings.TrimSpace(*mail.BaseURL)
+				if baseURL != "" && !isValidURLOrEmpty(baseURL) {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "mail.baseUrl must be a valid http(s) URL or empty"})
+					return
+				}
+				set["mail.baseUrl"] = baseURL
+			}
+			if mail.SMTP != nil {
+				smtpIn := mail.SMTP
+				if smtpIn.Host != nil {
+					set["mail.smtp.host"] = strings.TrimSpace(*smtpIn.Host)
+				}
+				if smtpIn.Port != nil {
+					if *smtpIn.Port < 0 || *smtpIn.Port > 65535 {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "mail.smtp.port must be between 0 and 65535"})
+						return
+					}
+					set["mail.smtp.port"] = *smtpIn.Port
+				}
+				if smtpIn.Username != nil {
+					set["mail.smtp.username"] = *smtpIn.Username
+				}
+				if smtpIn.FromEmail != nil {
+					set["mail.smtp.fromEmail"] = strings.TrimSpace(*smtpIn.FromEmail)
+				}
+				if smtpIn.FromName != nil {
+					set["mail.smtp.fromName"] = *smtpIn.FromName
+				}
+				if smtpIn.Encryption != nil {
+					enc := strings.ToLower(strings.TrimSpace(*smtpIn.Encryption))
+					if enc != "starttls" && enc != "tls" && enc != "none" {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "mail.smtp.encryption must be one of: starttls, tls, none"})
+						return
+					}
+					set["mail.smtp.encryption"] = enc
+				}
+				if smtpIn.Password != nil && strings.TrimSpace(*smtpIn.Password) != "" {
+					ciphertext, err := pii.Encrypt(strings.TrimSpace(*smtpIn.Password), []byte(cfg.EmailEncryptionKey))
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt SMTP password"})
+						return
+					}
+					set["mail.smtp.password"] = ciphertext
+				}
+			}
+			if mail.SendGrid != nil {
+				sg := mail.SendGrid
+				if sg.FromEmail != nil {
+					set["mail.sendgrid.fromEmail"] = strings.TrimSpace(*sg.FromEmail)
+				}
+				if sg.FromName != nil {
+					set["mail.sendgrid.fromName"] = *sg.FromName
+				}
+				if sg.APIKey != nil && strings.TrimSpace(*sg.APIKey) != "" {
+					ciphertext, err := pii.Encrypt(strings.TrimSpace(*sg.APIKey), []byte(cfg.EmailEncryptionKey))
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encrypt SendGrid API key"})
+						return
+					}
+					set["mail.sendgrid.apiKey"] = ciphertext
+				}
+			}
+		}
+
 		if req.CustomCSS != nil {
 			set["customCss"] = *req.CustomCSS
 		}
-
 		if len(set) == 1 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "no updatable fields provided"})
 			return

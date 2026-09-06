@@ -14,7 +14,7 @@ import (
 func TestCreateIncidentRejectsMissingAdminContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/incidents", CreateIncident(nil, nil))
+	r.POST("/api/incidents", CreateIncident(nil, nil, nil))
 
 	body, _ := json.Marshal(map[string]any{
 		"title":              "API outage",
@@ -36,7 +36,7 @@ func TestCreateIncidentRejectsMissingAdminContext(t *testing.T) {
 func TestCreateMaintenanceRejectsMissingAdminContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/maintenance", CreateMaintenance(nil))
+	r.POST("/api/maintenance", CreateMaintenance(nil, nil))
 
 	body, _ := json.Marshal(map[string]any{
 		"title":       "Database maintenance",

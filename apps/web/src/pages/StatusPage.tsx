@@ -1,11 +1,14 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Calendar } from 'lucide-react'
+import { useState, useCallback, useEffect, FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowRight, Calendar, CheckCircle, XCircle } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { useWebSocket } from '../hooks/useWebSocket'
 import type { ComponentStatus, ComponentWithSubs, Incident, Maintenance, StatusPageSettings, StatusSummary } from '../types'
 import { formatDate } from '../lib/utils'
 import { getIncidentContent, getMaintenanceContent } from '../lib/contentModel'
+import { getApiErrorMessage } from '../lib/apiError'
+import api from '../lib/api'
+import Modal from '../components/Modal'
 import ContentRenderer from '../components/content/ContentRenderer'
 import {
   DEFAULT_STATUS_PAGE_SETTINGS,
@@ -57,6 +60,13 @@ export default function StatusPage() {
     ?? DEFAULT_STATUS_PAGE_SETTINGS
   ))
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [subscribeOpen, setSubscribeOpen] = useState(false)
+  const [subscribeEmail, setSubscribeEmail] = useState('')
+  const [subscribeSubmitting, setSubscribeSubmitting] = useState(false)
+  const [subscribeSuccess, setSubscribeSuccess] = useState<string | null>(null)
+  const [subscribeError, setSubscribeError] = useState<string | null>(null)
+
   const handleWsMessage = useCallback((event: { type: string; data: unknown }) => {
     if (['component_updated', 'component_created'].includes(event.type)) {
       refetchComponents()
@@ -78,10 +88,11 @@ export default function StatusPage() {
   useWebSocket(handleWsMessage)
 
   useEffect(() => {
-    if (!settingsData) return
-    const nextSettings = normalizeStatusPageSettings(settingsData)
-    setSettings(nextSettings)
-    cacheStatusPageSettings(nextSettings)
+    if (settingsData) {
+      const normalized = normalizeStatusPageSettings(settingsData)
+      setSettings(normalized)
+      cacheStatusPageSettings(normalized)
+    }
   }, [settingsData])
 
   useEffect(() => {
@@ -98,8 +109,130 @@ export default function StatusPage() {
   const hasActiveIncidents = activeIncidents.length > 0 || hasIncidentSeverity(overallStatus)
   const totalServices = components?.reduce((count, component) => count + Math.max(component.subComponents.length, 1), 0) ?? 0
 
+  const verifiedBanner = searchParams.get('verified') === 'true'
+  const unsubscribedBanner = searchParams.get('unsubscribed') === 'true'
+  const bannerError = searchParams.get('error')
+
+  function dismissBanners() {
+    const next = new URLSearchParams(searchParams)
+    next.delete('verified')
+    next.delete('unsubscribed')
+    next.delete('error')
+    setSearchParams(next, { replace: true })
+  }
+
+  function openSubscribe() {
+    setSubscribeSuccess(null)
+    setSubscribeError(null)
+    setSubscribeEmail('')
+    setSubscribeOpen(true)
+  }
+
+  async function handleSubscribeSubmit(e: FormEvent) {
+    e.preventDefault()
+    const email = subscribeEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSubscribeError('Please enter a valid email address.')
+      return
+    }
+    setSubscribeSubmitting(true)
+    setSubscribeError(null)
+    try {
+      await api.post('/subscribe', { email })
+      setSubscribeSuccess("Check your inbox! We've sent a verification link to confirm your subscription.")
+      setSubscribeEmail('')
+    } catch (err: unknown) {
+      setSubscribeError(getApiErrorMessage(err, 'Failed to subscribe. Please try again.'))
+    } finally {
+      setSubscribeSubmitting(false)
+    }
+  }
+
   return (
-    <StatusPageFrame settings={settings}>
+    <StatusPageFrame settings={settings} onSubscribeClick={openSubscribe}>
+      {(verifiedBanner || unsubscribedBanner || bannerError) && (
+        <div className="mx-auto flex max-w-[768px] items-center justify-between gap-3 px-4 pt-6 md:px-8">
+          {verifiedBanner && (
+            <div className="flex flex-1 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              Your subscription is confirmed. You will now receive status updates.
+            </div>
+          )}
+          {unsubscribedBanner && (
+            <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+              <XCircle className="h-4 w-4 shrink-0" />
+              You have been unsubscribed. You will no longer receive status updates.
+            </div>
+          )}
+          {bannerError && (
+            <div className="flex flex-1 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+              <XCircle className="h-4 w-4 shrink-0" />
+              {bannerError === 'invalid_or_expired_token'
+                ? 'That verification link is invalid or has expired. Please subscribe again.'
+                : 'That link is invalid. Please check the link or subscribe again.'}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={dismissBanners}
+            className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {subscribeOpen && (
+        <Modal
+          title="Subscribe to updates"
+          onClose={() => setSubscribeOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSubscribeOpen(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Close
+              </button>
+              <button
+                type="submit"
+                form="subscribe-form"
+                disabled={subscribeSubmitting}
+                className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              >
+                {subscribeSubmitting ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </div>
+          }
+        >
+          <form id="subscribe-form" onSubmit={handleSubscribeSubmit} className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Get email notifications when we post incidents or maintenance updates.
+            </p>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              value={subscribeEmail}
+              onChange={(e) => setSubscribeEmail(e.target.value)}
+            />
+            {subscribeSuccess && (
+              <p className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <CheckCircle className="h-4 w-4 shrink-0" />
+                {subscribeSuccess}
+              </p>
+            )}
+            {subscribeError && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                {subscribeError}
+              </p>
+            )}
+          </form>
+        </Modal>
+      )}
+
       <main className="mx-auto flex max-w-[768px] flex-col gap-8 px-4 py-8 md:gap-10 md:px-8 md:py-12">
         <StatusHero
           overallStatus={overallStatus}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"github.com/fresp/Statora/configs"
 	"net/http"
 	"time"
 
@@ -67,7 +68,7 @@ func GetPublicMaintenance(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
+func CreateMaintenance(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			Title           string                         `json:"title" binding:"required"`
@@ -119,11 +120,12 @@ func CreateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		DispatchWebhookEvent(db, "maintenance_created", m)
+		DispatchSubscriberEmail(db, cfg, "maintenance_created", m)
 		c.JSON(http.StatusCreated, m)
 	}
 }
 
-func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
+func UpdateMaintenance(db *mongo.Database, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
@@ -164,6 +166,7 @@ func UpdateMaintenance(db *mongo.Database) gin.HandlerFunc {
 		}
 
 		DispatchWebhookEvent(db, "maintenance_updated", m)
+		DispatchSubscriberEmail(db, cfg, "maintenance_updated", m)
 		c.JSON(http.StatusOK, m)
 	}
 }

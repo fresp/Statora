@@ -215,6 +215,9 @@ export interface Subscriber {
   id: string
   email: string
   verified: boolean
+  verifiedAt?: string
+  unsubscribed: boolean
+  unsubscribedAt?: string
   createdAt: string
 }
 
@@ -313,6 +316,38 @@ export interface StatusPageSSOSettings {
   hasSecret?: boolean
 }
 
+export type MailProviderType = 'none' | 'smtp' | 'sendgrid'
+
+export interface SMTPSettings {
+  host: string
+  port: number
+  username: string
+  hasPassword?: boolean
+  fromEmail: string
+  fromName: string
+  encryption: 'starttls' | 'tls' | 'none'
+}
+
+export interface SendGridSettings {
+  hasApiKey?: boolean
+  fromEmail: string
+  fromName: string
+}
+
+export interface MailSettings {
+  provider: MailProviderType
+  smtp: SMTPSettings
+  sendgrid: SendGridSettings
+  baseUrl: string
+}
+
+export interface AdminMailSettingsResponse {
+  provider: string
+  smtp: SMTPSettings
+  sendgrid: SendGridSettings
+  baseUrl: string
+}
+
 export interface StatusPageSettings {
   head: {
     title: string
@@ -384,6 +419,7 @@ export interface StatusPageSettings {
     showPoweredBy: boolean
   }
   sso?: StatusPageSSOSettings
+  mail?: MailSettings
   customCss: string
   updatedAt: string
   createdAt: string
@@ -451,6 +487,24 @@ export interface StatusPageSettingsPatchRequest {
     algorithm?: 'HS256' | 'RS256'
     sharedSecret?: string
     publicKeyPem?: string
+  }
+  mail?: {
+    provider?: MailProviderType
+    baseUrl?: string
+    smtp?: {
+      host?: string
+      port?: number
+      username?: string
+      password?: string
+      fromEmail?: string
+      fromName?: string
+      encryption?: 'starttls' | 'tls' | 'none'
+    }
+    sendgrid?: {
+      apiKey?: string
+      fromEmail?: string
+      fromName?: string
+    }
   }
   customCss?: string
 }

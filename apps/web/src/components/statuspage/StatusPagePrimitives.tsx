@@ -75,7 +75,7 @@ export function StatusPageBadge({ status, solid = false, label }: { status: Stat
   )
 }
 
-export function StatusPageHeader({ settings }: { settings: StatusPageSettings }) {
+export function StatusPageHeader({ settings, onSubscribeClick }: { settings: StatusPageSettings; onSubscribeClick?: () => void }) {
   const location = useLocation()
   const navLinks = [
     { name: 'Current Status', path: '/' },
@@ -95,14 +95,14 @@ export function StatusPageHeader({ settings }: { settings: StatusPageSettings })
             <span className="truncate">{settings.branding.siteName || 'Statuspage'}</span>
           </Link>
         </div>
-        {/* temporary hidden */}
-        {/* <Link
-          to="/history"
+        <button
+          type="button"
+          onClick={onSubscribeClick}
           className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 font-mono text-sm font-medium text-white transition-all hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 sm:px-5"
         >
           <Bell className="h-4 w-4" />
           <span className="hidden sm:inline">Subscribe</span>
-        </Link> */}
+        </button>
       </div>
     </header>
   )
@@ -139,7 +139,7 @@ export function StatusPageFooter({ centerText, showPoweredBy }: { centerText?: s
   )
 }
 
-export function StatusPageFrame({ settings, children }: { settings: StatusPageSettings; children: React.ReactNode }) {
+export function StatusPageFrame({ settings, children, onSubscribeClick }: { settings: StatusPageSettings; children: React.ReactNode; onSubscribeClick?: () => void }) {
   React.useEffect(() => {
     const mode = settings.theme?.mode || 'light'
     const root = document.documentElement
@@ -159,7 +159,7 @@ export function StatusPageFrame({ settings, children }: { settings: StatusPageSe
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100" style={{ fontFamily: 'var(--font-family)' }}>
-      <StatusPageHeader settings={settings} />
+      <StatusPageHeader settings={settings} onSubscribeClick={onSubscribeClick} />
       <div className="flex-1">{children}</div>
       <StatusPageFooter centerText={settings.footer.text} showPoweredBy={settings.footer.showPoweredBy} />
     </div>

@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import type {
+  MailProviderType,
+  MailSettings,
+  SMTPSettings,
+  SendGridSettings,
   StatusPageSettings,
   StatusPageSettingsPatchRequest,
   StatusPageThemePresetSummary,
@@ -7,7 +11,24 @@ import type {
 import api from '../../lib/api'
 import { getApiErrorMessage } from '../../lib/apiError'
 import { getThemePresets, loadThemePresetStylesheet, normalizeThemePresetSelection } from '../../lib/themePresetLoader'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Mail, Send } from 'lucide-react'
+
+const DEFAULT_MAIL_SETTINGS: MailSettings = {
+  provider: 'none',
+  smtp: {
+    host: '',
+    port: 587,
+    username: '',
+    fromEmail: '',
+    fromName: '',
+    encryption: 'starttls',
+  },
+  sendgrid: {
+    fromEmail: '',
+    fromName: '',
+  },
+  baseUrl: '',
+}
 
 const ADMIN_TITLE_SUFFIX = ' - Admin Panel'
 
@@ -48,6 +69,30 @@ const DEFAULT_SETTINGS: StatusPageSettings = {
   createdAt: new Date().toISOString(),
 }
 
+function normalizeMailSettings(input: Partial<MailSettings> | null | undefined): MailSettings {
+  if (!input) {
+    return DEFAULT_MAIL_SETTINGS
+  }
+  return {
+    provider: (input.provider ?? 'none') as MailProviderType,
+    smtp: {
+      host: input.smtp?.host ?? '',
+      port: input.smtp?.port ?? 587,
+      username: input.smtp?.username ?? '',
+      hasPassword: input.smtp?.hasPassword ?? false,
+      fromEmail: input.smtp?.fromEmail ?? '',
+      fromName: input.smtp?.fromName ?? '',
+      encryption: input.smtp?.encryption ?? 'starttls',
+    },
+    sendgrid: {
+      hasApiKey: input.sendgrid?.hasApiKey ?? false,
+      fromEmail: input.sendgrid?.fromEmail ?? '',
+      fromName: input.sendgrid?.fromName ?? '',
+    },
+    baseUrl: input.baseUrl ?? '',
+  }
+}
+
 function normalizeSettings(input: StatusPageSettings | null | undefined, presets: StatusPageThemePresetSummary[]): StatusPageSettings {
   if (!input) {
     return DEFAULT_SETTINGS
@@ -85,8 +130,8 @@ function normalizeSettings(input: StatusPageSettings | null | undefined, presets
       algorithm: input.sso?.algorithm ?? 'HS256',
       publicKeyPem: input.sso?.publicKeyPem ?? '',
       sharedSecret: '',
-      hasSecret: input.sso?.hasSecret ?? false,
     },
+    mail: normalizeMailSettings(input.mail),
     customCss: input.customCss ?? '',
     updatedAt: input.updatedAt ?? new Date().toISOString(),
     createdAt: input.createdAt ?? new Date().toISOString(),
@@ -130,6 +175,11 @@ export default function AdminSettings() {
   const [themePresets, setThemePresets] = useState<StatusPageThemePresetSummary[]>(() => getThemePresets().presets)
   const [themePresetNotice, setThemePresetNotice] = useState<string | null>(null)
   const [metaTagsText, setMetaTagsText] = useState('')
+  const [smtpPassword, setSmtpPassword] = useState('')
+  const [sendGridApiKey, setSendGridApiKey] = useState('')
+  const [testEmailTo, setTestEmailTo] = useState('')
+  const [testEmailSending, setTestEmailSending] = useState(false)
+  const [testEmailResult, setTestEmailResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   const previewStyle: React.CSSProperties = {
     backgroundColor: 'var(--bg)',
@@ -205,6 +255,29 @@ export default function AdminSettings() {
     setSuccess(null)
 
     try {
+      const mailPatch: NonNullable<StatusPageSettingsPatchRequest['mail']> = {
+        provider: settings.mail?.provider,
+        baseUrl: settings.mail?.baseUrl,
+        smtp: {
+          host: settings.mail?.smtp.host,
+          port: settings.mail?.smtp.port,
+          username: settings.mail?.smtp.username,
+          fromEmail: settings.mail?.smtp.fromEmail,
+          fromName: settings.mail?.smtp.fromName,
+          encryption: settings.mail?.smtp.encryption,
+        },
+        sendgrid: {
+          fromEmail: settings.mail?.sendgrid.fromEmail,
+          fromName: settings.mail?.sendgrid.fromName,
+        },
+      }
+      if (smtpPassword.trim() !== '') {
+        mailPatch.smtp = { ...mailPatch.smtp, password: smtpPassword.trim() }
+      }
+      if (sendGridApiKey.trim() !== '') {
+        mailPatch.sendgrid = { ...mailPatch.sendgrid, apiKey: sendGridApiKey.trim() }
+      }
+
       const payload: StatusPageSettingsPatchRequest = {
         head: {
           title: settings.head.title,
@@ -236,21 +309,40 @@ export default function AdminSettings() {
           sharedSecret: settings.sso?.sharedSecret,
           publicKeyPem: settings.sso?.publicKeyPem,
         },
+        mail: mailPatch,
         customCss: settings.customCss,
       }
-
       const res = await api.patch<StatusPageSettings>('/settings/status-page', payload)
       const normalized = normalizeSettings(res.data, themePresets)
       if (normalized.sso) {
         normalized.sso.sharedSecret = ''
       }
       setSettings(normalized)
+      setSmtpPassword('')
+      setSendGridApiKey('')
       setMetaTagsText(metaTagsToText(normalized.head.metaTags || {}))
       setSuccess('Settings saved successfully')
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, 'Failed to save settings'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSendTestEmail() {
+    if (testEmailTo.trim() === '') {
+      setTestEmailResult({ ok: false, message: 'Enter a recipient email address.' })
+      return
+    }
+    setTestEmailSending(true)
+    setTestEmailResult(null)
+    try {
+      const res = await api.post<{ message: string }>('/settings/mail/test', { to: testEmailTo.trim() })
+      setTestEmailResult({ ok: true, message: res.data.message || 'Test email sent' })
+    } catch (err: unknown) {
+      setTestEmailResult({ ok: false, message: getApiErrorMessage(err, 'Failed to send test email') })
+    } finally {
+      setTestEmailSending(false)
     }
   }
 
@@ -511,6 +603,185 @@ export default function AdminSettings() {
               value={settings.sso?.publicKeyPem ?? ''}
               onChange={(e) => setSettings(prev => ({ ...prev, sso: { ...prev.sso!, publicKeyPem: e.target.value } }))}
             />
+          </div>
+        </section>
+
+        <section className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-5 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Mail Provider Settings</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            Used for subscriber verification emails and event notifications. Secrets are encrypted at rest.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Provider</label>
+              <select
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                value={settings.mail?.provider ?? 'none'}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  mail: normalizeMailSettings({
+                    provider: e.target.value as MailProviderType,
+                    smtp: prev.mail?.smtp,
+                    sendgrid: prev.mail?.sendgrid,
+                    baseUrl: prev.mail?.baseUrl,
+                  }),
+                }))}
+              >
+                <option value="none">None</option>
+                <option value="smtp">SMTP</option>
+                <option value="sendgrid">SendGrid</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status Page Base URL</label>
+              <input
+                className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                placeholder="https://status.example.com"
+                value={settings.mail?.baseUrl ?? ''}
+                onChange={(e) => setSettings(prev => ({
+                  ...prev,
+                  mail: { ...prev.mail!, baseUrl: e.target.value },
+                }))}
+              />
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Used to build verification and unsubscribe links.</p>
+            </div>
+          </div>
+
+          {settings.mail?.provider === 'smtp' && (
+            <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">SMTP</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Host</label>
+                  <input
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.host}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, host: e.target.value } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Port</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.port}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, port: Number(e.target.value) || 0 } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Username</label>
+                  <input
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.username}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, username: e.target.value } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Password</label>
+                  <input
+                    type="password"
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    placeholder={settings.mail.smtp.hasPassword ? 'Stored secret exists; enter to replace' : 'Enter password'}
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">From Email</label>
+                  <input
+                    type="email"
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.fromEmail}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, fromEmail: e.target.value } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">From Name</label>
+                  <input
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.fromName}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, fromName: e.target.value } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Encryption</label>
+                  <select
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.smtp.encryption}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, smtp: { ...prev.mail!.smtp, encryption: e.target.value as 'starttls' | 'tls' | 'none' } } }))}
+                  >
+                    <option value="starttls">STARTTLS</option>
+                    <option value="tls">TLS</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {settings.mail?.provider === 'sendgrid' && (
+            <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">SendGrid</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">API Key</label>
+                  <input
+                    type="password"
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    placeholder={settings.mail.sendgrid.hasApiKey ? 'Stored secret exists; enter to replace' : 'Enter API key'}
+                    value={sendGridApiKey}
+                    onChange={(e) => setSendGridApiKey(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">From Email</label>
+                  <input
+                    type="email"
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.sendgrid.fromEmail}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, sendgrid: { ...prev.mail!.sendgrid, fromEmail: e.target.value } } }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">From Name</label>
+                  <input
+                    className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                    value={settings.mail.sendgrid.fromName}
+                    onChange={(e) => setSettings(prev => ({ ...prev, mail: { ...prev.mail!, sendgrid: { ...prev.mail!.sendgrid, fromName: e.target.value } } }))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-gray-200 dark:border-slate-800 p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Send Test Email</h3>
+            <div className="flex items-center gap-2">
+              <input
+                type="email"
+                className="flex-1 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm"
+                placeholder="you@example.com"
+                value={testEmailTo}
+                onChange={(e) => setTestEmailTo(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={handleSendTestEmail}
+                disabled={testEmailSending || settings.mail?.provider === 'none'}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg px-4 py-2 text-sm font-medium"
+              >
+                <Send className="w-4 h-4" />
+                {testEmailSending ? 'Sending...' : 'Send Test'}
+              </button>
+            </div>
+            {settings.mail?.provider === 'none' && (
+              <p className="text-xs text-gray-500 dark:text-slate-400">Select and save a mail provider first.</p>
+            )}
+            {testEmailResult && (
+              <p className={`text-sm rounded-lg px-3 py-2 ${testEmailResult.ok ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'}`}>
+                {testEmailResult.message}
+              </p>
+            )}
           </div>
         </section>
 

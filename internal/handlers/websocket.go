@@ -69,11 +69,8 @@ func (c *Client) readPump() {
 	}()
 	c.conn.SetReadLimit(512)
 	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		c.conn.SetPongHandler(func(string) error {
-			log.Print("[WS] Ping received")
-			c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-			return nil
+	c.conn.SetPongHandler(func(string) error {
+		log.Print("[WS] Ping received")
 		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})

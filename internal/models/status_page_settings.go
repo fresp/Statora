@@ -60,6 +60,37 @@ type StatusPageSSOSettings struct {
 	PublicKeyPEM string `bson:"publicKeyPem,omitempty" json:"publicKeyPem,omitempty"`
 }
 
+type MailProviderType string
+
+const (
+	MailProviderNone     MailProviderType = "none"
+	MailProviderSMTP     MailProviderType = "smtp"
+	MailProviderSendGrid MailProviderType = "sendgrid"
+)
+
+type SMTPSettings struct {
+	Host       string `bson:"host" json:"host"`
+	Port       int    `bson:"port" json:"port"`
+	Username   string `bson:"username" json:"username"`
+	Password   string `bson:"password,omitempty" json:"-"` // AES-GCM encrypted at rest
+	FromEmail  string `bson:"fromEmail" json:"fromEmail"`
+	FromName   string `bson:"fromName" json:"fromName"`
+	Encryption string `bson:"encryption" json:"encryption"` // "starttls", "tls", "none"
+}
+
+type SendGridSettings struct {
+	APIKey    string `bson:"apiKey,omitempty" json:"-"` // AES-GCM encrypted at rest
+	FromEmail string `bson:"fromEmail" json:"fromEmail"`
+	FromName  string `bson:"fromName" json:"fromName"`
+}
+
+type MailSettings struct {
+	Provider MailProviderType `bson:"provider" json:"provider"`
+	SMTP     SMTPSettings     `bson:"smtp" json:"smtp"`
+	SendGrid SendGridSettings `bson:"sendgrid" json:"sendgrid"`
+	BaseURL  string           `bson:"baseUrl" json:"baseUrl"`
+}
+
 type StatusPageSettings struct {
 	Key       string                     `bson:"key" json:"-"`
 	Head      StatusPageHeadSettings     `bson:"head" json:"head"`
@@ -68,6 +99,7 @@ type StatusPageSettings struct {
 	Layout    StatusPageLayoutSettings   `bson:"layout" json:"layout"`
 	Footer    StatusPageFooterSettings   `bson:"footer" json:"footer"`
 	SSO       StatusPageSSOSettings      `bson:"sso,omitempty" json:"-"`
+	Mail      MailSettings               `bson:"mail" json:"mail"`
 	CustomCSS string                     `bson:"customCss" json:"customCss"`
 	UpdatedAt time.Time                  `bson:"updatedAt" json:"updatedAt"`
 	CreatedAt time.Time                  `bson:"createdAt" json:"createdAt"`
@@ -120,6 +152,9 @@ func DefaultStatusPageSettings() StatusPageSettings {
 		SSO: StatusPageSSOSettings{
 			Enabled:   false,
 			Algorithm: "HS256",
+		},
+		Mail: MailSettings{
+			Provider: MailProviderNone,
 		},
 		CustomCSS: "",
 		UpdatedAt: now,

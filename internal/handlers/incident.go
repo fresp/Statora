@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fresp/Statora/configs"
 	incidentservice "github.com/fresp/Statora/internal/services/incident"
 
 	"github.com/fresp/Statora/internal/models"
@@ -77,7 +78,7 @@ func GetIncidents(db *mongo.Database) gin.HandlerFunc {
 	}
 }
 
-func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+func CreateIncident(db *mongo.Database, hub *Hub, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req incidentRequestBody
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -134,12 +135,12 @@ func CreateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		}
 
 		DispatchWebhookEvent(db, "incident_created", incident)
+		DispatchSubscriberEmail(db, cfg, "incident_created", incident)
 		BroadcastEvent(hub, "incident_created", incident)
-		c.JSON(http.StatusCreated, incident)
 	}
 }
 
-func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+func UpdateIncident(db *mongo.Database, hub *Hub, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
@@ -187,8 +188,8 @@ func UpdateIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 			eventType = "incident_resolved"
 		}
 		DispatchWebhookEvent(db, eventType, incident)
+		DispatchSubscriberEmail(db, cfg, eventType, incident)
 		BroadcastEvent(hub, eventType, incident)
-		c.JSON(http.StatusOK, incident)
 	}
 }
 
@@ -236,7 +237,7 @@ func DeleteIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 	}
 }
 
-func ResolveIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
+func ResolveIncident(db *mongo.Database, hub *Hub, cfg *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id, err := primitive.ObjectIDFromHex(c.Param("id"))
 		if err != nil {
@@ -255,8 +256,8 @@ func ResolveIncident(db *mongo.Database, hub *Hub) gin.HandlerFunc {
 		}
 
 		DispatchWebhookEvent(db, "incident_resolved", incident)
+		DispatchSubscriberEmail(db, cfg, "incident_resolved", incident)
 		BroadcastEvent(hub, "incident_resolved", incident)
-		c.JSON(http.StatusOK, incident)
 	}
 }
 
