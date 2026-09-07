@@ -131,7 +131,7 @@ describe('StatusCategoryPage', () => {
     expect(html).toContain('99.95%')
     expect(html).toContain('30-Day Uptime')
     expect(html).not.toContain('NO ACTIVE INCIDENTS')
-    expect(html).not.toContain('Last updated')
+    expect(html).toContain('Last updated')
   })
 
   it('renders manual cards with large status typography and relative update time', () => {
