@@ -10,6 +10,9 @@
     "preview": "vite preview",
     "docs:screenshots": "node scripts/docs_screenshots.mjs"
   },
+  "overrides": {
+    "linkify-it": "^5.0.2"
+  },
   "dependencies": {
     "@tiptap/extension-highlight": "^2.26.1",
     "@tiptap/extension-link": "^2.26.1",
